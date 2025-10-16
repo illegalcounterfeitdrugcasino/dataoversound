@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visual Data Transfer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        h1 {
+            text-align: center;
+            color: #667eea;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+        }
+
+        .mode-selector {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 30px;
+            justify-content: center;
+        }
+
+        .mode-btn {
+            padding: 15px 40px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 600;
+            background: #e0e0e0;
+            color: #333;
+        }
+
+        .mode-btn.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            transform: scale(1.05);
+        }
+
+        .section {
+            display: none;
+        }
+
+        .section.active {
+            display: block;
+        }
+
+        /* Transmitter Styles */
+        .input-area {
+            margin-bottom: 20px;
+        }
+
+        textarea {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 1em;
+            resize: vertical;
+            min-height: 120px;
+            font-family: inherit;
+        }
+
+        .file-upload {
+            margin: 20px 0;
+            padding: 30px;
+            border: 3px dashed #667eea;
+            border-radius: 10px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .file-upload:hover {
+            background: rgba(102, 126, 234, 0.1);
+        }
+
+        .file-upload input {
+            display: none;
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            margin: 20px 0;
+            align-items: center;
+        }
+
+        .control-group {
+            flex: 1;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #555;
+        }
+
+        input[type="range"] {
+            width: 100%;
+        }
+
+        select, input[type="number"] {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1em;
+        }
+
+        .control-btn {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.2em;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 600;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            margin-top: 10px;
+        }
+
+        .control-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .control-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        #display-canvas {
+            width: 100%;
+            max-width: 600px;
+            height: 600px;
+            margin: 20px auto;
+            display: block;
+            background: white;
+            border: 4px solid #333;
+            border-radius: 10px;
+            image-rendering: pixelated;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .stat-item {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 15px;
+            border-radius: 10px;
+            color: white;
+            text-align: center;
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+
+        .stat-value {
+            font-size: 1.5em;
+            font-weight: 600;
+            margin-top: 5px;
+        }
+
+        /* Receiver Styles */
+        #video {
+            width: 100%;
+            max-width: 640px;
+            height: auto;
+            display: block;
+            margin: 20px auto;
+            border-radius: 10px;
+            border: 4px solid #333;
+        }
+
+        #scan-canvas {
+            display: none;
+        }
+
+        .info-box {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border-left: 4px solid #2196f3;
+        }
+
+        .preview-container {
+            margin: 20px 0;
+            padding: 20px;
+            background: #f5f5f5;
+            border-radius: 10px;
+            min-height: 200px;
+        }
+
+        .preview-container img {
+            max-width: 100%;
+            border-radius: 10px;
+        }
+
+        .preview-container pre {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-family: 'Courier New', monospace;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 30px;
+            background: #e0e0e0;
+            border-radius: 15px;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+        }
+
+        .status {
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 10px;
+            font-weight: 600;
+            text-align: center;
+            background: #e0e0e0;
+            color: #666;
+        }
+
+        .status.active {
+            background: #4caf50;
+            color: white;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📱 Visual Data Transfer</h1>
+        
+        <div class="mode-selector">
+            <button class="mode-btn active" onclick="setMode('transmit')">💻 Transmit (Laptop)</button>
+            <button class="mode-btn" onclick="setMode('receive')">📱 Receive (Phone)</button>
+        </div>
+
+        <!-- Transmit Section -->
+        <div id="transmit-section" class="section active">
+            <div class="input-area">
+                <textarea id="text-input" placeholder="Enter text to transmit...">Hello from laptop!</textarea>
+            </div>
+
+            <div class="file-upload" onclick="document.getElementById('file-input').click()">
+                <input type="file" id="file-input" onchange="handleFileSelect(event)">
+                <p>📁 Click to upload a file (images, text, small files)</p>
+                <p id="file-name" style="margin-top: 10px; color: #667eea; font-weight: 600;"></p>
+            </div>
+
+            <div class="controls">
+                <div class="control-group">
+                    <label>Update Frequency (Hz): <span id="fps-value">10</span></label>
+                    <input type="range" id="fps-slider" min="5" max="30" value="10" oninput="updateFPS(this.value)">
+                </div>
+                <div class="control-group">
+                    <label>Grid Size</label>
+                    <select id="grid-size">
+                        <option value="16">16×16 (Fast)</option>
+                        <option value="24" selected>24×24 (Balanced)</option>
+                        <option value="32">32×32 (More Data)</option>
+                    </select>
+                </div>
+            </div>
+
+            <button class="control-btn" onclick="startTransmission()">🚀 Start Transmission</button>
+
+            <div class="status" id="transmit-status">Ready to transmit</div>
+
+            <canvas id="display-canvas"></canvas>
+
+            <div class="stats" id="transmit-stats" style="display: none;">
+                <div class="stat-item">
+                    <div class="stat-label">Total Bytes</div>
+                    <div class="stat-value" id="total-bytes">0</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Frame</div>
+                    <div class="stat-value" id="current-frame">0</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Progress</div>
+                    <div class="stat-value" id="progress-percent">0%</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">FPS</div>
+                    <div class="stat-value" id="actual-fps">0</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Receive Section -->
+        <div id="receive-section" class="section">
+            <div class="info-box">
+                <strong>📱 Instructions:</strong><br>
+                1. Set the same FPS value as the transmitter<br>
+                2. Click "Start Camera" and allow camera access<br>
+                3. Point camera at the animated grid on the laptop<br>
+                4. Keep camera steady and well-lit<br>
+                5. Watch data appear live below!
+            </div>
+
+            <div class="controls">
+                <div class="control-group">
+                    <label>Scan Frequency (Hz): <span id="scan-fps-value">10</span></label>
+                    <input type="range" id="scan-fps-slider" min="5" max="30" value="10" oninput="updateScanFPS(this.value)">
+                </div>
+            </div>
+
+            <button class="control-btn" id="camera-btn" onclick="toggleCamera()">📷 Start Camera</button>
+
+            <div class="status" id="receive-status">Camera not started</div>
+
+            <video id="video" autoplay playsinline></video>
+            <canvas id="scan-canvas"></canvas>
+
+            <div class="progress-bar">
+                <div class="progress-fill" id="receive-progress" style="width: 0%">0%</div>
+            </div>
+
+            <div class="stats" id="receive-stats" style="display: none;">
+                <div class="stat-item">
+                    <div class="stat-label">Received</div>
+                    <div class="stat-value" id="received-bytes">0</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Expected</div>
+                    <div class="stat-value" id="expected-bytes">?</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Frames</div>
+                    <div class="stat-value" id="frames-decoded">0</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Errors</div>
+                    <div class="stat-value" id="error-count">0</div>
+                </div>
+            </div>
+
+            <div class="preview-container" id="receive-preview">
+                <p style="text-align: center; color: #999;">Received data will appear here...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentMode = 'transmit';
+        let transmitting = false;
+        let receiving = false;
+        let fileData = null;
+        let fileName = null;
+        let fileType = null;
+        
+        // Transmission settings
+        let fps = 10;
+        let gridSize = 24;
+        let transmitInterval = null;
+        let currentFrameIndex = 0;
+        let frames = [];
+        
+        // Reception state
+        let scanInterval = null;
+        let scanFPS = 10;
+        let receivedFrames = {};
+        let totalFrames = 0;
+        let dataLength = 0;
+        let receivedDataType = null;
+        let lastFrameTime = 0;
+        let errorCount = 0;
+
+        function setMode(mode) {
+            currentMode = mode;
+            document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.section').forEach(sec => sec.classList.remove('active'));
+            
+            if (mode === 'transmit') {
+                document.querySelectorAll('.mode-btn')[0].classList.add('active');
+                document.getElementById('transmit-section').classList.add('active');
+            } else {
+                document.querySelectorAll('.mode-btn')[1].classList.add('active');
+                document.getElementById('receive-section').classList.add('active');
+            }
+        }
+
+        function updateFPS(value) {
+            fps = parseInt(value);
+            document.getElementById('fps-value').textContent = fps;
+        }
+
+        function updateScanFPS(value) {
+            scanFPS = parseInt(value);
+            document.getElementById('scan-fps-value').textContent = scanFPS;
+        }
+
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            if (file.size > 100000) {
+                alert('File too large! Please use files under 100KB');
+                return;
+            }
+
+            fileName = file.name;
+            fileType = file.type;
+            document.getElementById('file-name').textContent = `Selected: ${fileName} (${(file.size / 1024).toFixed(1)} KB)`;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                fileData = new Uint8Array(e.target.result);
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function startTransmission() {
+            if (transmitting) {
+                stopTransmission();
+                return;
+            }
+
+            const textInput = document.getElementById('text-input').value;
+            let dataToSend;
+            let dataType = 'text';
+
+            if (fileData) {
+                dataToSend = fileData;
+                dataType = fileType || 'application/octet-stream';
+            } else if (textInput) {
+                dataToSend = new TextEncoder().encode(textInput);
+                dataType = 'text/plain';
+            } else {
+                alert('Please enter text or select a file');
+                return;
+            }
+
+            gridSize = parseInt(document.getElementById('grid-size').value);
+            
+            // Prepare frames
+            frames = encodeDataToFrames(dataToSend, dataType, gridSize);
+            currentFrameIndex = 0;
+            
+            transmitting = true;
+            document.querySelector('#transmit-section .control-btn').textContent = '⏹️ Stop Transmission';
+            document.getElementById('transmit-status').textContent = 'Transmitting...';
+            document.getElementById('transmit-status').className = 'status active';
+            document.getElementById('transmit-stats').style.display = 'grid';
+            document.getElementById('total-bytes').textContent = dataToSend.length;
+            
+            const canvas = document.getElementById('display-canvas');
+            canvas.width = gridSize;
+            canvas.height = gridSize;
+            
+            let frameCount = 0;
+            let lastFPSUpdate = Date.now();
+            
+            transmitInterval = setInterval(() => {
+                if (currentFrameIndex < frames.length) {
+                    drawFrame(canvas, frames[currentFrameIndex]);
+                    currentFrameIndex++;
+                    
+                    document.getElementById('current-frame').textContent = `${currentFrameIndex}/${frames.length}`;
+                    const progress = (currentFrameIndex / frames.length * 100).toFixed(1);
+                    document.getElementById('progress-percent').textContent = progress + '%';
+                    
+                    frameCount++;
+                    const now = Date.now();
+                    if (now - lastFPSUpdate >= 1000) {
+                        document.getElementById('actual-fps').textContent = frameCount;
+                        frameCount = 0;
+                        lastFPSUpdate = now;
+                    }
+                } else {
+                    currentFrameIndex = 0; // Loop
+                }
+            }, 1000 / fps);
+        }
+
+        function stopTransmission() {
+            transmitting = false;
+            clearInterval(transmitInterval);
+            document.querySelector('#transmit-section .control-btn').textContent = '🚀 Start Transmission';
+            document.getElementById('transmit-status').textContent = 'Stopped';
+            document.getElementById('transmit-status').className = 'status';
+        }
+
+        function encodeDataToFrames(data, dataType, gridSize) {
+            const frames = [];
+            const bitsPerFrame = (gridSize * gridSize) - 64; // Reserve cells for metadata
+            const bytesPerFrame = Math.floor(bitsPerFrame / 8);
+            
+            // Create header
+            const header = {
+                len: data.length,
+                type: dataType,
+                frames: Math.ceil(data.length / bytesPerFrame)
+            };
+            const headerStr = JSON.stringify(header);
+            const headerBytes = new TextEncoder().encode(headerStr);
+            
+            // Add header frames
+            for (let i = 0; i < headerBytes.length; i += bytesPerFrame) {
+                const chunk = headerBytes.slice(i, i + bytesPerFrame);
+                frames.push(createFrame(chunk, 0, true, gridSize));
+            }
+            
+            // Add data frames
+            let frameNum = 1;
+            for (let i = 0; i < data.length; i += bytesPerFrame) {
+                const chunk = data.slice(i, i + bytesPerFrame);
+                frames.push(createFrame(chunk, frameNum, false, gridSize));
+                frameNum++;
+            }
+            
+            return frames;
+        }
+
+        function createFrame(data, frameNum, isHeader, gridSize) {
+            const frame = new Uint8Array(gridSize * gridSize);
+            
+            // Sync pattern (first 8 bytes = alternating pattern)
+            for (let i = 0; i < 8; i++) {
+                frame[i] = i % 2 === 0 ? 255 : 0;
+            }
+            
+            // Frame number (4 bytes)
+            frame[8] = (frameNum >> 24) & 0xFF;
+            frame[9] = (frameNum >> 16) & 0xFF;
+            frame[10] = (frameNum >> 8) & 0xFF;
+            frame[11] = frameNum & 0xFF;
+            
+            // Header flag (1 byte)
+            frame[12] = isHeader ? 255 : 0;
+            
+            // Data length in this frame (2 bytes)
+            frame[13] = (data.length >> 8) & 0xFF;
+            frame[14] = data.length & 0xFF;
+            
+            // Reserved (1 byte for checksum)
+            let checksum = 0;
+            for (let i = 0; i < data.length; i++) {
+                checksum = (checksum + data[i]) & 0xFF;
+            }
+            frame[15] = checksum;
+            
+            // Data payload (up to gridSize*gridSize - 16)
+            for (let i = 0; i < data.length && i < frame.length - 16; i++) {
+                frame[16 + i] = data[i];
+            }
+            
+            return frame;
+        }
+
+        function drawFrame(canvas, frameData) {
+            const ctx = canvas.getContext('2d');
+            const imageData = ctx.createImageData(canvas.width, canvas.height);
+            
+            for (let i = 0; i < frameData.length; i++) {
+                const idx = i * 4;
+                const val = frameData[i];
+                imageData.data[idx] = val;
+                imageData.data[idx + 1] = val;
+                imageData.data[idx + 2] = val;
+                imageData.data[idx + 3] = 255;
+            }
+            
+            ctx.putImageData(imageData, 0, 0);
+        }
+
+        // Receiver functions
+        async function toggleCamera() {
+            if (receiving) {
+                stopCamera();
+            } else {
+                await startCamera();
+            }
+        }
+
+        async function startCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { 
+                        facingMode: 'environment',
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    } 
+                });
+                
+                const video = document.getElementById('video');
+                video.srcObject = stream;
+                
+                receiving = true;
+                document.getElementById('camera-btn').textContent = '⏹️ Stop Camera';
+                document.getElementById('receive-status').textContent = 'Scanning...';
+                document.getElementById('receive-status').className = 'status active';
+                document.getElementById('receive-stats').style.display = 'grid';
+                
+                receivedFrames = {};
+                totalFrames = 0;
+                dataLength = 0;
+                errorCount = 0;
+                
+                scanInterval = setInterval(scanFrame, 1000 / scanFPS);
+            } catch (err) {
+                alert('Camera error: ' + err.message);
+            }
+        }
+
+        function stopCamera() {
+            receiving = false;
+            clearInterval(scanInterval);
+            
+            const video = document.getElementById('video');
+            if (video.srcObject) {
+                video.srcObject.getTracks().forEach(track => track.stop());
+                video.srcObject = null;
+            }
+            
+            document.getElementById('camera-btn').textContent = '📷 Start Camera';
+            document.getElementById('receive-status').textContent = 'Stopped';
+            document.getElementById('receive-status').className = 'status';
+        }
+
+        function scanFrame() {
+            const video = document.getElementById('video');
+            const canvas = document.getElementById('scan-canvas');
+            const ctx = canvas.getContext('2d');
+            
+            if (video.readyState !== video.HAVE_ENOUGH_DATA) return;
+            
+            // Try different grid sizes
+            for (let size of [24, 16, 32]) {
+                canvas.width = size;
+                canvas.height = size;
+                
+                ctx.drawImage(video, 0, 0, size, size);
+                const imageData = ctx.getImageData(0, 0, size, size);
+                
+                const frame = decodeFrame(imageData, size);
+                if (frame) {
+                    processReceivedFrame(frame, size);
+                    break;
+                }
+            }
+        }
+
+        function decodeFrame(imageData, gridSize) {
+            const data = imageData.data;
+            const frameData = new Uint8Array(gridSize * gridSize);
+            
+            // Convert to grayscale
+            for (let i = 0; i < gridSize * gridSize; i++) {
+                const idx = i * 4;
+                frameData[i] = Math.round((data[idx] + data[idx + 1] + data[idx + 2]) / 3);
+            }
+            
+            // Check sync pattern
+            let syncMatch = 0;
+            for (let i = 0; i < 8; i++) {
+                const expected = i % 2 === 0 ? 255 : 0;
+                if (Math.abs(frameData[i] - expected) < 100) syncMatch++;
+            }
+            
+            if (syncMatch < 6) return null;
+            
+            // Extract metadata
+            const frameNum = (frameData[8] << 24) | (frameData[9] << 16) | (frameData[10] << 8) | frameData[11];
+            const isHeader = frameData[12] > 128;
+            const dataLen = (frameData[13] << 8) | frameData[14];
+            const checksum = frameData[15];
+            
+            // Extract payload
+            const payload = frameData.slice(16, 16 + dataLen);
+            
+            // Verify checksum
+            let calcChecksum = 0;
+            for (let i = 0; i < payload.length; i++) {
+                calcChecksum = (calcChecksum + payload[i]) & 0xFF;
+            }
+            
+            if (calcChecksum !== checksum) {
+                errorCount++;
+                document.getElementById('error-count').textContent = errorCount;
+                return null;
+            }
+            
+            return { frameNum, isHeader, payload, dataLen };
+        }
+
+        function processReceivedFrame(frame, gridSize) {
+            const now = Date.now();
+            if (now - lastFrameTime < 50) return; // Debounce
+            lastFrameTime = now;
+            
+            if (receivedFrames[frame.frameNum]) return; // Already have this frame
+            
+            receivedFrames[frame.frameNum] = frame;
+            document.getElementById('frames-decoded').textContent = Object.keys(receivedFrames).length;
+            
+            // Process header frames
+            if (frame.isHeader) {
+                const headerBytes = [];
+                for (let key in receivedFrames) {
+                    if (receivedFrames[key].isHeader) {
+                        headerBytes.push(...receivedFrames[key].payload);
+                    }
+                }
+                
+                try {
+                    const headerStr = new TextDecoder().decode(new Uint8Array(headerBytes));
+                    const header = JSON.parse(headerStr);
+                    dataLength = header.len;
+                    receivedDataType = header.type;
+                    totalFrames = header.frames;
+                    
+                    document.getElementById('expected-bytes').textContent = dataLength;
+                } catch (e) {
+                    // Header not complete yet
+                }
+            }
+            
+            // Check if we have all data frames
+            if (totalFrames > 0) {
+                const dataFrames = Object.values(receivedFrames).filter(f => !f.isHeader);
+                const receivedBytes = dataFrames.reduce((sum, f) => sum + f.payload.length, 0);
+                
+                document.getElementById('received-bytes').textContent = receivedBytes;
+                
+                if (dataLength > 0) {
+                    const progress = Math.min(100, (receivedBytes / dataLength * 100));
+                    document.getElementById('receive-progress').style.width = progress + '%';
+                    document.getElementById('receive-progress').textContent = progress.toFixed(0) + '%';
+                }
+                
+                // Reconstruct data live
+                if (receivedBytes > 0) {
+                    reconstructData(dataFrames);
+                }
+                
+                if (receivedBytes >= dataLength && dataLength > 0) {
+                    document.getElementById('receive-status').textContent = 'Complete!';
+                    document.getElementById('receive-status').className = 'status';
+                }
+            }
+        }
+
+        function reconstructData(dataFrames) {
+            // Sort by frame number
+            dataFrames.sort((a, b) => a.frameNum - b.frameNum);
+            
+            // Concatenate payload
+            const allBytes = [];
+            for (const frame of dataFrames) {
+                allBytes.push(...frame.payload);
+            }
+            
+            const data = new Uint8Array(allBytes.slice(0, dataLength || allBytes.length));
+            
+            const preview = document.getElementById('receive-preview');
+            preview.innerHTML = '';
+            
+            if (receivedDataType && receivedDataType.startsWith('image/')) {
+                const blob = new Blob([data], { type: receivedDataType });
+                const url = URL.createObjectURL(blob);
+                const img = document.createElement('img');
+                img.src = url;
+                img.style.maxWidth = '100%';
+                preview.appendChild(img);
+            } else {
+                try {
+                    const text = new TextDecoder().decode(data);
+                    const pre = document.createElement('pre');
+                    pre.textContent = text;
+                    preview.appendChild(pre);
+                } catch (e) {
+                    preview.innerHTML = `<p>Binary data (${data.length} bytes)</p>`;
+                }
+            }
+        }
+    </script>
+</body>
+</html>

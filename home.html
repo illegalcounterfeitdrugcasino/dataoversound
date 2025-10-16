@@ -350,8 +350,8 @@
         let dataArray = null;
         let animationId = null;
         
-        const HEADER_FREQ = 18000; // 18kHz header
-        const HEADER_DURATION = 0.2; // 200ms
+        const HEADER_PATTERN = [1, 0, 1, 0, 1, 0, 1, 1]; // repeating pattern for header
+        const HEADER_REPEATS = 10; // repeat pattern 10 times for robustness
         const BIT_RATE = 100; // bits per second
         const SYMBOL_RATE = BIT_RATE;
         
@@ -406,8 +406,19 @@
         
         function playHeader(ctx) {
             const now = ctx.currentTime;
-            generateTone(ctx, HEADER_FREQ, HEADER_DURATION, now);
-            return HEADER_DURATION;
+            const symbolDuration = 1 / SYMBOL_RATE;
+            let startTime = now;
+            
+            // Play header pattern multiple times
+            for (let rep = 0; rep < HEADER_REPEATS; rep++) {
+                for (let bit of HEADER_PATTERN) {
+                    const freq = bit === 0 ? FSK_FREQ_0 : FSK_FREQ_1;
+                    generateTone(ctx, freq, symbolDuration, startTime);
+                    startTime += symbolDuration;
+                }
+            }
+            
+            return startTime - now;
         }
         
         function encodeAndPlayData(text, mode) {
@@ -525,6 +536,8 @@
         let detectedData = '';
         let headerDetected = false;
         let detectionStartTime = 0;
+        let lastBitTime = 0;
+        let recentBits = '';
         
         function detectSignal() {
             if (!isListening || !analyser) return;
@@ -537,48 +550,59 @@
             
             document.getElementById('signalStrength').textContent = Math.min(100, avg) + '%';
             
-            // Detect header (look for 18kHz peak)
             const nyquist = getAudioContext().sampleRate / 2;
             const freqBinSize = nyquist / dataArray.length;
-            const headerBin = Math.floor(HEADER_FREQ / freqBinSize);
-            const headerStrength = dataArray[headerBin] || 0;
+            const freq0Bin = Math.floor(FSK_FREQ_0 / freqBinSize);
+            const freq1Bin = Math.floor(FSK_FREQ_1 / freqBinSize);
             
-            if (headerStrength > 100 && !headerDetected) {
-                headerDetected = true;
-                detectionStartTime = Date.now();
-                document.getElementById('rxStatus').textContent = 'Header Detected!';
-                document.getElementById('listeningText').textContent = 'Receiving data...';
-                detectedData = '';
-            }
+            const strength0 = dataArray[freq0Bin] || 0;
+            const strength1 = dataArray[freq1Bin] || 0;
             
-            // Detect bits if header was found
-            if (headerDetected && Date.now() - detectionStartTime > HEADER_DURATION * 1000 + 100) {
-                const mode = 'fsk'; // default to FSK for simplicity
-                const freq0Bin = Math.floor(FSK_FREQ_0 / freqBinSize);
-                const freq1Bin = Math.floor(FSK_FREQ_1 / freqBinSize);
-                
-                const strength0 = dataArray[freq0Bin] || 0;
-                const strength1 = dataArray[freq1Bin] || 0;
-                
-                // Simple bit detection
-                if (Math.abs(strength0 - strength1) > 20) {
+            // Detect bits consistently
+            const now = Date.now();
+            const symbolDuration = 1000 / SYMBOL_RATE; // ms
+            
+            if (now - lastBitTime > symbolDuration * 0.7) {
+                if (Math.abs(strength0 - strength1) > 15) {
                     const bit = strength1 > strength0 ? '1' : '0';
-                    detectedData += bit;
+                    recentBits += bit;
                     
-                    if (detectedData.length > 16) {
-                        // Extract length
-                        if (detectedData.length === 16) {
-                            const len = parseInt(detectedData.substring(0, 16), 2);
-                            console.log('Detected length:', len);
+                    // Keep only last 80 bits for header detection
+                    if (recentBits.length > 80) {
+                        recentBits = recentBits.slice(-80);
+                    }
+                    
+                    // Look for header pattern
+                    if (!headerDetected) {
+                        // Create expected header sequence
+                        let expectedHeader = '';
+                        for (let i = 0; i < HEADER_REPEATS; i++) {
+                            expectedHeader += HEADER_PATTERN.join('');
                         }
                         
-                        // Try to decode
+                        // Check if header pattern is in recent bits
+                        if (recentBits.includes(expectedHeader)) {
+                            headerDetected = true;
+                            document.getElementById('rxStatus').textContent = 'Header Detected!';
+                            document.getElementById('listeningText').textContent = 'Receiving data...';
+                            detectedData = '';
+                            console.log('Header pattern matched!');
+                        }
+                    } else {
+                        // After header, collect data bits
+                        detectedData += bit;
+                        
+                        // Try to decode when we have enough data
                         if (detectedData.length >= 24 && detectedData.length % 8 === 0) {
                             const text = binaryToText(detectedData.substring(16));
-                            document.getElementById('rxPreviewContent').textContent = text;
-                            document.getElementById('rxDataSize').textContent = text.length + ' B';
+                            if (text) {
+                                document.getElementById('rxPreviewContent').textContent = text;
+                                document.getElementById('rxDataSize').textContent = text.length + ' B';
+                            }
                         }
                     }
+                    
+                    lastBitTime = now;
                 }
             }
             

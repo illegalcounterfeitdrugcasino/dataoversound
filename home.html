@@ -314,10 +314,10 @@
         <div id="receive-section" class="section">
             <div class="info-box">
                 <strong>📱 Instructions:</strong><br>
-                1. Click "Start Listening" on receiver device<br>
-                2. Place transmitter close (5-15cm away)<br>
-                3. Set transmitter volume to 80-100%<br>
-                4. Start transmission and keep devices still
+                1. Click "Start Listening" FIRST<br>
+                2. Place transmitter 10-20cm away<br>
+                3. Set transmitter volume to MAX<br>
+                4. Then start transmission
             </div>
 
             <button class="control-btn receive" id="listen-btn" onclick="toggleListening()">👂 Start Listening</button>
@@ -360,30 +360,31 @@
         let fileName = null;
         let fileType = null;
 
-        // Use 16 distinct tones for hexadecimal encoding (4 bits per tone)
+        // 16 well-spaced tones for hex encoding
         const TONES = [
-            697, 770, 852, 941,      // 0-3
-            1209, 1336, 1477, 1633,  // 4-7
-            1800, 2000, 2200, 2400,  // 8-11
-            2600, 2800, 3000, 3200   // 12-15
+            700, 800, 900, 1000,      // 0-3
+            1100, 1200, 1300, 1400,   // 4-7
+            1500, 1700, 1900, 2100,   // 8-11
+            2300, 2500, 2700, 2900    // 12-15
         ];
         
-        const START_TONE = 4000;
-        const STOP_TONE = 4500;
-        const TONE_DURATION = 0.15;  // 150ms per nibble
-        const GAP_DURATION = 0.03;   // 30ms gap
+        const START_TONE = 3500;
+        const STOP_TONE = 4000;
+        const TONE_DURATION = 0.2;   // 200ms per nibble
+        const GAP_DURATION = 0.05;   // 50ms gap
         const SAMPLE_RATE = 44100;
 
-        // Receiver state
+        // Receiver state with strict state machine
         let analyser = null;
         let receiverState = {
-            listening: false,
-            started: false,
-            dataBuffer: [],
+            phase: 'IDLE',  // IDLE -> STARTED -> HEADER_LEN -> HEADER -> DATA -> COMPLETE
+            lastDetectionTime: 0,
+            nibbleBuffer: [],
+            byteBuffer: [],
+            headerLengthBytes: [],
             headerLength: 0,
-            totalLength: 0,
-            lastToneTime: 0,
-            currentNibbles: []
+            dataLength: 0,
+            receivedData: []
         };
 
         function setMode(mode) {
@@ -453,33 +454,30 @@
 
             audioContext = new (window.AudioContext || window.webkitAudioContext)();
 
-            // Create header with length info
+            // Create minimal header
             const header = {
-                type: dataType,
-                length: dataToSend.length,
-                name: fileName || '',
-                mime: fileType || 'text/plain'
+                len: dataToSend.length,
+                type: dataType
             };
             const headerBytes = new TextEncoder().encode(JSON.stringify(header));
             
-            // Send: START -> HEADER_LENGTH (2 bytes) -> HEADER -> DATA -> STOP
             const startTime = Date.now();
             
-            await playTone(START_TONE, 0.5);
-            await sleep(200);
+            // START tone (long)
+            await playTone(START_TONE, 0.8);
+            await sleep(300);
             
             // Send header length as 2 bytes
             await transmitByte(Math.floor(headerBytes.length / 256));
             await transmitByte(headerBytes.length % 256);
-            await sleep(100);
+            await sleep(200);
             
             // Send header
             for (let i = 0; i < headerBytes.length; i++) {
                 await transmitByte(headerBytes[i]);
-                updateTransmitProgress(0, headerBytes.length, startTime);
             }
             
-            await sleep(200);
+            await sleep(300);
             
             // Send data
             for (let i = 0; i < dataToSend.length; i++) {
@@ -488,8 +486,10 @@
                 updateTransmitProgress(i + 1, dataToSend.length, startTime);
             }
             
-            await sleep(200);
-            await playTone(STOP_TONE, 0.5);
+            await sleep(300);
+            
+            // STOP tone (long)
+            await playTone(STOP_TONE, 0.8);
 
             transmitting = false;
             document.getElementById('transmit-status').textContent = 'Complete!';
@@ -506,12 +506,10 @@
         }
 
         async function transmitByte(byte) {
-            // Send high nibble (4 bits)
             const highNibble = (byte >> 4) & 0x0F;
             await playTone(TONES[highNibble], TONE_DURATION);
             await sleep(GAP_DURATION * 1000);
             
-            // Send low nibble (4 bits)
             const lowNibble = byte & 0x0F;
             await playTone(TONES[lowNibble], TONE_DURATION);
             await sleep(GAP_DURATION * 1000);
@@ -523,9 +521,8 @@
             
             for (let i = 0; i < data.length; i++) {
                 const t = i / SAMPLE_RATE;
-                // Use envelope to reduce clicks
-                const envelope = Math.min(1, i / (SAMPLE_RATE * 0.01), (data.length - i) / (SAMPLE_RATE * 0.01));
-                data[i] = Math.sin(2 * Math.PI * freq * t) * 0.8 * envelope;
+                const envelope = Math.min(1, i / (SAMPLE_RATE * 0.02), (data.length - i) / (SAMPLE_RATE * 0.02));
+                data[i] = Math.sin(2 * Math.PI * freq * t) * 0.9 * envelope;
             }
             
             const source = audioContext.createBufferSource();
@@ -533,7 +530,6 @@
             source.connect(audioContext.destination);
             source.start();
             
-            // Visualize
             const canvas = document.getElementById('transmit-canvas');
             const ctx = canvas.getContext('2d');
             drawWaveform(ctx, canvas, data, Math.min(2000, data.length));
@@ -552,20 +548,20 @@
         async function startListening() {
             receiving = true;
             document.getElementById('listen-btn').textContent = '⏹️ Stop Listening';
-            document.getElementById('receive-status').textContent = 'Waiting for signal...';
+            document.getElementById('receive-status').textContent = 'Waiting for start signal...';
             document.getElementById('receive-status').className = 'status active';
             document.getElementById('receive-stats').style.display = 'grid';
 
-            // Reset state
+            // Reset state machine
             receiverState = {
-                listening: true,
-                started: false,
-                dataBuffer: [],
+                phase: 'IDLE',
+                lastDetectionTime: 0,
+                nibbleBuffer: [],
+                byteBuffer: [],
+                headerLengthBytes: [],
                 headerLength: 0,
-                totalLength: 0,
-                lastToneTime: 0,
-                currentNibbles: [],
-                headerBytes: []
+                dataLength: 0,
+                receivedData: []
             };
 
             try {
@@ -581,7 +577,7 @@
                 const source = audioContext.createMediaStreamSource(stream);
                 analyser = audioContext.createAnalyser();
                 analyser.fftSize = 16384;
-                analyser.smoothingTimeConstant = 0.8;
+                analyser.smoothingTimeConstant = 0.85;
                 source.connect(analyser);
 
                 window.receiverStream = stream;
@@ -595,7 +591,6 @@
 
         function stopListening() {
             receiving = false;
-            receiverState.listening = false;
             document.getElementById('listen-btn').textContent = '👂 Start Listening';
             document.getElementById('receive-status').textContent = 'Stopped';
             document.getElementById('receive-status').className = 'status idle';
@@ -606,159 +601,181 @@
         }
 
         function processAudio() {
-            if (!receiving || !receiverState.listening) return;
+            if (!receiving) return;
 
             const freqData = new Uint8Array(analyser.frequencyBinCount);
             analyser.getByteFrequencyData(freqData);
 
-            // Visualize
             const canvas = document.getElementById('receive-canvas');
             const ctx = canvas.getContext('2d');
             const timeData = new Uint8Array(analyser.frequencyBinCount);
             analyser.getByteTimeDomainData(timeData);
             drawWaveform(ctx, canvas, timeData, Math.min(2000, timeData.length));
 
-            const detectedTone = detectTone(freqData);
+            const detected = detectToneStrict(freqData);
             
-            if (detectedTone !== null) {
+            if (detected !== null) {
                 const now = Date.now();
                 
-                // Debounce: only accept tone if enough time passed
-                if (now - receiverState.lastToneTime > 100) {
-                    receiverState.lastToneTime = now;
-                    
-                    if (detectedTone === -1) {
-                        // START tone
-                        receiverState.started = true;
-                        receiverState.currentNibbles = [];
-                        receiverState.headerBytes = [];
-                        log('Start signal detected!');
-                        document.getElementById('receive-status').textContent = 'Receiving...';
-                    } else if (detectedTone === -2) {
-                        // STOP tone
-                        completeReception();
-                    } else if (receiverState.started) {
-                        // Data tone (0-15)
-                        receiverState.currentNibbles.push(detectedTone);
-                        
-                        if (receiverState.currentNibbles.length === 2) {
-                            const byte = (receiverState.currentNibbles[0] << 4) | receiverState.currentNibbles[1];
-                            receiverState.currentNibbles = [];
-                            
-                            // First 2 bytes are header length
-                            if (receiverState.headerLength === 0 && receiverState.headerBytes.length < 2) {
-                                receiverState.headerBytes.push(byte);
-                                if (receiverState.headerBytes.length === 2) {
-                                    receiverState.headerLength = (receiverState.headerBytes[0] << 8) | receiverState.headerBytes[1];
-                                    log(`Header length: ${receiverState.headerLength}`);
-                                }
-                            } else if (receiverState.dataBuffer.length < receiverState.headerLength) {
-                                // Receiving header
-                                receiverState.dataBuffer.push(byte);
-                                if (receiverState.dataBuffer.length === receiverState.headerLength) {
-                                    parseHeader();
-                                }
-                            } else {
-                                // Receiving data
-                                receiverState.dataBuffer.push(byte);
-                                updateReceiveProgress();
-                            }
-                        }
-                    }
+                // Strong debouncing: 150ms minimum between detections
+                if (now - receiverState.lastDetectionTime < 150) {
+                    requestAnimationFrame(processAudio);
+                    return;
                 }
+                
+                receiverState.lastDetectionTime = now;
+                handleDetectedTone(detected);
             }
 
             requestAnimationFrame(processAudio);
         }
 
-        function detectTone(freqData) {
+        function detectToneStrict(freqData) {
             const binSize = audioContext.sampleRate / analyser.fftSize;
-            const threshold = 80;
+            const threshold = 110;  // Higher threshold
             
-            // Check START tone
-            if (getPeakPower(freqData, START_TONE, binSize, 10) > threshold) {
-                return -1;
+            // Check START
+            const startPower = getPeakPower(freqData, START_TONE, binSize, 15);
+            if (startPower > threshold + 20 && receiverState.phase === 'IDLE') {
+                return { type: 'START', power: startPower };
             }
             
-            // Check STOP tone
-            if (getPeakPower(freqData, STOP_TONE, binSize, 10) > threshold) {
-                return -2;
+            // Check STOP
+            const stopPower = getPeakPower(freqData, STOP_TONE, binSize, 15);
+            if (stopPower > threshold + 20 && receiverState.phase === 'DATA') {
+                return { type: 'STOP', power: stopPower };
             }
             
-            // Check data tones
+            // Check data tones only if we're expecting them
+            if (receiverState.phase === 'IDLE') {
+                return null;
+            }
+            
             let maxPower = 0;
-            let maxTone = null;
+            let maxTone = -1;
             
             for (let i = 0; i < TONES.length; i++) {
-                const power = getPeakPower(freqData, TONES[i], binSize, 8);
-                if (power > maxPower && power > threshold) {
+                const power = getPeakPower(freqData, TONES[i], binSize, 12);
+                if (power > maxPower) {
                     maxPower = power;
                     maxTone = i;
                 }
             }
             
             document.getElementById('signal-strength').textContent = Math.round(maxPower);
-            return maxTone;
-        }
-
-        function getPeakPower(freqData, freq, binSize, range) {
-            const centerBin = Math.round(freq / binSize);
-            let sum = 0;
-            let count = 0;
             
-            for (let i = centerBin - range; i <= centerBin + range; i++) {
-                if (i >= 0 && i < freqData.length) {
-                    sum += freqData[i];
-                    count++;
-                }
+            if (maxPower > threshold) {
+                return { type: 'DATA', value: maxTone, power: maxPower };
             }
             
-            return count > 0 ? sum / count : 0;
+            return null;
+        }
+
+        function handleDetectedTone(detected) {
+            if (detected.type === 'START') {
+                receiverState.phase = 'STARTED';
+                receiverState.nibbleBuffer = [];
+                receiverState.byteBuffer = [];
+                log('🟢 Start detected!');
+                document.getElementById('receive-status').textContent = 'Receiving header...';
+            } else if (detected.type === 'STOP') {
+                completeReception();
+            } else if (detected.type === 'DATA') {
+                receiverState.nibbleBuffer.push(detected.value);
+                
+                if (receiverState.nibbleBuffer.length === 2) {
+                    const byte = (receiverState.nibbleBuffer[0] << 4) | receiverState.nibbleBuffer[1];
+                    receiverState.nibbleBuffer = [];
+                    
+                    processByte(byte);
+                }
+            }
+        }
+
+        function processByte(byte) {
+            if (receiverState.phase === 'STARTED') {
+                // Collecting header length (2 bytes)
+                receiverState.headerLengthBytes.push(byte);
+                
+                if (receiverState.headerLengthBytes.length === 2) {
+                    receiverState.headerLength = (receiverState.headerLengthBytes[0] << 8) | receiverState.headerLengthBytes[1];
+                    receiverState.phase = 'HEADER';
+                    log(`Header length: ${receiverState.headerLength}`);
+                }
+            } else if (receiverState.phase === 'HEADER') {
+                receiverState.byteBuffer.push(byte);
+                
+                if (receiverState.byteBuffer.length === receiverState.headerLength) {
+                    parseHeader();
+                }
+            } else if (receiverState.phase === 'DATA') {
+                receiverState.receivedData.push(byte);
+                updateReceiveProgress();
+                
+                if (receiverState.receivedData.length >= receiverState.dataLength) {
+                    completeReception();
+                }
+            }
         }
 
         function parseHeader() {
             try {
-                const headerText = new TextDecoder().decode(new Uint8Array(receiverState.dataBuffer));
+                const headerText = new TextDecoder().decode(new Uint8Array(receiverState.byteBuffer));
                 const header = JSON.parse(headerText);
-                receiverState.totalLength = header.length;
-                receiverState.dataBuffer = [];
+                receiverState.dataLength = header.len;
+                receiverState.phase = 'DATA';
                 
-                log(`Header parsed: ${header.length} bytes expected`);
-                document.getElementById('expected-bytes').textContent = header.length;
+                log(`✓ Header OK: ${header.len} bytes`);
+                document.getElementById('expected-bytes').textContent = header.len;
+                document.getElementById('receive-status').textContent = 'Receiving data...';
             } catch (e) {
-                log('Header parse error');
+                log('❌ Header parse error');
+                stopListening();
             }
         }
 
         function updateReceiveProgress() {
-            const received = receiverState.dataBuffer.length - receiverState.headerLength;
+            const received = receiverState.receivedData.length;
             document.getElementById('received-bytes').textContent = received;
             
-            if (receiverState.totalLength > 0) {
-                const progress = (received / receiverState.totalLength) * 100;
+            if (receiverState.dataLength > 0) {
+                const progress = (received / receiverState.dataLength) * 100;
                 document.getElementById('receive-progress').style.width = `${progress}%`;
                 document.getElementById('receive-progress').textContent = `${progress.toFixed(0)}%`;
             }
         }
 
         function completeReception() {
-            log('Reception complete!');
+            log('✅ Complete!');
             document.getElementById('receive-status').textContent = 'Complete!';
             document.getElementById('receive-status').className = 'status idle';
             
-            const dataStart = receiverState.headerLength;
-            const finalData = new Uint8Array(receiverState.dataBuffer.slice(dataStart, dataStart + receiverState.totalLength));
+            const finalData = new Uint8Array(receiverState.receivedData.slice(0, receiverState.dataLength));
             
             try {
                 const text = new TextDecoder().decode(finalData);
                 const preview = document.getElementById('receive-preview');
                 preview.style.display = 'block';
                 preview.innerHTML = `<pre>${text}</pre>`;
+                log(`Decoded: "${text}"`);
             } catch (e) {
                 log('Could not decode as text');
             }
             
-            receiverState.listening = false;
+            receiverState.phase = 'COMPLETE';
+        }
+
+        function getPeakPower(freqData, freq, binSize, range) {
+            const centerBin = Math.round(freq / binSize);
+            let max = 0;
+            
+            for (let i = centerBin - range; i <= centerBin + range; i++) {
+                if (i >= 0 && i < freqData.length) {
+                    max = Math.max(max, freqData[i]);
+                }
+            }
+            
+            return max;
         }
 
         function log(message) {

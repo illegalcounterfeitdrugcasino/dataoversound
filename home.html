@@ -246,7 +246,6 @@
         <canvas id="rxChart"></canvas>
     </div>
 </div>
-
 <script>
     let audioContext = null;
     let rxChart = null;
@@ -264,23 +263,24 @@
     const FREQ_0 = 500; // Frequency for bit '0'
     const FREQ_1 = 2500; // Frequency for bit '1'
     const FREQ_THRESHOLD = (FREQ_0 + FREQ_1) / 2; // Midpoint threshold
-    const MIN_PEAK_AMP = 3; // Minimum required amplitude (0-127) for a valid signal
+    // CRITICAL CHANGE: Lowered amplitude threshold for better iPhone detection
+    const MIN_PEAK_AMP = 15; // Minimum required amplitude (0-127) for a valid signal
     
     // Preamble and Synchronization
-    // Preamble: Alternating 1s and 0s for clock synchronization
     const PREAMBLE = '1010101010101010'; // 16 bits for timing stabilization
-    // Start Delimiter: Unique pattern to mark the end of preamble and start of data
     const START_DELIMITER = '11110000'; // 8 bits
+    const CALIBRATION_TONE_FREQ = 1500; // Mid-range frequency for calibration
+    const CALIBRATION_TONE_DURATION = 3; // 3 seconds of tone
 
     // Receiver State
     let detectedBits = '';
     let currentBitSamples = [];
     let consecutiveNoSignal = 0;
-    const MAX_NO_SIGNAL = SAMPLES_PER_BIT * 3; // Reset if silence lasts for 3 bit durations
+    const MAX_NO_SIGNAL = SAMPLES_PER_BIT * 3; 
 
     // Synchronization state
     let isSynchronized = false;
-    let bitSampleCounter = 0; // Tracks the sample position within a single bit (0 to SAMPLES_PER_BIT - 1)
+    let bitSampleCounter = 0; 
 
 
     function getAudioContext() {
@@ -337,14 +337,12 @@
     function encodeAndPlayData(text, speed) {
         const ctx = getAudioContext();
         const dataBinary = textToBinary(text);
-        const fullBinary = PREAMBLE + START_DELIMITER + dataBinary;
         
         console.group('TRANSMITTER');
+        console.log('--- CALIBRATION TONE: 1500Hz for 3s ---');
         console.log('PREAMBLE:', PREAMBLE);
         console.log('START DELIMITER:', START_DELIMITER);
         console.log('DATA BINARY:', dataBinary);
-        console.log('FULL BINARY TO SEND:', fullBinary);
-        console.log('TOTAL BITS:', fullBinary.length);
         console.log('BIT RATE (bps):', speed);
         console.groupEnd();
         
@@ -354,11 +352,18 @@
         document.getElementById('txStatus').textContent = 'Transmitting...';
         document.getElementById('txProgress').style.width = '0%';
         
+        // 1. CALIBRATION TONE
+        console.log(`[TX Calibration] Tone @ ${CALIBRATION_TONE_FREQ}Hz. Start time: ${startTime.toFixed(3)}s`);
+        generateTone(ctx, CALIBRATION_TONE_FREQ, CALIBRATION_TONE_DURATION, startTime); 
+        startTime += CALIBRATION_TONE_DURATION;
+        
+        // 2. PREAMBLE + DELIMITER + DATA
+        const fullBinary = PREAMBLE + START_DELIMITER + dataBinary;
+
         for (let i = 0; i < fullBinary.length; i++) {
             const bit = fullBinary[i];
             const freq = bit === '0' ? FREQ_0 : FREQ_1;
             
-            // Log the transmitted bit and frequency
             let type = (i < PREAMBLE.length) ? 'Preamble' : (i < PREAMBLE.length + START_DELIMITER.length) ? 'Delimiter' : 'Data';
             console.log(`[TX ${type}] Bit ${i+1}/${fullBinary.length}: ${bit} @ ${freq}Hz. Start time: ${startTime.toFixed(3)}s`);
 
@@ -400,8 +405,6 @@
         }
     }
     
-    // ... (switchMode, toggleListening, stopReceiving functions remain the same) ...
-
     function switchMode(mode) {
         document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
         document.querySelectorAll('.mode-btn').forEach(el => el.classList.remove('active'));
@@ -450,18 +453,17 @@
                 currentBitSamples = [];
                 consecutiveNoSignal = 0;
                 isSynchronized = false;
-                bitSampleCounter = 0; // Reset sample counter
+                bitSampleCounter = 0; 
                 document.getElementById('rxPreviewContent').textContent = 'Listening...';
                 
                 const totalSamplesPerSecond = rxSpeed * SAMPLES_PER_BIT;
                 const sampleDelayMs = 1000 / totalSamplesPerSecond;
                 
                 console.group('RECEIVER INITIALIZATION');
+                console.log('MIN_PEAK_AMP (Signal Threshold):', MIN_PEAK_AMP);
                 console.log('RX Speed (bps):', rxSpeed);
                 console.log('Samples per Bit:', SAMPLES_PER_BIT);
                 console.log('Sample Delay (ms):', sampleDelayMs.toFixed(2));
-                console.log('Awaiting Preamble:', PREAMBLE);
-                console.log('Start Delimiter:', START_DELIMITER);
                 console.groupEnd();
 
                 if (sampleInterval) clearInterval(sampleInterval);
@@ -531,8 +533,19 @@
             const avgFreq = getAverageFrequency(freqData);
             document.getElementById('avgFreq').textContent = Math.floor(avgFreq) + ' Hz';
 
-            const sampleBit = avgFreq > FREQ_THRESHOLD ? 1 : 0;
-            currentBitSamples.push(sampleBit);
+            // Special check for calibration tone (1500Hz) - it will be detected as a mix
+            // This tone is mainly for checking the peakAmp value during the 3s of its duration
+            if (avgFreq > FREQ_0 && avgFreq < FREQ_1) {
+                // If we're synchronized, assume it's data
+                if (isSynchronized) {
+                    const sampleBit = avgFreq > FREQ_THRESHOLD ? 1 : 0;
+                    currentBitSamples.push(sampleBit);
+                } else {
+                    // During calibration/preamble, just collect the sample
+                    const sampleBit = avgFreq > FREQ_THRESHOLD ? 1 : 0;
+                    currentBitSamples.push(sampleBit);
+                }
+            }
             
             // -----------------------------------------------------
             // 2. MAJORITY VOTE AND BIT DETECTION
@@ -542,7 +555,12 @@
                 const ones = currentBitSamples.filter(b => b === 1).length;
                 const majorityBit = ones > (SAMPLES_PER_BIT / 2) ? '1' : '0';
                 
-                console.log(`[RX BIT] Sampled: ${currentBitSamples.join('')} (1s=${ones}). Detected Bit: ${majorityBit}.`);
+                // Only log detailed bit detection once synchronized to avoid spam
+                if (isSynchronized) {
+                    console.log(`[RX BIT - DATA] Sampled: ${currentBitSamples.join('')} (1s=${ones}). Detected Bit: ${majorityBit}.`);
+                } else {
+                    console.log(`[RX BIT - SYNC] Detected Bit: ${majorityBit}.`);
+                }
 
                 currentBitSamples = []; // Reset for the next bit
                 
@@ -551,12 +569,11 @@
                 // -----------------------------------------------------
                 
                 if (!isSynchronized) {
-                    // Try to synchronize by looking for PREAMBLE + START_DELIMITER
                     const syncSequence = PREAMBLE + START_DELIMITER;
                     detectedBits += majorityBit;
                     
+                    // Only keep enough bits to check the sequence
                     if (detectedBits.length > syncSequence.length) {
-                         // Only keep enough bits to check the sequence
                          detectedBits = detectedBits.substring(detectedBits.length - syncSequence.length);
                     }
                     
@@ -564,24 +581,21 @@
                         isSynchronized = true;
                         detectedBits = ''; // Clear the buffer to start with real data
                         document.getElementById('rxStatus').textContent = 'Synchronized. Awaiting Data...';
+                        document.getElementById('rxPreviewContent').textContent = ''; // Clear preview
                         console.log('*** SYNCHRONIZATION ACHIEVED! Data begins now. ***');
                     }
                 } else {
-                    // We are synchronized, so every detected bit is data
                     detectedBits += majorityBit;
                     document.getElementById('bitsReceived').textContent = detectedBits.length;
 
-                    // Decode data in real-time (only decode full bytes)
                     if (detectedBits.length >= 8) {
                         const completeBytes = Math.floor(detectedBits.length / 8);
                         const fullBytes = detectedBits.substring(0, completeBytes * 8);
                         const text = binaryToText(fullBytes);
                         
-                        // Append to preview
                         document.getElementById('rxPreviewContent').textContent += text;
                         console.log('--> [DECODED BYTE] <--:', text);
                         
-                        // Crucial: remove the processed bits
                         detectedBits = detectedBits.substring(completeBytes * 8); 
                     }
                 }
@@ -597,8 +611,9 @@
                     console.warn(`[RX RESET] Lost synchronization due to extended signal loss (${consecutiveNoSignal} samples).`);
                     isSynchronized = false;
                 }
-                currentBitSamples = []; // Clear the partial bit buffer
-                detectedBits = ''; // Clear the data buffer
+                currentBitSamples = []; 
+                detectedBits = ''; 
+                document.getElementById('rxStatus').textContent = 'Sampling... Awaiting Sync.';
             }
         }
     }
@@ -608,8 +623,6 @@
         animationId = requestAnimationFrame(detectSignal);
     }
     
-    // ... (updateRxChart, updateStats, and event listeners for speed/input remain the same) ...
-
     function updateRxChart() {
         if (!rxChart || !freqData) return;
         
@@ -650,15 +663,16 @@
         const text = document.getElementById('messageInput').value;
         const size = new TextEncoder().encode(text).length;
         const totalBits = size * 8; 
+        // Add 3 seconds for the calibration tone
         const totalTransmissionBits = totalBits + PREAMBLE.length + START_DELIMITER.length;
-        const duration = (totalTransmissionBits / txSpeed).toFixed(2);
+        const duration = (totalTransmissionBits / txSpeed + CALIBRATION_TONE_DURATION).toFixed(2);
         
         document.getElementById('dataSize').textContent = size + ' B (' + totalBits + ' data bits)';
         document.getElementById('estDuration').textContent = duration + ' s';
         
         if (text) {
             document.getElementById('preview').classList.remove('hidden');
-            document.getElementById('previewContent').textContent = `Preamble (${PREAMBLE}) + Delimiter (${START_DELIMITER}) + Data...`;
+            document.getElementById('previewContent').textContent = `Calibration Tone (3s) + Preamble (${PREAMBLE}) + Delimiter (${START_DELIMITER}) + Data...`;
         } else {
             document.getElementById('preview').classList.add('hidden');
         }

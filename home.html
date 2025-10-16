@@ -247,7 +247,7 @@
 </head>
 <body>
     <div class="container">
-        <h1 style="text-align: center; margin-bottom: 30px; font-size: 32px; background: linear-gradient(135deg, #667eea 0%, #f093fb 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">v11 Data Over Sound</h1>
+        <h1 style="text-align: center; margin-bottom: 30px; font-size: 32px; background: linear-gradient(135deg, #667eea 0%, #f093fb 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">v12 Data Over Sound</h1>
         
         <div class="mode-selector">
             <button class="mode-btn transmitter active" onclick="switchMode('transmitter')">📡 TRANSMITTER</button>
@@ -357,8 +357,7 @@
             </div>
         </div>
     </div>
-    
- <script>
+    <script>
     let audioContext = null;
     let rxChart = null;
     let isListening = false;
@@ -366,19 +365,22 @@
     let timeDomainData = null;
     let freqData = null;
     let animationId = null;
-    let sampleInterval = null; // New timer for fixed-rate sampling
+    let sampleInterval = null; // Timer for fixed-rate sampling
     
     // Core parameters
     let txSpeed = 1; // bits per second
     let rxSpeed = 1;
-    const SAMPLES_PER_BIT = 5; // How many times to sample per bit duration
+    const SAMPLES_PER_BIT = 5; // How many times to sample per bit duration (must be odd for majority vote)
     const FREQ_0 = 500; // Frequency for bit '0'
     const FREQ_1 = 2500; // Frequency for bit '1'
     const FREQ_THRESHOLD = (FREQ_0 + FREQ_1) / 2; // Midpoint threshold
+    const MIN_PEAK_AMP = 30; // Minimum required amplitude (0-127) for a valid signal
     
     // Receiver State
     let detectedBits = '';
     let currentBitSamples = [];
+    let consecutiveNoSignal = 0; // Tracks consecutive samples below threshold
+    const MAX_NO_SIGNAL = SAMPLES_PER_BIT * 2; // Max time to tolerate no signal before resetting
 
     function getAudioContext() {
         if (!audioContext) {
@@ -402,12 +404,12 @@
         for (let i = 0; i < binary.length; i += 8) {
             const byte = binary.substr(i, 8);
             if (byte.length === 8) {
-                // Check for non-printable/null characters (ASCII 0-31 and 127)
                 const charCode = parseInt(byte, 2);
+                // Check for non-printable/null characters (ASCII 0-31 and 127)
                 if (charCode > 31 && charCode < 127) {
                     text += String.fromCharCode(charCode);
                 } else {
-                    // Use a placeholder for control characters to aid debugging
+                    // Placeholder for debugging control characters
                     text += ''; 
                 }
             }
@@ -447,7 +449,6 @@
         console.groupEnd();
         
         let startTime = ctx.currentTime;
-        // Reduce the effective duration slightly to allow space between tones
         const symbolDuration = 1 / speed; 
         
         document.getElementById('txStatus').textContent = 'Transmitting...';
@@ -537,7 +538,8 @@
                 const source = ctx.createMediaStreamSource(stream);
                 analyser = ctx.createAnalyser();
                 analyser.fftSize = 4096;
-                analyser.smoothingTimeConstant = 0.8; // Reduced smoothing for better frequency response
+                // Decreased smoothing time constant for better responsiveness
+                analyser.smoothingTimeConstant = 0.7; 
                 source.connect(analyser);
                 
                 timeDomainData = new Uint8Array(analyser.fftSize);
@@ -546,13 +548,14 @@
                 // Reset receiver state
                 detectedBits = '';
                 currentBitSamples = [];
+                consecutiveNoSignal = 0;
                 document.getElementById('rxPreviewContent').textContent = 'Listening...';
                 
                 // Calculate fixed sample rate
                 const totalSamplesPerSecond = rxSpeed * SAMPLES_PER_BIT;
                 const sampleDelayMs = 1000 / totalSamplesPerSecond;
                 
-                console.group('RECEIVER');
+                console.group('RECEIVER INITIALIZATION');
                 console.log('RX Speed (bps):', rxSpeed);
                 console.log('Samples per Bit:', SAMPLES_PER_BIT);
                 console.log('Sample Delay (ms):', sampleDelayMs.toFixed(2));
@@ -562,14 +565,14 @@
                 if (sampleInterval) clearInterval(sampleInterval);
                 sampleInterval = setInterval(processSample, sampleDelayMs);
                 
-                document.getElementById('rxStatus').textContent = 'Sampling @ ' + totalSamplesPerSecond + ' Hz';
+                document.getElementById('rxStatus').textContent = 'Sampling @ ' + totalSamplesPerSecond.toFixed(0) + ' Hz';
                 detectSignal(); // Start animation frame for chart updates
             })
             .catch(err => {
                 console.error('Microphone Error:', err);
                 alert('Microphone access denied or failed: ' + err.message);
-                isListening = true; // Set back to true so click flips it to false
-                document.getElementById('listeningBtn').click(); // Turn off listening state
+                isListening = true; 
+                document.getElementById('listeningBtn').click(); 
             });
     }
     
@@ -581,7 +584,6 @@
             clearInterval(sampleInterval);
             sampleInterval = null;
         }
-        // NOTE: Stopping the mic stream is complex but often done by the browser after a while
         document.getElementById('rxStatus').textContent = 'Idle';
     }
     
@@ -591,11 +593,10 @@
         const nyquist = audioContext.sampleRate / 2;
         const freqBinSize = nyquist / freqData.length;
         
-        // Define range to check (e.g., up to 3000 Hz)
         const maxFreqIndex = Math.floor(3000 / freqBinSize); 
 
         for (let i = 0; i < maxFreqIndex; i++) {
-            // Check for significant amplitude (threshold is subjective, 100/255 is approx 40%)
+            // Check for significant amplitude
             if (freqData[i] > 100) { 
                 sum += i * freqBinSize;
                 count++;
@@ -619,17 +620,16 @@
 
         document.getElementById('peakAmp').textContent = peakAmp;
         
-        // Threshold check: signal must be loud enough (peak > 25 is a good starting point)
-        if (peakAmp > 25) { 
+        // Threshold check: signal must be loud enough (increased to 30)
+        if (peakAmp > MIN_PEAK_AMP) { 
+            consecutiveNoSignal = 0; // Reset no-signal counter
+            
             const avgFreq = getAverageFrequency(freqData);
             document.getElementById('avgFreq').textContent = Math.floor(avgFreq) + ' Hz';
 
             const sampleBit = avgFreq > FREQ_THRESHOLD ? 1 : 0;
             currentBitSamples.push(sampleBit);
             
-            // Log the sample for debugging the majority vote
-            // console.log(`[RX Sample] Freq: ${Math.floor(avgFreq)}Hz, Bit: ${sampleBit}. Samples in window: ${currentBitSamples.length}/${SAMPLES_PER_BIT}`);
-
             // Perform majority vote when enough samples are collected for one bit
             if (currentBitSamples.length >= SAMPLES_PER_BIT) {
                 const ones = currentBitSamples.filter(b => b === 1).length;
@@ -651,17 +651,24 @@
                         document.getElementById('rxPreviewContent').textContent = text;
                         console.log('--> [DECODED TEXT] <--:', text);
                     }
-                    // Crucial: remove the processed bits so we only keep partial bits (if any)
+                    // Crucial: remove the processed bits
                     detectedBits = detectedBits.substring(completeBytes * 8); 
                 }
             }
         } else {
-            // If the signal drops too low, reset the sample buffer to avoid noise samples
-            currentBitSamples = []; 
+            // Signal is too low
+            consecutiveNoSignal++;
             document.getElementById('avgFreq').textContent = '0 Hz (No signal)';
+            
+            // Auto-reset logic: If no signal for too long, clear the current partial bit buffer
+            if (consecutiveNoSignal >= MAX_NO_SIGNAL) {
+                if (currentBitSamples.length > 0) {
+                    console.warn(`[RX RESET] Cleared ${currentBitSamples.length} partial samples due to extended signal loss.`);
+                }
+                currentBitSamples = []; 
+                // We keep detectedBits, assuming the receiver will catch the next byte start
+            }
         }
-        
-        // Chart update is handled by the requestAnimationFrame loop (detectSignal)
     }
     
     function detectSignal() {
@@ -677,14 +684,12 @@
         const nyquist = ctx.sampleRate / 2;
         const freqBinSize = nyquist / analyser.frequencyBinCount;
         
-        // Show frequency bins up to 3000Hz (index ~ 512 for a 44100Hz sample rate)
         const visibleBins = 512; 
         const visibleData = Array.from(freqData).slice(0, visibleBins);
         
-        // Update labels only once on load or context change
         if (rxChart.data.labels.length !== visibleBins) {
             rxChart.data.labels = Array.from({length: visibleBins}, (_, i) => Math.floor(i * freqBinSize));
-            rxChart.update('none'); // Update labels immediately
+            rxChart.update('none'); 
         }
         
         rxChart.data.datasets[0].data = visibleData;
@@ -702,7 +707,6 @@
         rxSpeed = parseInt(e.target.value);
         document.getElementById('rxSpeedDisplay').textContent = rxSpeed + ' bit/sec';
         
-        // Re-initialize sampling if listening is active (to change sample rate)
         if (isListening) {
             stopReceiving();
             startReceiving();
@@ -712,7 +716,6 @@
     function updateStats() {
         const text = document.getElementById('messageInput').value;
         const size = new TextEncoder().encode(text).length;
-        // Total bits = size * 8 (assuming 8 bits/byte)
         const totalBits = size * 8; 
         const duration = (totalBits / txSpeed).toFixed(2);
         
@@ -732,7 +735,6 @@
     // Initialize RX chart
     window.addEventListener('load', () => {
         const rxCtx = document.getElementById('rxChart');
-        // Initial labels for chart, will be overwritten after microphone access
         const initialLabels = Array.from({length: 512}, (_, i) => i); 
 
         rxChart = new Chart(rxCtx, {
@@ -756,7 +758,7 @@
                     legend: { display: true, labels: { color: 'white' } },
                     title: { display: true, text: 'Real-time Frequency Spectrum (0-3000 Hz)', color: 'white' }
                 },
-                animation: false, // Disable chart.js animation for real-time
+                animation: false, 
                 scales: {
                     y: {
                         title: { display: true, text: 'Amplitude (0-255)', color: 'rgba(255,255,255,0.8)' },
@@ -769,7 +771,6 @@
                         title: { display: true, text: 'Frequency (Hz)', color: 'rgba(255,255,255,0.8)' },
                         ticks: { 
                             color: 'rgba(255,255,255,0.6)',
-                            // Only show a few ticks for clarity
                             callback: function(val, index) {
                                 return index % 100 === 0 ? this.getLabelForValue(val) : '';
                             }
@@ -780,15 +781,14 @@
             }
         });
         
-        // Start chart rendering loop
         const chartRender = () => {
             if (isListening) updateRxChart();
             requestAnimationFrame(chartRender);
         };
         chartRender();
 
-        updateStats(); // Initial stats calculation
+        updateStats(); 
     });
-    </script>
+</script>
 </body>
 </html>

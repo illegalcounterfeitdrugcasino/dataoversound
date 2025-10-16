@@ -151,34 +151,34 @@
             cursor: not-allowed;
         }
 
-        #qr-display {
-            width: 600px;
-            height: 600px;
+        .qr-container {
+            background: white;
+            padding: 40px;
             margin: 20px auto;
             display: flex;
             align-items: center;
             justify-content: center;
-            background: white;
-            border: 8px solid #333;
             border-radius: 10px;
-            position: relative;
+            max-width: 700px;
+        }
+
+        #qr-display {
+            background: white;
         }
 
         #qr-display canvas {
-            max-width: 100%;
-            max-height: 100%;
+            display: block !important;
         }
 
-        .frame-indicator {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            background: rgba(0, 0, 0, 0.8);
-            color: white;
-            padding: 10px 15px;
-            border-radius: 5px;
-            font-weight: 600;
-            font-size: 1.2em;
+        .frame-info {
+            text-align: center;
+            font-size: 2em;
+            font-weight: 700;
+            color: #667eea;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f0f0f0;
+            border-radius: 10px;
         }
 
         .stats {
@@ -209,7 +209,7 @@
 
         .video-container {
             position: relative;
-            max-width: 640px;
+            max-width: 100%;
             margin: 20px auto;
         }
 
@@ -219,6 +219,19 @@
             display: block;
             border-radius: 10px;
             border: 4px solid #333;
+        }
+
+        .scan-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 300px;
+            height: 300px;
+            border: 3px solid #4caf50;
+            border-radius: 10px;
+            box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5);
+            pointer-events: none;
         }
 
         .info-box {
@@ -284,6 +297,11 @@
             animation: pulse 2s infinite;
         }
 
+        .status.scanning {
+            background: #2196f3;
+            color: white;
+        }
+
         @keyframes pulse {
             0%, 100% { opacity: 1; }
             50% { opacity: 0.7; }
@@ -295,13 +313,32 @@
             border-radius: 5px;
             font-family: monospace;
             font-size: 0.85em;
-            max-height: 150px;
+            max-height: 200px;
             overflow-y: auto;
             margin: 10px 0;
         }
 
         #scan-canvas {
             display: none;
+        }
+
+        .alert {
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 10px;
+            font-weight: 600;
+        }
+
+        .alert.success {
+            background: #d4edda;
+            color: #155724;
+            border: 2px solid #c3e6cb;
+        }
+
+        .alert.warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 2px solid #ffeaa7;
         }
     </style>
 </head>
@@ -314,26 +351,26 @@
             <button class="mode-btn" onclick="setMode('receive')">📱 Receive (Phone)</button>
         </div>
 
-        <!-- Transmit Section -->
         <div id="transmit-section" class="section active">
             <div class="input-area">
-                <textarea id="text-input" placeholder="Enter text to transmit...">Hello from QR codes!</textarea>
+                <textarea id="text-input" placeholder="Enter text to transmit...">Hello World from QR codes!</textarea>
             </div>
 
             <div class="file-upload" onclick="document.getElementById('file-input').click()">
-                <input type="file" id="file-input" onchange="handleFileSelect(event)">
-                <p>📁 Click to upload a file (images, text, small files)</p>
+                <input type="file" id="file-input" onchange="handleFileSelect(event)" accept="image/*,text/*,.pdf,.json">
+                <p>📁 Click to upload a file</p>
+                <p style="font-size: 0.9em; color: #999; margin-top: 5px;">Images, text files (max 200KB recommended)</p>
                 <p id="file-name" style="margin-top: 10px; color: #667eea; font-weight: 600;"></p>
             </div>
 
             <div class="controls">
                 <div class="control-group">
-                    <label>Display Time per QR (seconds): <span id="delay-value">1.5</span></label>
-                    <input type="range" id="delay-slider" min="0.5" max="3" step="0.1" value="1.5" oninput="updateDelay(this.value)">
+                    <label>Display Time per QR (seconds): <span id="delay-value">2.0</span></label>
+                    <input type="range" id="delay-slider" min="1" max="4" step="0.5" value="2" oninput="updateDelay(this.value)">
                 </div>
                 <div class="control-group">
-                    <label>Chunk Size (bytes): <span id="chunk-value">800</span></label>
-                    <input type="range" id="chunk-slider" min="400" max="1500" step="100" value="800" oninput="updateChunkSize(this.value)">
+                    <label>Bytes per QR: <span id="chunk-value">500</span></label>
+                    <input type="range" id="chunk-slider" min="300" max="1000" step="100" value="500" oninput="updateChunkSize(this.value)">
                 </div>
             </div>
 
@@ -341,8 +378,12 @@
 
             <div class="status" id="transmit-status">Ready to transmit</div>
 
-            <div id="qr-display">
-                <p style="color: #999;">QR codes will appear here</p>
+            <div class="frame-info" id="frame-info" style="display: none;"></div>
+
+            <div class="qr-container">
+                <div id="qr-display">
+                    <p style="color: #999; padding: 100px 50px; text-align: center;">QR codes will appear here</p>
+                </div>
             </div>
 
             <div class="stats" id="transmit-stats" style="display: none;">
@@ -351,11 +392,11 @@
                     <div class="stat-value" id="total-bytes">0</div>
                 </div>
                 <div class="stat-item">
-                    <div class="stat-label">QR Codes</div>
+                    <div class="stat-label">Total QR Codes</div>
                     <div class="stat-value" id="total-qrs">0</div>
                 </div>
                 <div class="stat-item">
-                    <div class="stat-label">Current QR</div>
+                    <div class="stat-label">Current</div>
                     <div class="stat-value" id="current-qr">0</div>
                 </div>
                 <div class="stat-item">
@@ -365,28 +406,29 @@
             </div>
         </div>
 
-        <!-- Receive Section -->
         <div id="receive-section" class="section">
             <div class="info-box">
                 <strong>📱 Instructions:</strong><br>
-                1. Click "Start Camera" and allow camera access<br>
-                2. Point camera at the QR codes on laptop screen<br>
-                3. Keep camera steady and screen brightness HIGH<br>
-                4. System will automatically scan each QR code<br>
-                5. Data appears live below as it's received!
+                1. Set transmitter running on laptop first<br>
+                2. Click "Start Camera" below<br>
+                3. Point phone camera at QR codes<br>
+                4. Keep phone STEADY in the green box area<br>
+                5. Brightness should be HIGH on laptop<br>
+                6. Distance: 20-40cm from screen
             </div>
 
             <button class="control-btn" id="camera-btn" onclick="toggleCamera()">📷 Start Camera</button>
 
             <div class="status" id="receive-status">Camera not started</div>
 
+            <div id="scan-alert"></div>
+
             <div class="video-container">
                 <video id="video" autoplay playsinline></video>
+                <div class="scan-overlay"></div>
             </div>
 
             <canvas id="scan-canvas"></canvas>
-
-            <div class="log" id="log"></div>
 
             <div class="progress-bar">
                 <div class="progress-fill" id="receive-progress" style="width: 0%">0%</div>
@@ -402,14 +444,16 @@
                     <div class="stat-value" id="expected-bytes">?</div>
                 </div>
                 <div class="stat-item">
-                    <div class="stat-label">QR Scanned</div>
+                    <div class="stat-label">QR Codes Got</div>
                     <div class="stat-value" id="qrs-scanned">0</div>
                 </div>
                 <div class="stat-item">
-                    <div class="stat-label">Success Rate</div>
+                    <div class="stat-label">Completion</div>
                     <div class="stat-value" id="success-rate">0%</div>
                 </div>
             </div>
+
+            <div class="log" id="log"></div>
 
             <div class="preview-container" id="receive-preview">
                 <p style="text-align: center; color: #999;">Received data will appear here...</p>
@@ -426,9 +470,9 @@
         let fileType = null;
         
         // Transmission
-        let displayDelay = 1.5;
-        let chunkSize = 800;
-        let transmitInterval = null;
+        let displayDelay = 2.0;
+        let chunkSize = 500;
+        let transmitTimeout = null;
         let currentQRIndex = 0;
         let qrCodes = [];
         
@@ -438,7 +482,8 @@
         let totalChunks = 0;
         let dataLength = 0;
         let receivedDataType = null;
-        let lastScannedIndex = -1;
+        let scannedQRs = new Set();
+        let lastScanTime = 0;
 
         function setMode(mode) {
             currentMode = mode;
@@ -469,7 +514,7 @@
             if (!file) return;
 
             if (file.size > 500000) {
-                alert('File too large! Please use files under 500KB');
+                alert('File too large! Please use files under 500KB for reliable transfer');
                 return;
             }
 
@@ -505,7 +550,6 @@
                 return;
             }
 
-            // Create QR codes
             qrCodes = createQRCodes(dataToSend, dataType);
             currentQRIndex = 0;
             
@@ -514,6 +558,7 @@
             document.getElementById('transmit-status').textContent = 'Transmitting...';
             document.getElementById('transmit-status').className = 'status active';
             document.getElementById('transmit-stats').style.display = 'grid';
+            document.getElementById('frame-info').style.display = 'block';
             document.getElementById('total-bytes').textContent = dataToSend.length;
             document.getElementById('total-qrs').textContent = qrCodes.length;
             
@@ -522,16 +567,16 @@
 
         function stopTransmission() {
             transmitting = false;
-            clearTimeout(transmitInterval);
+            clearTimeout(transmitTimeout);
             document.querySelector('#transmit-section .control-btn').textContent = '🚀 Start Transmission';
             document.getElementById('transmit-status').textContent = 'Stopped';
             document.getElementById('transmit-status').className = 'status';
+            document.getElementById('frame-info').style.display = 'none';
         }
 
         function createQRCodes(data, dataType) {
             const codes = [];
             
-            // Create header
             const header = {
                 len: data.length,
                 type: dataType,
@@ -540,12 +585,10 @@
             const headerStr = JSON.stringify(header);
             codes.push({ index: 0, data: headerStr, isHeader: true });
             
-            // Create data chunks
             for (let i = 0; i < data.length; i += chunkSize) {
-                const chunk = data.slice(i, i + chunkSize);
+                const chunk = data.slice(i, Math.min(i + chunkSize, data.length));
                 const chunkIndex = Math.floor(i / chunkSize) + 1;
                 
-                // Convert to base64 for QR encoding
                 const base64 = arrayBufferToBase64(chunk);
                 const payload = JSON.stringify({
                     i: chunkIndex,
@@ -577,44 +620,46 @@
         }
 
         function displayNextQR() {
-            if (!transmitting || currentQRIndex >= qrCodes.length) {
-                if (transmitting) {
-                    currentQRIndex = 0; // Loop
-                } else {
-                    return;
-                }
+            if (!transmitting) return;
+
+            if (currentQRIndex >= qrCodes.length) {
+                currentQRIndex = 0;
             }
 
             const qrData = qrCodes[currentQRIndex];
             const display = document.getElementById('qr-display');
             display.innerHTML = '';
             
-            // Create frame indicator
-            const indicator = document.createElement('div');
-            indicator.className = 'frame-indicator';
-            indicator.textContent = qrData.isHeader ? 'HEADER' : `${qrData.index}/${qrCodes.length - 1}`;
-            display.appendChild(indicator);
+            const frameInfo = document.getElementById('frame-info');
+            if (qrData.isHeader) {
+                frameInfo.textContent = '📋 HEADER';
+                frameInfo.style.background = '#fff3cd';
+            } else {
+                frameInfo.textContent = `QR ${qrData.index} of ${qrCodes.length - 1}`;
+                frameInfo.style.background = '#d4edda';
+            }
             
-            // Generate QR code
-            new QRCode(display, {
-                text: qrData.data,
-                width: 550,
-                height: 550,
-                colorDark: "#000000",
-                colorLight: "#ffffff",
-                correctLevel: QRCode.CorrectLevel.M
-            });
+            try {
+                new QRCode(display, {
+                    text: qrData.data,
+                    width: 512,
+                    height: 512,
+                    colorDark: "#000000",
+                    colorLight: "#ffffff",
+                    correctLevel: QRCode.CorrectLevel.H
+                });
+            } catch (e) {
+                console.error('QR generation error:', e);
+            }
             
             document.getElementById('current-qr').textContent = `${currentQRIndex + 1}/${qrCodes.length}`;
             const progress = ((currentQRIndex + 1) / qrCodes.length * 100).toFixed(0);
             document.getElementById('progress-percent').textContent = progress + '%';
             
             currentQRIndex++;
-            
-            transmitInterval = setTimeout(displayNextQR, displayDelay * 1000);
+            transmitTimeout = setTimeout(displayNextQR, displayDelay * 1000);
         }
 
-        // RECEIVER
         async function toggleCamera() {
             if (receiving) {
                 stopCamera();
@@ -645,21 +690,22 @@
                 
                 receiving = true;
                 document.getElementById('camera-btn').textContent = '⏹️ Stop Camera';
-                document.getElementById('receive-status').textContent = 'Scanning for QR codes...';
-                document.getElementById('receive-status').className = 'status active';
+                document.getElementById('receive-status').textContent = 'Scanning...';
+                document.getElementById('receive-status').className = 'status scanning';
                 document.getElementById('receive-stats').style.display = 'grid';
                 
                 receivedChunks = {};
                 totalChunks = 0;
                 dataLength = 0;
-                lastScannedIndex = -1;
+                scannedQRs = new Set();
                 
-                scanInterval = setInterval(scanQR, 100);
+                scanInterval = setInterval(scanQR, 200);
                 
-                log('Camera started, scanning...');
+                log('📷 Camera ready - point at QR codes');
+                showAlert('Position your camera over the QR code', 'warning');
             } catch (err) {
                 alert('Camera error: ' + err.message);
-                log('ERROR: ' + err.message);
+                log('❌ ERROR: ' + err.message);
             }
         }
 
@@ -684,6 +730,10 @@
             
             if (video.readyState !== video.HAVE_ENOUGH_DATA) return;
             
+            const now = Date.now();
+            if (now - lastScanTime < 150) return;
+            lastScanTime = now;
+            
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
             const ctx = canvas.getContext('2d');
@@ -703,29 +753,28 @@
             try {
                 const parsed = JSON.parse(data);
                 
-                // Check if header
                 if (parsed.len !== undefined) {
                     dataLength = parsed.len;
                     receivedDataType = parsed.type;
                     totalChunks = parsed.chunks;
                     
-                    document.getElementById('expected-bytes').textContent = dataLength;
-                    log(`Header: ${dataLength} bytes, ${totalChunks} chunks`);
-                    receivedChunks[0] = { isHeader: true };
+                    if (!receivedChunks[0]) {
+                        receivedChunks[0] = { isHeader: true };
+                        document.getElementById('expected-bytes').textContent = dataLength;
+                        log(`📋 Header received: ${dataLength} bytes, ${totalChunks} chunks`);
+                        showAlert('Header received! Keep scanning...', 'success');
+                    }
                 } 
-                // Data chunk
                 else if (parsed.i !== undefined && parsed.d !== undefined) {
                     const index = parsed.i;
                     
-                    // Avoid re-scanning same QR
-                    if (index === lastScannedIndex) return;
-                    lastScannedIndex = index;
-                    
-                    if (!receivedChunks[index]) {
+                    if (!scannedQRs.has(index)) {
+                        scannedQRs.add(index);
+                        
                         const chunkData = base64ToArrayBuffer(parsed.d);
                         receivedChunks[index] = { data: chunkData };
                         
-                        const scanned = Object.keys(receivedChunks).length - 1; // -1 for header
+                        const scanned = scannedQRs.size;
                         document.getElementById('qrs-scanned').textContent = scanned;
                         
                         if (totalChunks > 0) {
@@ -733,13 +782,15 @@
                             document.getElementById('success-rate').textContent = rate + '%';
                         }
                         
-                        log(`Chunk ${index}/${totalChunks} received`);
+                        log(`✓ QR ${index}/${totalChunks} scanned`);
+                        
+                        if (scanned % 5 === 0) {
+                            showAlert(`${scanned} of ${totalChunks} QR codes received`, 'success');
+                        }
+                        
                         reconstructData();
                     }
                 }
-                
-                // Reset after small delay to allow next scan
-                setTimeout(() => { lastScannedIndex = -1; }, 200);
                 
             } catch (e) {
                 // Invalid QR data
@@ -749,7 +800,6 @@
         function reconstructData() {
             if (totalChunks === 0 || dataLength === 0) return;
             
-            // Check how many chunks we have
             const chunkIndices = Object.keys(receivedChunks)
                 .map(k => parseInt(k))
                 .filter(k => k > 0)
@@ -757,7 +807,6 @@
             
             if (chunkIndices.length === 0) return;
             
-            // Concatenate chunks
             const allBytes = [];
             for (const index of chunkIndices) {
                 const chunk = receivedChunks[index];
@@ -775,16 +824,16 @@
                 document.getElementById('receive-progress').textContent = progress.toFixed(0) + '%';
             }
             
-            // Display data
             if (receivedBytes > 0) {
                 const data = new Uint8Array(allBytes.slice(0, dataLength));
                 displayReceivedData(data);
             }
             
-            if (receivedBytes >= dataLength) {
-                document.getElementById('receive-status').textContent = 'Transfer complete!';
-                document.getElementById('receive-status').className = 'status';
-                log('✓ Transfer complete!');
+            if (receivedBytes >= dataLength && scannedQRs.size >= totalChunks) {
+                document.getElementById('receive-status').textContent = '✓ Transfer Complete!';
+                document.getElementById('receive-status').className = 'status active';
+                log('🎉 Transfer complete!');
+                showAlert('Transfer complete! Data received successfully!', 'success');
             }
         }
 
@@ -798,7 +847,7 @@
                 const img = document.createElement('img');
                 img.src = url;
                 img.style.maxWidth = '100%';
-                img.onload = () => log('Image rendered!');
+                img.onload = () => log('🖼️ Image rendered!');
                 preview.appendChild(img);
             } else {
                 try {
@@ -807,9 +856,17 @@
                     pre.textContent = text;
                     preview.appendChild(pre);
                 } catch (e) {
-                    preview.innerHTML = `<p>Binary data (${data.length} bytes)</p>`;
+                    preview.innerHTML = `<p>📦 Binary data (${data.length} bytes)</p>`;
                 }
             }
+        }
+
+        function showAlert(message, type) {
+            const alertDiv = document.getElementById('scan-alert');
+            alertDiv.innerHTML = `<div class="alert ${type}">${message}</div>`;
+            setTimeout(() => {
+                alertDiv.innerHTML = '';
+            }, 3000);
         }
 
         function log(message) {
@@ -819,8 +876,8 @@
             logEl.scrollTop = logEl.scrollHeight;
             
             const lines = logEl.innerHTML.split('<br>');
-            if (lines.length > 8) {
-                logEl.innerHTML = lines.slice(-8).join('<br>');
+            if (lines.length > 100) {
+                logEl.innerHTML = lines.slice(lines.length - 100).join('<br>');
             }
         }
     </script>

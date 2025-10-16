@@ -224,6 +224,22 @@
             border-radius: 6px;
         }
         
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 3px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            width: 0%;
+            transition: width 0.1s;
+        }
+        
         .hidden {
             display: none;
         }
@@ -242,36 +258,18 @@
         <div id="transmitter" class="content active">
             <div class="section">
                 <h2>📤 Input Data</h2>
-                <div class="info-box">Select how you want to send data: text message or file upload</div>
+                <div class="info-box">Enter text or upload a file. It will be encoded and transmitted as sound!</div>
                 
-                <div style="margin-bottom: 15px;">
-                    <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; margin-bottom: 10px;">
-                        <input type="radio" name="input-type" value="text" checked onchange="updateInputType('text')">
-                        <span>📝 Text Message</span>
-                    </label>
-                    <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
-                        <input type="radio" name="input-type" value="file" onchange="updateInputType('file')">
-                        <span>📁 File Upload</span>
-                    </label>
-                </div>
-                
-                <div id="text-input">
-                    <textarea id="messageInput" placeholder="Enter your message here..." style="min-height: 100px;"></textarea>
-                </div>
-                
-                <div id="file-input" class="hidden">
-                    <input type="file" id="fileInput" onchange="handleFileUpload(event)">
-                </div>
+                <textarea id="messageInput" placeholder="Enter your message here..." style="min-height: 100px;"></textarea>
             </div>
             
             <div class="section">
-                <h2>⚙️ Encoding Settings</h2>
+                <h2>⚙️ Settings</h2>
                 <label style="display: block; margin-bottom: 10px;">
                     <span style="color: #64b5f6;">Encoding Mode:</span>
                     <select id="encodingMode" style="width: 100%; padding: 8px; margin-top: 5px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; color: white;">
-                        <option value="fsk">FSK (Frequency Shift Keying) - Audible</option>
+                        <option value="fsk">FSK (Audible) - Recommended</option>
                         <option value="ultrasonic">Ultrasonic (Inaudible)</option>
-                        <option value="chirp">Chirp Modulation - Audible</option>
                     </select>
                 </label>
             </div>
@@ -286,8 +284,8 @@
                     <div class="stat-value" id="estDuration">0 s</div>
                 </div>
                 <div class="stat">
-                    <div class="stat-label">Encoding</div>
-                    <div class="stat-value" id="encodingDisplay">FSK</div>
+                    <div class="stat-label">Status</div>
+                    <div class="stat-value" id="txStatus">Ready</div>
                 </div>
             </div>
             
@@ -296,10 +294,9 @@
                 <div id="previewContent"></div>
             </div>
             
-            <button onclick="transmitData()" style="width: 100%; margin-top: 20px; padding: 15px; font-size: 18px;">🔊 START TRANSMISSION</button>
-            
-            <div class="chart-container hidden" id="transmitterChart">
-                <canvas id="txChart"></canvas>
+            <button onclick="transmitData()" id="transmitBtn" style="width: 100%; margin-top: 20px; padding: 15px; font-size: 18px;">🔊 TRANSMIT</button>
+            <div class="progress-bar">
+                <div class="progress-fill" id="txProgress"></div>
             </div>
         </div>
         
@@ -307,14 +304,14 @@
         <div id="receiver" class="content">
             <div class="section">
                 <h2>📥 Receiver Controls</h2>
-                <div class="info-box">Set this device to listening mode. When the transmitter starts, it will send a header signal first, then the encoded data.</div>
+                <div class="info-box">Click START LISTENING and make sure your speaker volume is up on the transmitter device!</div>
                 
                 <button onclick="toggleListening()" id="listeningBtn" style="width: 100%; padding: 15px; font-size: 18px; background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);">🎧 START LISTENING</button>
                 
                 <div id="listeningStatus" class="hidden">
                     <div class="listening-indicator">
                         <div class="pulse"></div>
-                        <span>Listening for incoming transmission...</span>
+                        <span id="listeningText">Listening for incoming transmission...</span>
                     </div>
                 </div>
             </div>
@@ -346,112 +343,137 @@
     </div>
     
     <script>
-        let txChart, rxChart;
+        let audioContext = null;
+        let rxChart = null;
         let isListening = false;
-        let transmissionData = null;
+        let analyser = null;
+        let dataArray = null;
+        let animationId = null;
+        
+        const HEADER_FREQ = 18000; // 18kHz header
+        const HEADER_DURATION = 0.2; // 200ms
+        const BIT_RATE = 100; // bits per second
+        const SYMBOL_RATE = BIT_RATE;
+        
+        // FSK frequencies
+        const FSK_FREQ_0 = 1000; // 0 bit
+        const FSK_FREQ_1 = 2000; // 1 bit
+        
+        // Ultrasonic frequencies
+        const ULTRA_FREQ_0 = 35000;
+        const ULTRA_FREQ_1 = 45000;
+        
+        function getAudioContext() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            return audioContext;
+        }
+        
+        function textToBinary(text) {
+            let binary = '';
+            for (let i = 0; i < text.length; i++) {
+                binary += text.charCodeAt(i).toString(2).padStart(8, '0');
+            }
+            return binary;
+        }
+        
+        function binaryToText(binary) {
+            let text = '';
+            for (let i = 0; i < binary.length; i += 8) {
+                const byte = binary.substr(i, 8);
+                if (byte.length === 8) {
+                    text += String.fromCharCode(parseInt(byte, 2));
+                }
+            }
+            return text;
+        }
+        
+        function generateTone(ctx, freq, duration, startTime) {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            
+            osc.frequency.value = freq;
+            gain.gain.setValueAtTime(0.3, startTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, startTime + duration);
+            
+            osc.start(startTime);
+            osc.stop(startTime + duration);
+        }
+        
+        function playHeader(ctx) {
+            const now = ctx.currentTime;
+            generateTone(ctx, HEADER_FREQ, HEADER_DURATION, now);
+            return HEADER_DURATION;
+        }
+        
+        function encodeAndPlayData(text, mode) {
+            const ctx = getAudioContext();
+            const binary = textToBinary(text);
+            
+            let startTime = ctx.currentTime;
+            
+            // Play header
+            startTime += playHeader(ctx);
+            startTime += 0.1; // gap
+            
+            // Select frequencies based on mode
+            const freq0 = mode === 'ultrasonic' ? ULTRA_FREQ_0 : FSK_FREQ_0;
+            const freq1 = mode === 'ultrasonic' ? ULTRA_FREQ_1 : FSK_FREQ_1;
+            const symbolDuration = 1 / SYMBOL_RATE;
+            
+            // Encode length first (16 bits)
+            const lengthBinary = text.length.toString(2).padStart(16, '0');
+            let fullBinary = lengthBinary + binary;
+            
+            // Play each bit
+            for (let i = 0; i < fullBinary.length; i++) {
+                const bit = fullBinary[i];
+                const freq = bit === '0' ? freq0 : freq1;
+                generateTone(ctx, freq, symbolDuration, startTime);
+                startTime += symbolDuration;
+            }
+            
+            // Update UI
+            document.getElementById('txStatus').textContent = 'Transmitting...';
+            document.getElementById('txProgress').style.width = '100%';
+            
+            const totalDuration = startTime - ctx.currentTime;
+            setTimeout(() => {
+                document.getElementById('txStatus').textContent = 'Complete!';
+                document.getElementById('transmitBtn').disabled = false;
+            }, totalDuration * 1000);
+            
+            return totalDuration;
+        }
+        
+        function transmitData() {
+            const text = document.getElementById('messageInput').value;
+            if (!text) {
+                alert('Please enter a message');
+                return;
+            }
+            
+            const mode = document.getElementById('encodingMode').value;
+            document.getElementById('transmitBtn').disabled = true;
+            
+            try {
+                encodeAndPlayData(text, mode);
+            } catch (e) {
+                console.error(e);
+                alert('Error during transmission: ' + e.message);
+                document.getElementById('transmitBtn').disabled = false;
+            }
+        }
         
         function switchMode(mode) {
             document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
             document.querySelectorAll('.mode-btn').forEach(el => el.classList.remove('active'));
             document.getElementById(mode).classList.add('active');
             document.querySelector(`.mode-btn.${mode}`).classList.add('active');
-        }
-        
-        function updateInputType(type) {
-            document.getElementById('text-input').classList.toggle('hidden', type !== 'text');
-            document.getElementById('file-input').classList.toggle('hidden', type !== 'file');
-        }
-        
-        function handleFileUpload(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-            
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                transmissionData = {
-                    type: 'file',
-                    name: file.name,
-                    data: e.target.result,
-                    size: file.size
-                };
-                updateStats();
-                showPreview();
-            };
-            
-            if (file.type.startsWith('image/')) {
-                reader.readAsDataURL(file);
-            } else {
-                reader.readAsText(file);
-            }
-        }
-        
-        function updateStats() {
-            if (!transmissionData) return;
-            
-            const size = transmissionData.size || transmissionData.data.length;
-            const encoding = document.getElementById('encodingMode').value;
-            const bitrate = encoding === 'ultrasonic' ? 100 : 50;
-            const duration = Math.ceil((size * 8) / bitrate);
-            
-            document.getElementById('dataSize').textContent = formatBytes(size);
-            document.getElementById('estDuration').textContent = duration + ' s';
-            document.getElementById('encodingDisplay').textContent = encoding.toUpperCase();
-        }
-        
-        function showPreview() {
-            const preview = document.getElementById('preview');
-            const content = document.getElementById('previewContent');
-            
-            if (!transmissionData) {
-                preview.classList.add('hidden');
-                return;
-            }
-            
-            preview.classList.remove('hidden');
-            
-            if (transmissionData.type === 'file' && transmissionData.data.startsWith('data:image')) {
-                content.innerHTML = `<img src="${transmissionData.data}" class="preview-image">`;
-            } else {
-                content.innerHTML = `<div class="preview-text">${escapeHtml(transmissionData.data.substring(0, 500))}</div>`;
-            }
-        }
-        
-        function getInputData() {
-            const inputType = document.querySelector('input[name="input-type"]:checked').value;
-            
-            if (inputType === 'text') {
-                const text = document.getElementById('messageInput').value;
-                if (!text) {
-                    alert('Please enter a message');
-                    return null;
-                }
-                transmissionData = {
-                    type: 'text',
-                    data: text,
-                    size: new TextEncoder().encode(text).length
-                };
-            }
-            
-            return transmissionData;
-        }
-        
-        function transmitData() {
-            const data = getInputData();
-            if (!data) return;
-            
-            updateStats();
-            showPreview();
-            
-            console.log('Transmitting:', data);
-            
-            // Simulate transmission
-            simulateTransmission();
-        }
-        
-        function simulateTransmission() {
-            console.log('Starting transmission simulation...');
-            // In a real implementation, this would generate audio
-            alert('Transmission started! (Simulation mode)\n\nIn production, this would generate sound waves based on the selected encoding.');
         }
         
         function toggleListening() {
@@ -463,70 +485,159 @@
                 btn.textContent = '🎧 STOP LISTENING';
                 btn.style.background = 'linear-gradient(135deg, #f44336 0%, #d32f2f 100%)';
                 status.classList.remove('hidden');
-                document.getElementById('rxStatus').textContent = 'Listening...';
                 startReceiving();
             } else {
                 btn.textContent = '🎧 START LISTENING';
                 btn.style.background = 'linear-gradient(135deg, #4caf50 0%, #45a049 100%)';
                 status.classList.add('hidden');
-                document.getElementById('rxStatus').textContent = 'Idle';
+                stopReceiving();
             }
         }
         
         function startReceiving() {
-            console.log('Receiver listening...');
-            // Simulate receiving data
-            simulateReception();
-        }
-        
-        function simulateReception() {
-            let progress = 0;
-            const interval = setInterval(() => {
-                progress += Math.random() * 25;
-                if (progress > 100) progress = 100;
-                
-                document.getElementById('rxDataSize').textContent = formatBytes(Math.floor(progress * 1000));
-                document.getElementById('signalStrength').textContent = Math.floor(progress) + '%';
-                document.getElementById('rxPreviewContent').textContent = 'Receiving data... ' + Math.floor(progress) + '%';
-                
-                if (progress >= 100) {
-                    clearInterval(interval);
-                    document.getElementById('rxStatus').textContent = 'Complete!';
-                }
-            }, 500);
-        }
-        
-        function formatBytes(bytes) {
-            if (bytes === 0) return '0 B';
-            const k = 1024;
-            const sizes = ['B', 'KB', 'MB'];
-            const i = Math.floor(Math.log(bytes) / Math.log(k));
-            return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
-        }
-        
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        }
-        
-        // Initialize charts
-        function initCharts() {
-            const txCtx = document.getElementById('txChart');
-            const rxCtx = document.getElementById('rxChart');
+            const ctx = getAudioContext();
             
-            const chartConfig = {
+            navigator.mediaDevices.getUserMedia({ audio: true })
+                .then(stream => {
+                    const source = ctx.createMediaStreamSource(stream);
+                    analyser = ctx.createAnalyser();
+                    analyser.fftSize = 2048;
+                    analyser.smoothingTimeConstant = 0.8;
+                    source.connect(analyser);
+                    
+                    dataArray = new Uint8Array(analyser.frequencyBinCount);
+                    document.getElementById('rxStatus').textContent = 'Listening';
+                    detectSignal();
+                })
+                .catch(err => {
+                    alert('Microphone access denied: ' + err.message);
+                    isListening = false;
+                    document.getElementById('listeningBtn').click();
+                });
+        }
+        
+        function stopReceiving() {
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+            }
+        }
+        
+        let detectedData = '';
+        let headerDetected = false;
+        let detectionStartTime = 0;
+        
+        function detectSignal() {
+            if (!isListening || !analyser) return;
+            
+            analyser.getByteFrequencyData(dataArray);
+            
+            // Calculate signal strength
+            const sum = dataArray.reduce((a, b) => a + b, 0);
+            const avg = Math.floor(sum / dataArray.length);
+            
+            document.getElementById('signalStrength').textContent = Math.min(100, avg) + '%';
+            
+            // Detect header (look for 18kHz peak)
+            const nyquist = getAudioContext().sampleRate / 2;
+            const freqBinSize = nyquist / dataArray.length;
+            const headerBin = Math.floor(HEADER_FREQ / freqBinSize);
+            const headerStrength = dataArray[headerBin] || 0;
+            
+            if (headerStrength > 100 && !headerDetected) {
+                headerDetected = true;
+                detectionStartTime = Date.now();
+                document.getElementById('rxStatus').textContent = 'Header Detected!';
+                document.getElementById('listeningText').textContent = 'Receiving data...';
+                detectedData = '';
+            }
+            
+            // Detect bits if header was found
+            if (headerDetected && Date.now() - detectionStartTime > HEADER_DURATION * 1000 + 100) {
+                const mode = 'fsk'; // default to FSK for simplicity
+                const freq0Bin = Math.floor(FSK_FREQ_0 / freqBinSize);
+                const freq1Bin = Math.floor(FSK_FREQ_1 / freqBinSize);
+                
+                const strength0 = dataArray[freq0Bin] || 0;
+                const strength1 = dataArray[freq1Bin] || 0;
+                
+                // Simple bit detection
+                if (Math.abs(strength0 - strength1) > 20) {
+                    const bit = strength1 > strength0 ? '1' : '0';
+                    detectedData += bit;
+                    
+                    if (detectedData.length > 16) {
+                        // Extract length
+                        if (detectedData.length === 16) {
+                            const len = parseInt(detectedData.substring(0, 16), 2);
+                            console.log('Detected length:', len);
+                        }
+                        
+                        // Try to decode
+                        if (detectedData.length >= 24 && detectedData.length % 8 === 0) {
+                            const text = binaryToText(detectedData.substring(16));
+                            document.getElementById('rxPreviewContent').textContent = text;
+                            document.getElementById('rxDataSize').textContent = text.length + ' B';
+                        }
+                    }
+                }
+            }
+            
+            // Update RX chart
+            updateRxChart();
+            
+            animationId = requestAnimationFrame(detectSignal);
+        }
+        
+        function updateRxChart() {
+            if (!rxChart || !dataArray) return;
+            
+            const visibleData = dataArray.slice(0, 256);
+            rxChart.data.datasets[0].data = Array.from(visibleData);
+            rxChart.update('none');
+        }
+        
+        // Initialize
+        document.getElementById('messageInput').addEventListener('input', (e) => {
+            const text = e.target.value;
+            const size = new TextEncoder().encode(text).length;
+            const duration = Math.ceil((size * 8 + 16) / BIT_RATE);
+            
+            document.getElementById('dataSize').textContent = size + ' B';
+            document.getElementById('estDuration').textContent = duration + ' s';
+            
+            if (text) {
+                document.getElementById('preview').classList.remove('hidden');
+                document.getElementById('previewContent').textContent = text.substring(0, 500);
+            } else {
+                document.getElementById('preview').classList.add('hidden');
+            }
+        });
+        
+        // Initialize RX chart
+        window.addEventListener('load', () => {
+            const rxCtx = document.getElementById('rxChart');
+            rxChart = new Chart(rxCtx, {
                 type: 'line',
+                data: {
+                    labels: Array.from({length: 256}, (_, i) => i),
+                    datasets: [{
+                        label: 'Frequency Spectrum',
+                        data: Array(256).fill(0),
+                        borderColor: '#f093fb',
+                        backgroundColor: 'rgba(240, 147, 251, 0.1)',
+                        tension: 0,
+                        pointRadius: 0,
+                        borderWidth: 1
+                    }]
+                },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: false }
-                    },
+                    plugins: { legend: { display: false } },
                     scales: {
                         y: {
                             beginAtZero: true,
-                            max: 100,
+                            max: 255,
                             ticks: { color: 'rgba(255,255,255,0.6)' },
                             grid: { color: 'rgba(255,255,255,0.1)' }
                         },
@@ -536,51 +647,7 @@
                         }
                     }
                 }
-            };
-            
-            txChart = new Chart(txCtx, {
-                ...chartConfig,
-                data: {
-                    labels: Array.from({length: 50}, (_, i) => i),
-                    datasets: [{
-                        label: 'Frequency',
-                        data: Array.from({length: 50}, () => Math.random() * 100),
-                        borderColor: '#667eea',
-                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                        tension: 0.4
-                    }]
-                }
             });
-            
-            rxChart = new Chart(rxCtx, {
-                ...chartConfig,
-                data: {
-                    labels: Array.from({length: 50}, (_, i) => i),
-                    datasets: [{
-                        label: 'Signal',
-                        data: Array.from({length: 50}, () => Math.random() * 100),
-                        borderColor: '#f093fb',
-                        backgroundColor: 'rgba(240, 147, 251, 0.1)',
-                        tension: 0.4
-                    }]
-                }
-            });
-        }
-        
-        window.addEventListener('load', initCharts);
-        
-        // Update stats on encoding change
-        document.getElementById('encodingMode').addEventListener('change', updateStats);
-        document.getElementById('messageInput').addEventListener('input', () => {
-            if (document.querySelector('input[name="input-type"]:checked').value === 'text') {
-                transmissionData = {
-                    type: 'text',
-                    data: document.getElementById('messageInput').value,
-                    size: new TextEncoder().encode(document.getElementById('messageInput').value).length
-                };
-                updateStats();
-                showPreview();
-            }
         });
     </script>
 </body>

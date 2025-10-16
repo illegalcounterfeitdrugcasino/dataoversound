@@ -3,282 +3,249 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Acoustic FSK Modem</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
+    <title>Acoustic FSK Data Link</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             margin: 0;
-            padding: 20px;
+            padding: 0;
             background: #282c34;
-            color: #ffffff;
+            color: #abb2bf;
             display: flex;
             flex-direction: column;
             align-items: center;
         }
         .container {
-            width: 100%;
+            width: 95%;
             max-width: 1200px;
-            background: #3c414b;
-            border-radius: 12px;
-            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
-            padding: 30px;
+            padding: 20px;
+            background: #3c4048;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            margin-top: 20px;
         }
         h1 {
             color: #61afef;
             text-align: center;
             margin-bottom: 20px;
         }
-        .mode-switcher {
+        .mode-selector {
             display: flex;
             justify-content: center;
-            margin-bottom: 25px;
+            margin-bottom: 30px;
         }
         .mode-btn {
-            padding: 12px 25px;
-            font-size: 16px;
-            cursor: pointer;
-            border: none;
-            border-radius: 8px;
-            margin: 0 10px;
-            transition: all 0.2s ease;
-            background: #4a505b;
-            color: #abb2bf;
-        }
-        .mode-btn:hover {
             background: #5c6370;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 0 10px;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: background-color 0.3s;
         }
         .mode-btn.active {
-            background: linear-gradient(135deg, #c678dd 0%, #98c379 100%);
+            background: #98c379;
             color: #282c34;
             font-weight: bold;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+        }
+        .mode-btn:hover {
+            background: #61afef;
         }
         .content {
             display: none;
-            padding-top: 20px;
+            padding: 20px;
+            border: 1px solid #5c6370;
+            border-radius: 5px;
         }
         .content.active {
             display: block;
         }
+        /* Transmitter Styles */
+        #transmitter textarea {
+            width: 98%;
+            height: 100px;
+            background: #282c34;
+            color: #abb2bf;
+            border: 1px solid #5c6370;
+            border-radius: 3px;
+            padding: 10px;
+            resize: vertical;
+        }
+        .controls, .stats, .receiver-stats {
+            margin-top: 15px;
+            padding: 10px;
+            background: #353941;
+            border-radius: 5px;
+        }
         .control-group {
-            margin-bottom: 20px;
-            padding: 15px;
-            border: 1px solid #4a505b;
-            border-radius: 8px;
-            background: #343841;
+            margin-bottom: 10px;
         }
         label {
             display: block;
-            margin-bottom: 8px;
-            color: #98c379;
-            font-weight: bold;
+            margin-bottom: 5px;
+            color: #c678dd;
         }
         input[type="range"] {
             width: 100%;
-            margin: 5px 0;
             -webkit-appearance: none;
             height: 8px;
-            background: #4a505b;
-            border-radius: 4px;
+            background: #5c6370;
+            border-radius: 5px;
+            outline: none;
+            opacity: 0.7;
+            transition: opacity .2s;
         }
         input[type="range"]::-webkit-slider-thumb {
             -webkit-appearance: none;
-            width: 16px;
-            height: 16px;
+            appearance: none;
+            width: 15px;
+            height: 15px;
+            background: #e6c07b;
             border-radius: 50%;
-            background: #e06c75;
             cursor: pointer;
         }
-        textarea {
-            width: 100%;
-            min-height: 100px;
-            padding: 10px;
-            border-radius: 6px;
-            border: 1px solid #4a505b;
-            background: #21252b;
-            color: #ffffff;
-            font-size: 14px;
-            resize: vertical;
-            box-sizing: border-box;
+        .button-group {
+            margin-top: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
-        button {
-            padding: 12px 20px;
-            font-size: 16px;
+        #transmitBtn, #listeningBtn {
+            padding: 15px 30px;
             border: none;
-            border-radius: 6px;
+            border-radius: 5px;
+            font-size: 1.1em;
             cursor: pointer;
-            transition: background-color 0.2s;
             font-weight: bold;
+            transition: background 0.3s;
         }
         #transmitBtn {
-            background: linear-gradient(135deg, #61afef 0%, #56b6c2 100%);
-            color: #282c34;
-            width: 100%;
+            background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
+            color: white;
         }
         #transmitBtn:disabled {
-            background: #4a505b;
-            color: #abb2bf;
+            background: #5c6370;
             cursor: not-allowed;
         }
-        #listeningBtn {
-            background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
-            color: #282c34;
+        #txProgressContainer {
             width: 100%;
-        }
-        .status-box {
-            margin-top: 15px;
-            padding: 10px;
-            border-radius: 6px;
-            text-align: center;
-        }
-        #txStatus {
-            background: #343841;
-            color: #e5c07b;
+            background: #5c6370;
+            border-radius: 5px;
+            margin-top: 10px;
         }
         #txProgress {
-            height: 5px;
+            height: 10px;
             background: #98c379;
             width: 0%;
-            margin-top: 5px;
             border-radius: 5px;
             transition: width 0.1s linear;
         }
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 15px;
-            margin-top: 15px;
-            text-align: center;
+        .stats p, .receiver-stats p {
+            margin: 5px 0;
+            display: flex;
+            justify-content: space-between;
         }
-        .stat-item {
-            background: #343841;
-            padding: 10px;
-            border-radius: 6px;
-        }
-        .stat-label {
-            color: #abb2bf;
-            font-size: 12px;
-        }
-        .stat-value {
-            font-size: 18px;
+        .stats span, .receiver-stats span {
+            color: #61afef;
             font-weight: bold;
-            color: #e06c75;
         }
-        #preview {
+        /* Receiver Styles */
+        #rxChart {
+            max-height: 300px;
             margin-top: 20px;
-            border-top: 1px solid #4a505b;
-            padding-top: 15px;
         }
-        #previewContent, #rxPreviewContent {
+        #listeningStatus {
+            margin-top: 10px;
+            font-size: 1.2em;
+            color: #98c379;
+        }
+        #rxPreview {
+            margin-top: 20px;
+            padding: 15px;
+            background: #282c34;
+            border-radius: 5px;
+            min-height: 50px;
+        }
+        #rxPreview p {
+            margin: 0;
             white-space: pre-wrap;
             word-wrap: break-word;
-            font-family: monospace;
-            background: #21252b;
-            padding: 10px;
-            border-radius: 6px;
-            margin-top: 10px;
-            min-height: 40px;
+            font-size: 1.1em;
+            color: #e6c07b;
         }
         .hidden {
             display: none !important;
         }
-        #rxChart {
-            margin-top: 20px;
-            height: 300px;
-            width: 100%;
-        }
-        #listeningStatus {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 15px;
-            margin-top: 15px;
-            text-align: center;
-        }
-        #listeningStatus .stat-item {
-            background: #343841;
-            padding: 10px;
-            border-radius: 6px;
-        }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Acoustic FSK Data Link</h1>
+
+<div class="container">
+    <h1>Acoustic FSK Data Link</h1>
+
+    <div class="mode-selector">
+        <button class="mode-btn transmitter active" onclick="switchMode('transmitter')">Transmitter (MBP)</button>
+        <button class="mode-btn receiver" onclick="switchMode('receiver')">Receiver (iPhone)</button>
+    </div>
+
+    <div id="transmitter" class="content active">
+        <h2>Transmitter Settings</h2>
         
-        <div class="mode-switcher">
-            <button class="mode-btn transmitter active" onclick="switchMode('transmitter')">📻 Transmitter</button>
-            <button class="mode-btn receiver" onclick="switchMode('receiver')">👂 Receiver</button>
+        <label for="messageInput">Message to Transmit (ASCII text):</label>
+        <textarea id="messageInput">Hello World! This is a test message for acoustic data transmission over the air.</textarea>
+
+        <div class="controls">
+            <div class="control-group">
+                <label for="txSpeed">Transmission Speed (Bit/s): <span id="txSpeedDisplay">1 bit/sec</span></label>
+                <input type="range" id="txSpeed" min="1" max="24" value="1" step="1">
+            </div>
+            <div class="stats">
+                <p>Data Size: <span id="dataSize">0 B (0 bits)</span></p>
+                <p>Est. Duration: <span id="estDuration">0.00 s</span></p>
+                <p>Status: <span id="txStatus">Ready</span></p>
+            </div>
         </div>
 
-        <div id="transmitter" class="content active">
-            <div class="control-group">
-                <label for="txSpeed">Transmission Speed: <span id="txSpeedDisplay">1 bit/sec</span></label>
-                <input type="range" id="txSpeed" min="1" max="20" value="1" step="1">
-            </div>
-
-            <div class="control-group">
-                <label for="messageInput">Message to Transmit:</label>
-                <textarea id="messageInput" placeholder="Enter your secret message here..."></textarea>
-                <div class="stats-grid">
-                    <div class="stat-item">
-                        <div class="stat-label">Data Size</div>
-                        <div class="stat-value" id="dataSize">0 B (0 bits)</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-label">Est. Duration</div>
-                        <div class="stat-value" id="estDuration">0.00 s</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-label">Tx Frequencies</div>
-                        <div class="stat-value">500Hz / 2500Hz</div>
-                    </div>
-                </div>
-                <div id="preview" class="hidden">
-                    <div class="stat-label" style="text-align: left;">Message Preview:</div>
-                    <div id="previewContent"></div>
-                </div>
-            </div>
-
-            <button id="transmitBtn" onclick="transmitData()">🔊 TRANSMIT DATA</button>
-            <div id="txStatus" class="status-box">Ready</div>
-            <div id="txProgress"></div>
+        <div class="button-group">
+            <button id="transmitBtn" onclick="transmitData()">🔊 TRANSMIT</button>
+            <div id="txProgressContainer"><div id="txProgress"></div></div>
         </div>
-
-        <div id="receiver" class="content">
-            <div class="control-group">
-                <label for="rxSpeed">Receiver Speed (Must match Tx): <span id="rxSpeedDisplay">1 bit/sec</span></label>
-                <input type="range" id="rxSpeed" min="1" max="20" value="1" step="1">
-            </div>
-
-            <button id="listeningBtn" onclick="toggleListening()">🎧 START LISTENING</button>
-            <div id="rxStatus" class="status-box">Idle</div>
-
-            <div id="listeningStatus" class="hidden">
-                <div class="stat-item">
-                    <div class="stat-label">Peak Amplitude (0-127)</div>
-                    <div class="stat-value" id="peakAmp">0</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-label">Average Detected Frequency</div>
-                    <div class="stat-value" id="avgFreq">0 Hz</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-label">Total Bits Received</div>
-                    <div class="stat-value" id="bitsReceived">0</div>
-                </div>
-            </div>
-
-            <div class="control-group" style="margin-top: 20px;">
-                <label>Received Message:</label>
-                <div id="rxPreviewContent">Waiting for signal...</div>
-            </div>
-
-            <div id="rxChartContainer">
-                <canvas id="rxChart"></canvas>
-            </div>
+        
+        <div id="preview" class="stats">
+            <label>Binary Preview:</label>
+            <p id="previewContent"></p>
         </div>
     </div>
+
+    <div id="receiver" class="content">
+        <h2>Receiver Settings and Status</h2>
+
+        <div class="controls">
+             <div class="control-group">
+                <label for="rxSpeed">Receiver Speed (Bit/s): <span id="rxSpeedDisplay">1 bit/sec</span></label>
+                <input type="range" id="rxSpeed" min="1" max="24" value="1" step="1">
+            </div>
+            <div class="button-group">
+                <button id="listeningBtn" onclick="toggleListening()">🎧 START LISTENING</button>
+            </div>
+            <div class="receiver-stats">
+                <p>Status: <span id="rxStatus">Idle</span></p>
+                <p>Total Bits Received: <span id="bitsReceived">0</span></p>
+                <p>Current Peak Amplitude (0-127): <span id="peakAmp">0</span></p>
+                <p>Detected Average Freq: <span id="avgFreq">0 Hz</span></p>
+            </div>
+        </div>
+
+        <div id="listeningStatus" class="hidden">
+            <h3>Decoded Message Preview:</h3>
+            <div id="rxPreview"><p id="rxPreviewContent">Waiting for signal...</p></div>
+        </div>
+        
+        <canvas id="rxChart"></canvas>
+    </div>
+</div>
 
 <script>
     let audioContext = null;
@@ -288,29 +255,33 @@
     let timeDomainData = null;
     let freqData = null;
     let animationId = null;
-    let sampleInterval = null; // Timer for fixed-rate sampling
+    let sampleInterval = null; 
     
     // Core parameters
     let txSpeed = 1; // bits per second
     let rxSpeed = 1;
-    const SAMPLES_PER_BIT = 5; // How many times to sample per bit duration (must be odd for majority vote)
+    const SAMPLES_PER_BIT = 5; // How many times to sample per bit duration (must be odd)
     const FREQ_0 = 500; // Frequency for bit '0'
     const FREQ_1 = 2500; // Frequency for bit '1'
     const FREQ_THRESHOLD = (FREQ_0 + FREQ_1) / 2; // Midpoint threshold
     const MIN_PEAK_AMP = 30; // Minimum required amplitude (0-127) for a valid signal
     
-    // Preamble & SOF (Start of Frame)
-    const PREAMBLE = '10101010'; // 8 bits for clock synchronization
-    const SOF_MARKER = '11110000'; // 8 bits for data start synchronization
-    const SYNC_SEQUENCE = PREAMBLE + SOF_MARKER; // Total 16 bits
-    
+    // Preamble and Synchronization
+    // Preamble: Alternating 1s and 0s for clock synchronization
+    const PREAMBLE = '1010101010101010'; // 16 bits for timing stabilization
+    // Start Delimiter: Unique pattern to mark the end of preamble and start of data
+    const START_DELIMITER = '11110000'; // 8 bits
+
     // Receiver State
     let detectedBits = '';
     let currentBitSamples = [];
     let consecutiveNoSignal = 0;
-    const MAX_NO_SIGNAL = SAMPLES_PER_BIT * 2;
-    let syncState = 'WAITING_FOR_PREAMBLE'; // New state machine for synchronization
-    let syncBuffer = ''; // Buffer to hold incoming bits to check for SOF
+    const MAX_NO_SIGNAL = SAMPLES_PER_BIT * 3; // Reset if silence lasts for 3 bit durations
+
+    // Synchronization state
+    let isSynchronized = false;
+    let bitSampleCounter = 0; // Tracks the sample position within a single bit (0 to SAMPLES_PER_BIT - 1)
+
 
     function getAudioContext() {
         if (!audioContext) {
@@ -351,14 +322,13 @@
         osc.connect(gain);
         gain.connect(ctx.destination);
         
-        osc.type = 'sine'; 
+        osc.type = 'sine';
         osc.frequency.setValueAtTime(freq, startTime);
         
-        // Apply smooth ramp up and down
         gain.gain.setValueAtTime(0, startTime);
-        gain.gain.linearRampToValueAtTime(0.7, startTime + 0.005); 
+        gain.gain.linearRampToValueAtTime(0.7, startTime + 0.005);
         gain.gain.linearRampToValueAtTime(0.7, startTime + duration - 0.005);
-        gain.gain.linearRampToValueAtTime(0, startTime + duration); 
+        gain.gain.linearRampToValueAtTime(0, startTime + duration);
         
         osc.start(startTime);
         osc.stop(startTime + duration);
@@ -367,34 +337,34 @@
     function encodeAndPlayData(text, speed) {
         const ctx = getAudioContext();
         const dataBinary = textToBinary(text);
-        // Prepend the synchronization sequence
-        const fullBinary = SYNC_SEQUENCE + dataBinary; 
+        const fullBinary = PREAMBLE + START_DELIMITER + dataBinary;
         
         console.group('TRANSMITTER');
-        console.log('SYNC SEQUENCE (16 bits):', SYNC_SEQUENCE);
-        console.log('USER DATA:', dataBinary.length, 'bits');
-        console.log('FULL BINARY TO SEND:', fullBinary.length, 'bits');
+        console.log('PREAMBLE:', PREAMBLE);
+        console.log('START DELIMITER:', START_DELIMITER);
+        console.log('DATA BINARY:', dataBinary);
+        console.log('FULL BINARY TO SEND:', fullBinary);
+        console.log('TOTAL BITS:', fullBinary.length);
         console.log('BIT RATE (bps):', speed);
         console.groupEnd();
         
         let startTime = ctx.currentTime;
         const symbolDuration = 1 / speed; 
         
-        document.getElementById('txStatus').textContent = 'Transmitting... (Sync: ' + SYNC_SEQUENCE.length + ' bits)';
+        document.getElementById('txStatus').textContent = 'Transmitting...';
         document.getElementById('txProgress').style.width = '0%';
         
         for (let i = 0; i < fullBinary.length; i++) {
             const bit = fullBinary[i];
             const freq = bit === '0' ? FREQ_0 : FREQ_1;
             
-            // Log for TX debugging: Mark the SOF position
-            const txType = (i < PREAMBLE.length) ? 'PREAMBLE' : 
-                           (i < SYNC_SEQUENCE.length) ? 'SOF' : 'DATA';
-            console.log(`[TX] Bit ${i+1}/${fullBinary.length}: ${bit} @ ${freq}Hz. Type: ${txType}`);
+            // Log the transmitted bit and frequency
+            let type = (i < PREAMBLE.length) ? 'Preamble' : (i < PREAMBLE.length + START_DELIMITER.length) ? 'Delimiter' : 'Data';
+            console.log(`[TX ${type}] Bit ${i+1}/${fullBinary.length}: ${bit} @ ${freq}Hz. Start time: ${startTime.toFixed(3)}s`);
 
             generateTone(ctx, freq, symbolDuration * 0.98, startTime); 
             
-            // Update progress bar based on total length
+            // Update progress bar
             setTimeout(() => {
                 document.getElementById('txProgress').style.width = `${((i + 1) / fullBinary.length) * 100}%`;
             }, (startTime - ctx.currentTime) * 1000);
@@ -413,7 +383,6 @@
     }
     
     function transmitData() {
-        // ... (same as before)
         const text = document.getElementById('messageInput').value;
         if (!text) {
             alert('Please enter a message');
@@ -431,8 +400,9 @@
         }
     }
     
+    // ... (switchMode, toggleListening, stopReceiving functions remain the same) ...
+
     function switchMode(mode) {
-        // ... (same as before)
         document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
         document.querySelectorAll('.mode-btn').forEach(el => el.classList.remove('active'));
         document.getElementById(mode).classList.add('active');
@@ -444,7 +414,6 @@
     }
     
     function toggleListening() {
-        // ... (same as before)
         isListening = !isListening;
         const btn = document.getElementById('listeningBtn');
         const status = document.getElementById('listeningStatus');
@@ -480,18 +449,19 @@
                 detectedBits = '';
                 currentBitSamples = [];
                 consecutiveNoSignal = 0;
-                syncState = 'WAITING_FOR_PREAMBLE'; // Reset synchronization state
-                syncBuffer = '';
-                document.getElementById('rxPreviewContent').textContent = 'Waiting for Preamble...';
+                isSynchronized = false;
+                bitSampleCounter = 0; // Reset sample counter
+                document.getElementById('rxPreviewContent').textContent = 'Listening...';
                 
-                // Calculate fixed sample rate
                 const totalSamplesPerSecond = rxSpeed * SAMPLES_PER_BIT;
                 const sampleDelayMs = 1000 / totalSamplesPerSecond;
                 
                 console.group('RECEIVER INITIALIZATION');
-                console.log('RX State:', syncState);
                 console.log('RX Speed (bps):', rxSpeed);
+                console.log('Samples per Bit:', SAMPLES_PER_BIT);
                 console.log('Sample Delay (ms):', sampleDelayMs.toFixed(2));
+                console.log('Awaiting Preamble:', PREAMBLE);
+                console.log('Start Delimiter:', START_DELIMITER);
                 console.groupEnd();
 
                 if (sampleInterval) clearInterval(sampleInterval);
@@ -509,7 +479,6 @@
     }
     
     function stopReceiving() {
-        // ... (same as before)
         if (animationId) {
             cancelAnimationFrame(animationId);
         }
@@ -519,7 +488,7 @@
         }
         document.getElementById('rxStatus').textContent = 'Idle';
     }
-    
+
     function getAverageFrequency(freqData) {
         let sum = 0;
         let count = 0;
@@ -529,7 +498,6 @@
         const maxFreqIndex = Math.floor(3000 / freqBinSize); 
 
         for (let i = 0; i < maxFreqIndex; i++) {
-            // Check for significant amplitude (still using 100/255 threshold)
             if (freqData[i] > 100) { 
                 sum += i * freqBinSize;
                 count++;
@@ -553,50 +521,53 @@
 
         document.getElementById('peakAmp').textContent = peakAmp;
         
+        // -----------------------------------------------------
+        // 1. SIGNAL DETECTION AND SAMPLE COLLECTION
+        // -----------------------------------------------------
+
         if (peakAmp > MIN_PEAK_AMP) { 
             consecutiveNoSignal = 0; 
             
             const avgFreq = getAverageFrequency(freqData);
             document.getElementById('avgFreq').textContent = Math.floor(avgFreq) + ' Hz';
 
-            const sampleBit = avgFreq > FREQ_THRESHOLD ? '1' : '0';
+            const sampleBit = avgFreq > FREQ_THRESHOLD ? 1 : 0;
             currentBitSamples.push(sampleBit);
             
-            // Perform majority vote when enough samples are collected for one bit
+            // -----------------------------------------------------
+            // 2. MAJORITY VOTE AND BIT DETECTION
+            // -----------------------------------------------------
+
             if (currentBitSamples.length >= SAMPLES_PER_BIT) {
-                const ones = currentBitSamples.filter(b => b === '1').length;
+                const ones = currentBitSamples.filter(b => b === 1).length;
                 const majorityBit = ones > (SAMPLES_PER_BIT / 2) ? '1' : '0';
                 
-                // --- Synchronization Logic ---
-                if (syncState === 'WAITING_FOR_PREAMBLE') {
-                    // Collect bits until we detect the SOF marker
-                    syncBuffer += majorityBit;
+                console.log(`[RX BIT] Sampled: ${currentBitSamples.join('')} (1s=${ones}). Detected Bit: ${majorityBit}.`);
+
+                currentBitSamples = []; // Reset for the next bit
+                
+                // -----------------------------------------------------
+                // 3. SYNCHRONIZATION AND DATA PROCESSING
+                // -----------------------------------------------------
+                
+                if (!isSynchronized) {
+                    // Try to synchronize by looking for PREAMBLE + START_DELIMITER
+                    const syncSequence = PREAMBLE + START_DELIMITER;
+                    detectedBits += majorityBit;
                     
-                    // Keep the buffer size manageable (max SYNC_SEQUENCE length + some)
-                    if (syncBuffer.length > SYNC_SEQUENCE.length * 2) {
-                        syncBuffer = syncBuffer.substring(syncBuffer.length - SYNC_SEQUENCE.length * 2);
+                    if (detectedBits.length > syncSequence.length) {
+                         // Only keep enough bits to check the sequence
+                         detectedBits = detectedBits.substring(detectedBits.length - syncSequence.length);
                     }
                     
-                    // Check if the end of the buffer matches the SOF marker
-                    const sofIndex = syncBuffer.indexOf(SOF_MARKER);
-                    
-                    if (sofIndex !== -1) {
-                        syncState = 'DATA_LOCKED';
-                        detectedBits = ''; // Clear buffer, next received bit is the start of user data
-                        
-                        // Log the transition point for precise debugging
-                        console.warn(`[SYNC LOCK] SOF '${SOF_MARKER}' detected. Starting data reception from next bit.`);
-                        document.getElementById('rxPreviewContent').textContent = 'Synchronization Locked...';
-
-                    } else {
-                        // Log preamble progress
-                        console.log(`[RX PREAMBLE] Bit: ${majorityBit}. Buffer length: ${syncBuffer.length}. Samples: ${currentBitSamples.join('')}`);
+                    if (detectedBits === syncSequence) {
+                        isSynchronized = true;
+                        detectedBits = ''; // Clear the buffer to start with real data
+                        document.getElementById('rxStatus').textContent = 'Synchronized. Awaiting Data...';
+                        console.log('*** SYNCHRONIZATION ACHIEVED! Data begins now. ***');
                     }
-
-                } else if (syncState === 'DATA_LOCKED') {
-                    // We are locked and are now reading data
-                    console.log(`[RX DATA] Bit: ${majorityBit}. Samples: ${currentBitSamples.join('')}`);
-                    
+                } else {
+                    // We are synchronized, so every detected bit is data
                     detectedBits += majorityBit;
                     document.getElementById('bitsReceived').textContent = detectedBits.length;
 
@@ -606,49 +577,40 @@
                         const fullBytes = detectedBits.substring(0, completeBytes * 8);
                         const text = binaryToText(fullBytes);
                         
-                        if (text) {
-                            document.getElementById('rxPreviewContent').textContent += text;
-                            console.log('--> [DECODED TEXT] <--:', text);
-                        }
+                        // Append to preview
+                        document.getElementById('rxPreviewContent').textContent += text;
+                        console.log('--> [DECODED BYTE] <--:', text);
+                        
+                        // Crucial: remove the processed bits
                         detectedBits = detectedBits.substring(completeBytes * 8); 
                     }
                 }
-                
-                currentBitSamples = []; // Reset for the next bit
             }
         } else {
             // Signal is too low
             consecutiveNoSignal++;
             document.getElementById('avgFreq').textContent = '0 Hz (No signal)';
             
-            // Auto-reset logic: If no signal for too long, clear the current partial bit buffer
+            // Auto-reset logic: If no signal for too long, reset synchronization
             if (consecutiveNoSignal >= MAX_NO_SIGNAL) {
-                if (currentBitSamples.length > 0) {
-                    console.warn(`[RX RESET] Cleared ${currentBitSamples.length} partial samples due to extended signal loss.`);
+                if (isSynchronized) {
+                    console.warn(`[RX RESET] Lost synchronization due to extended signal loss (${consecutiveNoSignal} samples).`);
+                    isSynchronized = false;
                 }
-                currentBitSamples = []; 
-                // Reset sync state if the silence is too long, forcing it to look for preamble again
-                if (syncState === 'DATA_LOCKED') {
-                     console.error('[RX DESYNC] Major signal loss. Returning to WAITING_FOR_PREAMBLE.');
-                     syncState = 'WAITING_FOR_PREAMBLE';
-                     document.getElementById('rxPreviewContent').textContent = 'Lost signal. Waiting for Preamble...';
-                     detectedBits = '';
-                     syncBuffer = '';
-                }
+                currentBitSamples = []; // Clear the partial bit buffer
+                detectedBits = ''; // Clear the data buffer
             }
         }
-        
-        // Chart update is handled by the requestAnimationFrame loop (detectSignal)
     }
     
     function detectSignal() {
-        // ... (same as before)
         if (!isListening) return;
         animationId = requestAnimationFrame(detectSignal);
     }
     
+    // ... (updateRxChart, updateStats, and event listeners for speed/input remain the same) ...
+
     function updateRxChart() {
-        // ... (same as before)
         if (!rxChart || !freqData) return;
         
         const ctx = getAudioContext();
@@ -687,16 +649,16 @@
     function updateStats() {
         const text = document.getElementById('messageInput').value;
         const size = new TextEncoder().encode(text).length;
-        // Total bits = SYNC_SEQUENCE (16) + data size * 8
-        const totalBits = SYNC_SEQUENCE.length + size * 8; 
-        const duration = (totalBits / txSpeed).toFixed(2);
+        const totalBits = size * 8; 
+        const totalTransmissionBits = totalBits + PREAMBLE.length + START_DELIMITER.length;
+        const duration = (totalTransmissionBits / txSpeed).toFixed(2);
         
-        document.getElementById('dataSize').textContent = size + ' B (' + (size * 8) + ' data bits)';
-        document.getElementById('estDuration').textContent = duration + ' s (incl. 16 sync bits)';
+        document.getElementById('dataSize').textContent = size + ' B (' + totalBits + ' data bits)';
+        document.getElementById('estDuration').textContent = duration + ' s';
         
         if (text) {
             document.getElementById('preview').classList.remove('hidden');
-            document.getElementById('previewContent').textContent = text.substring(0, 500);
+            document.getElementById('previewContent').textContent = `Preamble (${PREAMBLE}) + Delimiter (${START_DELIMITER}) + Data...`;
         } else {
             document.getElementById('preview').classList.add('hidden');
         }

@@ -247,7 +247,7 @@
 </head>
 <body>
     <div class="container">
-        <h1 style="text-align: center; margin-bottom: 30px; font-size: 32px; background: linear-gradient(135deg, #667eea 0%, #f093fb 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">Data Over Sound</h1>
+        <h1 style="text-align: center; margin-bottom: 30px; font-size: 32px; background: linear-gradient(135deg, #667eea 0%, #f093fb 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">Data Over Sound v4</h1>
         
         <div class="mode-selector">
             <button class="mode-btn transmitter active" onclick="switchMode('transmitter')">📡 TRANSMITTER</button>
@@ -351,17 +351,13 @@
         let animationId = null;
         
         const HEADER_PATTERN = [1, 0, 1, 0, 1, 0, 1, 1]; // repeating pattern for header
-        const HEADER_REPEATS = 10; // repeat pattern 10 times for robustness
-        const BIT_RATE = 100; // bits per second
+        const HEADER_REPEATS = 15; // repeat pattern 15 times for robustness
+        const BIT_RATE = 50; // slower for more reliable detection
         const SYMBOL_RATE = BIT_RATE;
         
-        // FSK frequencies
-        const FSK_FREQ_0 = 1000; // 0 bit
-        const FSK_FREQ_1 = 2000; // 1 bit
-        
-        // Ultrasonic frequencies
-        const ULTRA_FREQ_0 = 35000;
-        const ULTRA_FREQ_1 = 45000;
+        // FSK frequencies - make them more distinct
+        const FSK_FREQ_0 = 800; // 0 bit
+        const FSK_FREQ_1 = 3200; // 1 bit
         
         function getAudioContext() {
             if (!audioContext) {
@@ -397,7 +393,7 @@
             gain.connect(ctx.destination);
             
             osc.frequency.value = freq;
-            gain.gain.setValueAtTime(0.3, startTime);
+            gain.gain.setValueAtTime(0.5, startTime);
             gain.gain.exponentialRampToValueAtTime(0.01, startTime + duration);
             
             osc.start(startTime);
@@ -538,6 +534,41 @@
         let detectionStartTime = 0;
         let lastBitTime = 0;
         let recentBits = '';
+        let bitBuffer = '';
+        let lastDetectedFreq = null;
+        
+        function detectDominantFrequency(dataArray) {
+            let maxVal = 0;
+            let maxBin = 0;
+            
+            // Look in the range we care about (500Hz - 5000Hz)
+            const nyquist = getAudioContext().sampleRate / 2;
+            const freqBinSize = nyquist / dataArray.length;
+            const startBin = Math.floor(500 / freqBinSize);
+            const endBin = Math.floor(5000 / freqBinSize);
+            
+            for (let i = startBin; i < endBin; i++) {
+                if (dataArray[i] > maxVal) {
+                    maxVal = dataArray[i];
+                    maxBin = i;
+                }
+            }
+            
+            if (maxVal < 50) return null; // No strong signal
+            
+            const freq = maxBin * freqBinSize;
+            return freq;
+        }
+        
+        function frequencyToBit(freq) {
+            if (!freq) return null;
+            
+            // Determine which frequency is closer
+            const dist0 = Math.abs(freq - FSK_FREQ_0);
+            const dist1 = Math.abs(freq - FSK_FREQ_1);
+            
+            return dist1 < dist0 ? 1 : 0;
+        }
         
         function detectSignal() {
             if (!isListening || !analyser) return;
@@ -550,54 +581,53 @@
             
             document.getElementById('signalStrength').textContent = Math.min(100, avg) + '%';
             
-            const nyquist = getAudioContext().sampleRate / 2;
-            const freqBinSize = nyquist / dataArray.length;
-            const freq0Bin = Math.floor(FSK_FREQ_0 / freqBinSize);
-            const freq1Bin = Math.floor(FSK_FREQ_1 / freqBinSize);
-            
-            const strength0 = dataArray[freq0Bin] || 0;
-            const strength1 = dataArray[freq1Bin] || 0;
-            
-            // Detect bits consistently
             const now = Date.now();
-            const symbolDuration = 1000 / SYMBOL_RATE; // ms
+            const symbolDuration = 1000 / SYMBOL_RATE;
             
-            if (now - lastBitTime > symbolDuration * 0.7) {
-                if (Math.abs(strength0 - strength1) > 15) {
-                    const bit = strength1 > strength0 ? '1' : '0';
-                    recentBits += bit;
+            // Detect dominant frequency at a regular interval
+            if (now - lastBitTime > symbolDuration * 0.8) {
+                const freq = detectDominantFrequency(dataArray);
+                
+                if (freq) {
+                    const bit = frequencyToBit(freq);
+                    bitBuffer += bit;
+                    lastDetectedFreq = freq;
                     
-                    // Keep only last 80 bits for header detection
-                    if (recentBits.length > 80) {
-                        recentBits = recentBits.slice(-80);
-                    }
-                    
-                    // Look for header pattern
+                    // Keep recent bits for header detection
                     if (!headerDetected) {
-                        // Create expected header sequence
+                        recentBits += bit;
+                        if (recentBits.length > 120) {
+                            recentBits = recentBits.slice(-120);
+                        }
+                        
+                        // Create expected header
                         let expectedHeader = '';
                         for (let i = 0; i < HEADER_REPEATS; i++) {
                             expectedHeader += HEADER_PATTERN.join('');
                         }
                         
-                        // Check if header pattern is in recent bits
+                        // Check multiple positions for header
                         if (recentBits.includes(expectedHeader)) {
                             headerDetected = true;
                             document.getElementById('rxStatus').textContent = 'Header Detected!';
                             document.getElementById('listeningText').textContent = 'Receiving data...';
                             detectedData = '';
-                            console.log('Header pattern matched!');
+                            bitBuffer = '';
+                            console.log('✓ Header pattern matched!');
                         }
                     } else {
-                        // After header, collect data bits
-                        detectedData += bit;
-                        
-                        // Try to decode when we have enough data
-                        if (detectedData.length >= 24 && detectedData.length % 8 === 0) {
-                            const text = binaryToText(detectedData.substring(16));
-                            if (text) {
-                                document.getElementById('rxPreviewContent').textContent = text;
-                                document.getElementById('rxDataSize').textContent = text.length + ' B';
+                        // Collect data bits
+                        if (bitBuffer.length >= 8) {
+                            detectedData += bitBuffer;
+                            bitBuffer = '';
+                            
+                            // Try to decode
+                            if (detectedData.length >= 16) {
+                                const text = binaryToText(detectedData);
+                                if (text && text.length > 0) {
+                                    document.getElementById('rxPreviewContent').textContent = text;
+                                    document.getElementById('rxDataSize').textContent = text.length + ' B';
+                                }
                             }
                         }
                     }
@@ -606,9 +636,7 @@
                 }
             }
             
-            // Update RX chart
             updateRxChart();
-            
             animationId = requestAnimationFrame(detectSignal);
         }
         

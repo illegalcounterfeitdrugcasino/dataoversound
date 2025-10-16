@@ -67,6 +67,10 @@
             display: block;
         }
 
+        .input-area {
+            margin-bottom: 20px;
+        }
+
         textarea {
             width: 100%;
             padding: 15px;
@@ -158,8 +162,8 @@
             height: 600px;
             margin: 20px auto;
             display: block;
-            background: white;
-            border: 4px solid #333;
+            background: black;
+            border: 8px solid #FF0000;
             border-radius: 10px;
             image-rendering: pixelated;
         }
@@ -190,37 +194,34 @@
             margin-top: 5px;
         }
 
+        .video-container {
+            position: relative;
+            max-width: 640px;
+            margin: 20px auto;
+        }
+
         #video {
             width: 100%;
-            max-width: 640px;
             height: auto;
             display: block;
-            margin: 20px auto;
             border-radius: 10px;
             border: 4px solid #333;
         }
 
-        .canvas-row {
-            display: flex;
-            gap: 10px;
-            margin: 20px 0;
-            justify-content: center;
-            flex-wrap: wrap;
-        }
-
-        .canvas-container {
-            text-align: center;
-        }
-
-        .canvas-container canvas {
+        #debug-canvas {
+            width: 100%;
+            margin-top: 10px;
             border: 2px solid #333;
-            background: #000;
+            border-radius: 5px;
         }
 
-        .canvas-container p {
-            margin-top: 5px;
-            font-size: 0.9em;
-            color: #666;
+        .detection-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
         }
 
         .info-box {
@@ -286,20 +287,25 @@
             animation: pulse 2s infinite;
         }
 
-        .debug-log {
-            margin-top: 20px;
-            padding: 15px;
-            background: #f0f0f0;
-            border-radius: 10px;
-            font-family: monospace;
-            font-size: 0.85em;
-            max-height: 300px;
-            overflow-y: auto;
+        .status.warning {
+            background: #ff9800;
+            color: white;
         }
 
         @keyframes pulse {
             0%, 100% { opacity: 1; }
             50% { opacity: 0.7; }
+        }
+
+        .log {
+            background: #f0f0f0;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 0.85em;
+            max-height: 150px;
+            overflow-y: auto;
+            margin: 10px 0;
         }
     </style>
 </head>
@@ -315,7 +321,7 @@
         <!-- Transmit Section -->
         <div id="transmit-section" class="section active">
             <div class="input-area">
-                <textarea id="text-input" placeholder="Enter text to transmit...">Hello from laptop!</textarea>
+                <textarea id="text-input" placeholder="Enter text to transmit...">Hello World!</textarea>
             </div>
 
             <div class="file-upload" onclick="document.getElementById('file-input').click()">
@@ -326,15 +332,15 @@
 
             <div class="controls">
                 <div class="control-group">
-                    <label>Update Frequency (Hz): <span id="fps-value">5</span></label>
-                    <input type="range" id="fps-slider" min="3" max="15" value="5" oninput="updateFPS(this.value)">
+                    <label>Update Frequency (Hz): <span id="fps-value">8</span></label>
+                    <input type="range" id="fps-slider" min="4" max="15" value="8" oninput="updateFPS(this.value)">
                 </div>
                 <div class="control-group">
                     <label>Grid Size</label>
                     <select id="grid-size">
-                        <option value="12">12×12 (Fast)</option>
-                        <option value="16" selected>16×16 (Balanced)</option>
-                        <option value="20">20×20 (More Data)</option>
+                        <option value="20" selected>20×20 (Recommended)</option>
+                        <option value="24">24×24 (More Data)</option>
+                        <option value="28">28×28 (Advanced)</option>
                     </select>
                 </div>
             </div>
@@ -358,6 +364,10 @@
                     <div class="stat-label">Progress</div>
                     <div class="stat-value" id="progress-percent">0%</div>
                 </div>
+                <div class="stat-item">
+                    <div class="stat-label">FPS</div>
+                    <div class="stat-value" id="actual-fps">0</div>
+                </div>
             </div>
         </div>
 
@@ -365,20 +375,20 @@
         <div id="receive-section" class="section">
             <div class="info-box">
                 <strong>📱 Instructions:</strong><br>
-                1. Set the same FPS value as the transmitter<br>
+                1. Set the same FPS as transmitter<br>
                 2. Click "Start Camera" and allow camera access<br>
-                3. Point camera at the animated grid (fill screen)<br>
-                4. Keep phone STEADY and ensure good lighting<br>
-                5. Check debug view below to see if detection works
+                3. Point at the RED BORDERED grid on laptop<br>
+                4. Keep screen brightness HIGH and phone steady<br>
+                5. Watch the debug view to see detection
             </div>
 
             <div class="controls">
                 <div class="control-group">
-                    <label>Scan Frequency (Hz): <span id="scan-fps-value">5</span></label>
-                    <input type="range" id="scan-fps-slider" min="3" max="15" value="5" oninput="updateScanFPS(this.value)">
+                    <label>Scan Frequency (Hz): <span id="scan-fps-value">8</span></label>
+                    <input type="range" id="scan-fps-slider" min="4" max="15" value="8" oninput="updateScanFPS(this.value)">
                 </div>
                 <div class="control-group">
-                    <label>Detection Threshold: <span id="threshold-value">128</span></label>
+                    <label>Brightness Threshold: <span id="threshold-value">128</span></label>
                     <input type="range" id="threshold-slider" min="50" max="200" value="128" oninput="updateThreshold(this.value)">
                 </div>
             </div>
@@ -387,22 +397,14 @@
 
             <div class="status" id="receive-status">Camera not started</div>
 
-            <video id="video" autoplay playsinline></video>
-
-            <div class="canvas-row">
-                <div class="canvas-container">
-                    <canvas id="scan-canvas" width="200" height="200"></canvas>
-                    <p>Original Capture</p>
-                </div>
-                <div class="canvas-container">
-                    <canvas id="processed-canvas" width="200" height="200"></canvas>
-                    <p>After Processing</p>
-                </div>
-                <div class="canvas-container">
-                    <canvas id="grid-canvas" width="200" height="200"></canvas>
-                    <p>Detected Grid</p>
-                </div>
+            <div class="video-container">
+                <video id="video" autoplay playsinline></video>
+                <canvas class="detection-overlay" id="overlay-canvas"></canvas>
             </div>
+
+            <canvas id="debug-canvas"></canvas>
+
+            <div class="log" id="log"></div>
 
             <div class="progress-bar">
                 <div class="progress-fill" id="receive-progress" style="width: 0%">0%</div>
@@ -418,20 +420,18 @@
                     <div class="stat-value" id="expected-bytes">?</div>
                 </div>
                 <div class="stat-item">
-                    <div class="stat-label">Frames OK</div>
+                    <div class="stat-label">Frames</div>
                     <div class="stat-value" id="frames-decoded">0</div>
                 </div>
                 <div class="stat-item">
-                    <div class="stat-label">Errors</div>
-                    <div class="stat-value" id="error-count">0</div>
+                    <div class="stat-label">Detection</div>
+                    <div class="stat-value" id="detection-rate">0%</div>
                 </div>
             </div>
 
             <div class="preview-container" id="receive-preview">
                 <p style="text-align: center; color: #999;">Received data will appear here...</p>
             </div>
-
-            <div class="debug-log" id="debug-log"></div>
         </div>
     </div>
 
@@ -443,31 +443,23 @@
         let fileName = null;
         let fileType = null;
         
-        // Transmission settings
-        let fps = 5;
-        let gridSize = 16;
+        // Transmission
+        let fps = 8;
+        let gridSize = 20;
         let transmitInterval = null;
         let currentFrameIndex = 0;
         let frames = [];
         
-        // Reception state
+        // Reception
         let scanInterval = null;
-        let scanFPS = 5;
+        let scanFPS = 8;
         let threshold = 128;
         let receivedFrames = {};
         let totalFrames = 0;
         let dataLength = 0;
         let receivedDataType = null;
-        let errorCount = 0;
-        let lastSuccessfulFrame = -1;
-
-        function log(msg) {
-            const logEl = document.getElementById('debug-log');
-            const time = new Date().toLocaleTimeString();
-            logEl.innerHTML += `[${time}] ${msg}<br>`;
-            logEl.scrollTop = logEl.scrollHeight;
-            console.log(msg);
-        }
+        let detectionAttempts = 0;
+        let successfulDetections = 0;
 
         function setMode(mode) {
             currentMode = mode;
@@ -541,7 +533,6 @@
 
             gridSize = parseInt(document.getElementById('grid-size').value);
             
-            // Prepare frames
             frames = encodeDataToFrames(dataToSend, dataType, gridSize);
             currentFrameIndex = 0;
             
@@ -556,6 +547,9 @@
             canvas.width = gridSize;
             canvas.height = gridSize;
             
+            let frameCount = 0;
+            let lastFPSUpdate = Date.now();
+            
             transmitInterval = setInterval(() => {
                 if (currentFrameIndex < frames.length) {
                     drawFrame(canvas, frames[currentFrameIndex]);
@@ -564,8 +558,16 @@
                     document.getElementById('current-frame').textContent = `${currentFrameIndex}/${frames.length}`;
                     const progress = (currentFrameIndex / frames.length * 100).toFixed(1);
                     document.getElementById('progress-percent').textContent = progress + '%';
+                    
+                    frameCount++;
+                    const now = Date.now();
+                    if (now - lastFPSUpdate >= 1000) {
+                        document.getElementById('actual-fps').textContent = frameCount;
+                        frameCount = 0;
+                        lastFPSUpdate = now;
+                    }
                 } else {
-                    currentFrameIndex = 0; // Loop
+                    currentFrameIndex = 0;
                 }
             }, 1000 / fps);
         }
@@ -580,11 +582,8 @@
 
         function encodeDataToFrames(data, dataType, gridSize) {
             const frames = [];
-            const cellsPerFrame = gridSize * gridSize;
-            // Reserve: 16 cells for sync pattern, 8 for frame number, 8 for metadata = 32 cells
-            const dataCellsPerFrame = cellsPerFrame - 32;
+            const bytesPerFrame = Math.floor((gridSize * gridSize - 20) / 8) * 8;
             
-            // Create header
             const header = {
                 len: data.length,
                 type: dataType,
@@ -593,60 +592,66 @@
             const headerStr = JSON.stringify(header);
             const headerBytes = new TextEncoder().encode(headerStr);
             
-            // Calculate total frames needed
-            const totalDataBytes = headerBytes.length + data.length;
-            const totalFramesNeeded = Math.ceil(totalDataBytes / dataCellsPerFrame);
+            // Header frame
+            const headerFrame = new Uint8Array(gridSize * gridSize);
+            // Corners for detection (white squares)
+            for (let i = 0; i < 4; i++) {
+                for (let j = 0; j < 4; j++) {
+                    headerFrame[i * gridSize + j] = 255;
+                    headerFrame[i * gridSize + (gridSize - 1 - j)] = 255;
+                    headerFrame[(gridSize - 1 - i) * gridSize + j] = 255;
+                    headerFrame[(gridSize - 1 - i) * gridSize + (gridSize - 1 - j)] = 255;
+                }
+            }
+            // Header marker (center top)
+            headerFrame[2 * gridSize + Math.floor(gridSize / 2)] = 255;
             
-            // Combine header and data
-            const allData = new Uint8Array(headerBytes.length + data.length);
-            allData.set(headerBytes, 0);
-            allData.set(data, headerBytes.length);
+            // Pack header data
+            for (let i = 0; i < headerBytes.length && i < bytesPerFrame; i++) {
+                const byte = headerBytes[i];
+                const startIdx = 20 + i * 8;
+                for (let bit = 0; bit < 8; bit++) {
+                    headerFrame[startIdx + bit] = (byte & (1 << (7 - bit))) ? 255 : 0;
+                }
+            }
+            frames.push(headerFrame);
             
-            // Create frames
-            let byteIndex = 0;
-            for (let frameNum = 0; frameNum < totalFramesNeeded; frameNum++) {
-                const frameData = allData.slice(byteIndex, byteIndex + dataCellsPerFrame);
-                frames.push(createFrame(frameData, frameNum, totalFramesNeeded, gridSize, headerBytes.length));
-                byteIndex += dataCellsPerFrame;
+            // Data frames
+            for (let offset = 0; offset < data.length; offset += bytesPerFrame) {
+                const frame = new Uint8Array(gridSize * gridSize);
+                
+                // Corners
+                for (let i = 0; i < 4; i++) {
+                    for (let j = 0; j < 4; j++) {
+                        frame[i * gridSize + j] = 255;
+                        frame[i * gridSize + (gridSize - 1 - j)] = 255;
+                        frame[(gridSize - 1 - i) * gridSize + j] = 255;
+                        frame[(gridSize - 1 - i) * gridSize + (gridSize - 1 - j)] = 255;
+                    }
+                }
+                
+                // Frame number in center top (3 bytes = 24 bits)
+                const frameNum = Math.floor(offset / bytesPerFrame) + 1;
+                for (let bit = 0; bit < 24; bit++) {
+                    const idx = 2 * gridSize + Math.floor(gridSize / 2) - 12 + bit;
+                    frame[idx] = (frameNum & (1 << (23 - bit))) ? 255 : 0;
+                }
+                
+                // Data
+                for (let i = 0; i < bytesPerFrame && offset + i < data.length; i++) {
+                    const byte = data[offset + i];
+                    const startIdx = 20 + i * 8;
+                    for (let bit = 0; bit < 8; bit++) {
+                        if (startIdx + bit < frame.length) {
+                            frame[startIdx + bit] = (byte & (1 << (7 - bit))) ? 255 : 0;
+                        }
+                    }
+                }
+                
+                frames.push(frame);
             }
             
             return frames;
-        }
-
-        function createFrame(data, frameNum, totalFrames, gridSize, headerLength) {
-            const frame = new Uint8Array(gridSize * gridSize);
-            
-            // Sync pattern - strong alternating pattern (16 cells, 4x4 checkerboard)
-            for (let i = 0; i < 16; i++) {
-                const row = Math.floor(i / 4);
-                const col = i % 4;
-                frame[row * gridSize + col] = ((row + col) % 2 === 0) ? 255 : 0;
-            }
-            
-            // Frame number (4 cells = 32 bits)
-            frame[gridSize * 4] = (frameNum >> 24) & 0xFF;
-            frame[gridSize * 4 + 1] = (frameNum >> 16) & 0xFF;
-            frame[gridSize * 4 + 2] = (frameNum >> 8) & 0xFF;
-            frame[gridSize * 4 + 3] = frameNum & 0xFF;
-            
-            // Total frames (4 cells)
-            frame[gridSize * 4 + 4] = (totalFrames >> 24) & 0xFF;
-            frame[gridSize * 4 + 5] = (totalFrames >> 16) & 0xFF;
-            frame[gridSize * 4 + 6] = (totalFrames >> 8) & 0xFF;
-            frame[gridSize * 4 + 7] = totalFrames & 0xFF;
-            
-            // Data length in this frame (2 cells) and header length (2 cells)
-            frame[gridSize * 5] = (data.length >> 8) & 0xFF;
-            frame[gridSize * 5 + 1] = data.length & 0xFF;
-            frame[gridSize * 5 + 2] = (headerLength >> 8) & 0xFF;
-            frame[gridSize * 5 + 3] = headerLength & 0xFF;
-            
-            // Fill with data starting from position 32
-            for (let i = 0; i < data.length; i++) {
-                frame[32 + i] = data[i];
-            }
-            
-            return frame;
         }
 
         function drawFrame(canvas, frameData) {
@@ -665,7 +670,7 @@
             ctx.putImageData(imageData, 0, 0);
         }
 
-        // Receiver functions
+        // RECEIVER
         async function toggleCamera() {
             if (receiving) {
                 stopCamera();
@@ -687,28 +692,35 @@
                 const video = document.getElementById('video');
                 video.srcObject = stream;
                 
+                await new Promise(resolve => {
+                    video.onloadedmetadata = () => {
+                        video.play();
+                        resolve();
+                    };
+                });
+                
+                const overlay = document.getElementById('overlay-canvas');
+                overlay.width = video.videoWidth;
+                overlay.height = video.videoHeight;
+                
                 receiving = true;
                 document.getElementById('camera-btn').textContent = '⏹️ Stop Camera';
-                document.getElementById('receive-status').textContent = 'Scanning...';
+                document.getElementById('receive-status').textContent = 'Scanning for grid...';
                 document.getElementById('receive-status').className = 'status active';
                 document.getElementById('receive-stats').style.display = 'grid';
                 
                 receivedFrames = {};
                 totalFrames = 0;
                 dataLength = 0;
-                errorCount = 0;
-                lastSuccessfulFrame = -1;
+                detectionAttempts = 0;
+                successfulDetections = 0;
                 
-                log('Camera started, waiting for data...');
+                scanInterval = setInterval(scanFrame, 1000 / scanFPS);
                 
-                // Wait for video to be ready
-                video.addEventListener('loadedmetadata', () => {
-                    log(`Video ready: ${video.videoWidth}x${video.videoHeight}`);
-                    scanInterval = setInterval(scanFrame, 1000 / scanFPS);
-                });
+                log('Camera started, looking for grid...');
             } catch (err) {
                 alert('Camera error: ' + err.message);
-                log('Camera error: ' + err.message);
+                log('ERROR: ' + err.message);
             }
         }
 
@@ -725,264 +737,332 @@
             document.getElementById('camera-btn').textContent = '📷 Start Camera';
             document.getElementById('receive-status').textContent = 'Stopped';
             document.getElementById('receive-status').className = 'status';
-            log('Camera stopped');
         }
 
         function scanFrame() {
             const video = document.getElementById('video');
             if (video.readyState !== video.HAVE_ENOUGH_DATA) return;
             
-            const scanCanvas = document.getElementById('scan-canvas');
-            const processedCanvas = document.getElementById('processed-canvas');
-            const gridCanvas = document.getElementById('grid-canvas');
+            detectionAttempts++;
             
-            const ctx = scanCanvas.getContext('2d');
+            // Create processing canvas
+            const procCanvas = document.createElement('canvas');
+            procCanvas.width = video.videoWidth;
+            procCanvas.height = video.videoHeight;
+            const procCtx = procCanvas.getContext('2d');
+            procCtx.drawImage(video, 0, 0);
             
-            // Capture center portion of video
-            const captureSize = Math.min(video.videoWidth, video.videoHeight);
-            const sx = (video.videoWidth - captureSize) / 2;
-            const sy = (video.videoHeight - captureSize) / 2;
+            // Find red border
+            const bounds = findRedBorder(procCtx, procCanvas.width, procCanvas.height);
             
-            scanCanvas.width = 200;
-            scanCanvas.height = 200;
-            ctx.drawImage(video, sx, sy, captureSize, captureSize, 0, 0, 200, 200);
+            if (!bounds) {
+                if (detectionAttempts % 10 === 0) {
+                    log('No red border detected');
+                    document.getElementById('receive-status').textContent = 'Looking for RED border...';
+                    document.getElementById('receive-status').className = 'status warning';
+                }
+                return;
+            }
             
-            // Process image: convert to grayscale and apply threshold
-            const imageData = ctx.getImageData(0, 0, 200, 200);
-            const processed = processImage(imageData);
+            // Extract and process grid
+            const gridData = extractGrid(procCtx, bounds);
             
-            // Show processed image
-            const pCtx = processedCanvas.getContext('2d');
-            processedCanvas.width = 200;
-            processedCanvas.height = 200;
-            pCtx.putImageData(processed, 0, 0);
+            if (gridData) {
+                successfulDetections++;
+                const rate = ((successfulDetections / detectionAttempts) * 100).toFixed(0);
+                document.getElementById('detection-rate').textContent = rate + '%';
+                document.getElementById('receive-status').textContent = 'Decoding data...';
+                document.getElementById('receive-status').className = 'status active';
+                
+                const decoded = decodeGrid(gridData);
+                if (decoded) {
+                    processDecodedFrame(decoded);
+                }
+                
+                // Show debug view
+                showDebugView(gridData);
+            }
+        }
+
+        function findRedBorder(ctx, width, height) {
+            const imageData = ctx.getImageData(0, 0, width, height);
+            const data = imageData.data;
             
-            // Try to detect grid for each possible size
-            for (let size of [16, 12, 20]) {
-                const gridData = extractGrid(processed, size);
-                if (gridData) {
-                    // Show detected grid
-                    const gCtx = gridCanvas.getContext('2d');
-                    gridCanvas.width = size * 10;
-                    gridCanvas.height = size * 10;
-                    drawDetectedGrid(gCtx, gridData, size);
+            // Sample points to find red pixels
+            const redPoints = [];
+            const step = 10;
+            
+            for (let y = 0; y < height; y += step) {
+                for (let x = 0; x < width; x += step) {
+                    const idx = (y * width + x) * 4;
+                    const r = data[idx];
+                    const g = data[idx + 1];
+                    const b = data[idx + 2];
                     
-                    // Try to decode frame
-                    const frame = decodeFrame(gridData, size);
-                    if (frame) {
-                        processReceivedFrame(frame);
-                        return;
+                    // Red detection: high R, low G and B
+                    if (r > 150 && g < 100 && b < 100 && r > g + 50 && r > b + 50) {
+                        redPoints.push({ x, y });
                     }
                 }
             }
-        }
-
-        function processImage(imageData) {
-            const data = imageData.data;
-            const processed = new ImageData(imageData.width, imageData.height);
             
-            // Convert to grayscale
-            const gray = new Uint8Array(data.length / 4);
-            for (let i = 0; i < data.length; i += 4) {
-                gray[i / 4] = Math.round(0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]);
+            if (redPoints.length < 20) return null;
+            
+            // Find bounding box of red points
+            let minX = width, maxX = 0, minY = height, maxY = 0;
+            for (const p of redPoints) {
+                minX = Math.min(minX, p.x);
+                maxX = Math.max(maxX, p.x);
+                minY = Math.min(minY, p.y);
+                maxY = Math.max(maxY, p.y);
             }
             
-            // Apply adaptive threshold
-            for (let i = 0; i < gray.length; i++) {
-                const val = gray[i] > threshold ? 255 : 0;
-                processed.data[i * 4] = val;
-                processed.data[i * 4 + 1] = val;
-                processed.data[i * 4 + 2] = val;
-                processed.data[i * 4 + 3] = 255;
-            }
+            // Add padding and ensure square-ish
+            const padding = 20;
+            minX = Math.max(0, minX - padding);
+            maxX = Math.min(width, maxX + padding);
+            minY = Math.max(0, minY - padding);
+            maxY = Math.min(height, maxY + padding);
             
-            return processed;
+            const w = maxX - minX;
+            const h = maxY - minY;
+            
+            if (w < 100 || h < 100 || w > width * 0.9 || h > height * 0.9) return null;
+            
+            return { x: minX, y: minY, width: w, height: h };
         }
 
-        function extractGrid(imageData, gridSize) {
-            const data = imageData.data;
-            const imgWidth = imageData.width;
-            const imgHeight = imageData.height;
-            
-            const cellWidth = imgWidth / gridSize;
-            const cellHeight = imgHeight / gridSize;
-            
-            const gridData = new Uint8Array(gridSize * gridSize);
-            
-            // Sample each cell
-            for (let row = 0; row < gridSize; row++) {
-                for (let col = 0; col < gridSize; col++) {
-                    // Sample center of cell
-                    const x = Math.floor(col * cellWidth + cellWidth / 2);
-                    const y = Math.floor(row * cellHeight + cellHeight / 2);
-                    const idx = (y * imgWidth + x) * 4;
-                    gridData[row * gridSize + col] = data[idx]; // Already thresholded to 0 or 255
+        function extractGrid(ctx, bounds) {
+            // Try different grid sizes
+            for (const size of [20, 24, 28, 16, 32]) {
+                const canvas = document.createElement('canvas');
+                canvas.width = size;
+                canvas.height = size;
+                const tempCtx = canvas.getContext('2d');
+                
+                tempCtx.drawImage(
+                    ctx.canvas,
+                    bounds.x, bounds.y, bounds.width, bounds.height,
+                    0, 0, size, size
+                );
+                
+                const imageData = tempCtx.getImageData(0, 0, size, size);
+                const data = imageData.data;
+                const grid = new Uint8Array(size * size);
+                
+                // Convert to grayscale
+                for (let i = 0; i < size * size; i++) {
+                    const idx = i * 4;
+                    grid[i] = (data[idx] + data[idx + 1] + data[idx + 2]) / 3;
                 }
-            }
-            
-            // Verify sync pattern
-            let syncScore = 0;
-            for (let i = 0; i < 16; i++) {
-                const row = Math.floor(i / 4);
-                const col = i % 4;
-                const expected = ((row + col) % 2 === 0) ? 255 : 0;
-                const actual = gridData[row * gridSize + col];
-                if (actual === expected) syncScore++;
-            }
-            
-            if (syncScore >= 14) { // At least 14/16 correct
-                return gridData;
+                
+// Check if corners are white (detection markers)
+                let cornerSum = 0;
+                for (let i = 0; i < 4; i++) {
+                    for (let j = 0; j < 4; j++) {
+                        cornerSum += grid[i * size + j];
+                        cornerSum += grid[i * size + (size - 1 - j)];
+                        cornerSum += grid[(size - 1 - i) * size + j];
+                        cornerSum += grid[(size - 1 - i) * size + (size - 1 - j)];
+                    }
+                }
+                
+                const avgCorner = cornerSum / 64;
+                if (avgCorner > 180) {
+                    return { grid, size };
+                }
             }
             
             return null;
         }
 
-        function drawDetectedGrid(ctx, gridData, gridSize) {
-            const cellSize = 10;
-            for (let row = 0; row < gridSize; row++) {
-                for (let col = 0; col < gridSize; col++) {
-                    const val = gridData[row * gridSize + col];
-                    ctx.fillStyle = val > 128 ? 'white' : 'black';
-                    ctx.fillRect(col * cellSize, row * cellSize, cellSize, cellSize);
-                }
-            }
-        }
-
-        function decodeFrame(gridData, gridSize) {
-            try {
-                // Extract frame number (4 bytes starting at position gridSize*4)
-                const frameNumBytes = [];
-                for (let i = 0; i < 4; i++) {
-                    frameNumBytes.push(gridData[gridSize * 4 + i]);
-                }
-                const frameNum = (frameNumBytes[0] << 24) | (frameNumBytes[1] << 16) | 
-                                (frameNumBytes[2] << 8) | frameNumBytes[3];
-                
-                // Extract total frames
-                const totalFramesBytes = [];
-                for (let i = 0; i < 4; i++) {
-                    totalFramesBytes.push(gridData[gridSize * 4 + 4 + i]);
-                }
-                const totalFramesValue = (totalFramesBytes[0] << 24) | (totalFramesBytes[1] << 16) | 
-                                         (totalFramesBytes[2] << 8) | totalFramesBytes[3];
-                
-                // Extract data length and header length
-                const dataLen = (gridData[gridSize * 5] << 8) | gridData[gridSize * 5 + 1];
-                const headerLen = (gridData[gridSize * 5 + 2] << 8) | gridData[gridSize * 5 + 3];
-                
-                // Sanity checks
-                if (frameNum < 0 || frameNum > 10000) return null;
-                if (totalFramesValue < 1 || totalFramesValue > 10000) return null;
-                if (dataLen < 0 || dataLen > 1000) return null;
-                
-                // Extract payload starting from position 32
-                const payload = gridData.slice(32, 32 + dataLen);
-                
-                return {
-                    frameNum,
-                    totalFrames: totalFramesValue,
-                    payload,
-                    headerLength: headerLen
-                };
-            } catch (e) {
-                errorCount++;
-                document.getElementById('error-count').textContent = errorCount;
-                return null;
-            }
-        }
-
-        function processReceivedFrame(frame) {
-            // Skip duplicate frames
-            if (receivedFrames[frame.frameNum]) return;
+        function decodeGrid(gridData) {
+            const { grid, size } = gridData;
             
-            receivedFrames[frame.frameNum] = frame;
-            totalFrames = frame.totalFrames;
-            
-            const framesReceived = Object.keys(receivedFrames).length;
-            document.getElementById('frames-decoded').textContent = framesReceived;
-            
-            if (frame.frameNum !== lastSuccessfulFrame) {
-                log(`✓ Frame ${frame.frameNum}/${frame.totalFrames} (${frame.payload.length} bytes)`);
-                lastSuccessfulFrame = frame.frameNum;
+            // Apply adaptive thresholding
+            const binary = new Uint8Array(size * size);
+            for (let i = 0; i < grid.length; i++) {
+                binary[i] = grid[i] > threshold ? 255 : 0;
             }
             
-            // Update progress
-            const progress = Math.min(100, (framesReceived / totalFrames * 100));
-            document.getElementById('receive-progress').style.width = progress + '%';
-            document.getElementById('receive-progress').textContent = progress.toFixed(0) + '%';
+            // Check if this is a header frame (center top pixel is white)
+            const isHeader = binary[2 * size + Math.floor(size / 2)] > 128;
             
-            // Try to reconstruct data
-            if (framesReceived >= totalFrames) {
-                reconstructData(frame.headerLength);
-            } else {
-                // Show partial reconstruction
-                reconstructData(frame.headerLength);
-            }
-        }
-
-        function reconstructData(headerLength) {
-            // Sort frames by frame number
-            const sortedFrames = Object.keys(receivedFrames)
-                .map(k => parseInt(k))
-                .sort((a, b) => a - b)
-                .map(k => receivedFrames[k]);
-            
-            // Concatenate all payloads
-            let allBytes = [];
-            for (const frame of sortedFrames) {
-                allBytes.push(...frame.payload);
-            }
-            
-            // Split header and data
-            const headerBytes = allBytes.slice(0, headerLength);
-            const dataBytes = allBytes.slice(headerLength);
-            
-            // Parse header
-            try {
-                const headerStr = new TextDecoder().decode(new Uint8Array(headerBytes));
-                const header = JSON.parse(headerStr);
-                
-                dataLength = header.len;
-                receivedDataType = header.type;
-                
-                document.getElementById('expected-bytes').textContent = dataLength;
-                document.getElementById('received-bytes').textContent = dataBytes.length;
-                
-                // Truncate to expected length
-                const finalData = new Uint8Array(dataBytes.slice(0, dataLength));
-                
-                // Display data
-                const preview = document.getElementById('receive-preview');
-                preview.innerHTML = '';
-                
-                if (receivedDataType && receivedDataType.startsWith('image/')) {
-                    const blob = new Blob([finalData], { type: receivedDataType });
-                    const url = URL.createObjectURL(blob);
-                    const img = document.createElement('img');
-                    img.src = url;
-                    img.style.maxWidth = '100%';
-                    preview.appendChild(img);
-                    log('📷 Image reconstructed!');
-                } else {
-                    try {
-                        const text = new TextDecoder().decode(finalData);
-                        const pre = document.createElement('pre');
-                        pre.textContent = text;
-                        preview.appendChild(pre);
-                        log(`📝 Text: "${text}"`);
-                    } catch (e) {
-                        preview.innerHTML = `<p>Binary data (${finalData.length} bytes)</p>`;
-                        log(`📦 Binary data: ${finalData.length} bytes`);
+            // Decode frame number from center top (24 bits)
+            let frameNum = 0;
+            if (!isHeader) {
+                for (let bit = 0; bit < 24; bit++) {
+                    const idx = 2 * size + Math.floor(size / 2) - 12 + bit;
+                    if (binary[idx] > 128) {
+                        frameNum |= (1 << (23 - bit));
                     }
                 }
+            }
+            
+            // Extract data bits
+            const bytesPerFrame = Math.floor((size * size - 20) / 8);
+            const bytes = [];
+            
+            for (let i = 0; i < bytesPerFrame; i++) {
+                let byte = 0;
+                const startIdx = 20 + i * 8;
                 
-                // Check if complete
-                if (dataBytes.length >= dataLength && Object.keys(receivedFrames).length >= totalFrames) {
-                    document.getElementById('receive-status').textContent = '✅ Transfer Complete!';
-                    document.getElementById('receive-status').className = 'status';
-                    log('✅ Transfer complete!');
+                if (startIdx + 7 < binary.length) {
+                    for (let bit = 0; bit < 8; bit++) {
+                        if (binary[startIdx + bit] > 128) {
+                            byte |= (1 << (7 - bit));
+                        }
+                    }
+                    bytes.push(byte);
                 }
-            } catch (e) {
-                log('⚠️ Waiting for more frames...');
+            }
+            
+            return {
+                isHeader,
+                frameNum,
+                bytes: new Uint8Array(bytes),
+                size
+            };
+        }
+
+        function processDecodedFrame(decoded) {
+            if (decoded.isHeader) {
+                // Try to parse header
+                try {
+                    const headerStr = new TextDecoder().decode(decoded.bytes);
+                    const nullIdx = headerStr.indexOf('\0');
+                    const cleanStr = nullIdx >= 0 ? headerStr.substring(0, nullIdx) : headerStr;
+                    const header = JSON.parse(cleanStr);
+                    
+                    dataLength = header.len;
+                    receivedDataType = header.type;
+                    totalFrames = Math.ceil(dataLength / decoded.bytes.length) + 1;
+                    
+                    document.getElementById('expected-bytes').textContent = dataLength;
+                    log(`Header decoded: ${dataLength} bytes, type: ${receivedDataType}`);
+                    
+                    receivedFrames[0] = decoded;
+                } catch (e) {
+                    // Header not complete or corrupted
+                }
+            } else {
+                if (decoded.frameNum > 0 && !receivedFrames[decoded.frameNum]) {
+                    receivedFrames[decoded.frameNum] = decoded;
+                    document.getElementById('frames-decoded').textContent = Object.keys(receivedFrames).length;
+                    log(`Frame ${decoded.frameNum} decoded`);
+                }
+            }
+            
+            // Try to reconstruct data
+            if (dataLength > 0) {
+                reconstructData();
             }
         }
+
+        function reconstructData() {
+            // Get all data frames in order
+            const frameNums = Object.keys(receivedFrames)
+                .map(k => parseInt(k))
+                .filter(k => k > 0)
+                .sort((a, b) => a - b);
+            
+            if (frameNums.length === 0) return;
+            
+            // Concatenate bytes
+            const allBytes = [];
+            for (const num of frameNums) {
+                const frame = receivedFrames[num];
+                allBytes.push(...frame.bytes);
+            }
+            
+            const receivedBytes = Math.min(allBytes.length, dataLength);
+            document.getElementById('received-bytes').textContent = receivedBytes;
+            
+            if (dataLength > 0) {
+                const progress = Math.min(100, (receivedBytes / dataLength * 100));
+                document.getElementById('receive-progress').style.width = progress + '%';
+                document.getElementById('receive-progress').textContent = progress.toFixed(0) + '%';
+            }
+            
+            // Display data
+            if (receivedBytes > 0) {
+                const data = new Uint8Array(allBytes.slice(0, dataLength));
+                displayReceivedData(data);
+            }
+            
+            if (receivedBytes >= dataLength && dataLength > 0) {
+                document.getElementById('receive-status').textContent = 'Transfer complete!';
+                document.getElementById('receive-status').className = 'status';
+                log('✓ Transfer complete!');
+            }
+        }
+
+        function displayReceivedData(data) {
+            const preview = document.getElementById('receive-preview');
+            preview.innerHTML = '';
+            
+            if (receivedDataType && receivedDataType.startsWith('image/')) {
+                const blob = new Blob([data], { type: receivedDataType });
+                const url = URL.createObjectURL(blob);
+                const img = document.createElement('img');
+                img.src = url;
+                img.style.maxWidth = '100%';
+                img.onload = () => log('Image rendered');
+                preview.appendChild(img);
+            } else {
+                try {
+                    const text = new TextDecoder().decode(data);
+                    const pre = document.createElement('pre');
+                    pre.textContent = text;
+                    preview.appendChild(pre);
+                    log(`Text: "${text.substring(0, 50)}..."`);
+                } catch (e) {
+                    preview.innerHTML = `<p>Binary data (${data.length} bytes)</p>`;
+                }
+            }
+        }
+
+        function showDebugView(gridData) {
+            const debugCanvas = document.getElementById('debug-canvas');
+            const { grid, size } = gridData;
+            
+            debugCanvas.width = size * 10;
+            debugCanvas.height = size * 10;
+            const ctx = debugCanvas.getContext('2d');
+            
+            const imageData = ctx.createImageData(size, size);
+            for (let i = 0; i < grid.length; i++) {
+                const idx = i * 4;
+                const val = grid[i] > threshold ? 255 : 0;
+                imageData.data[idx] = val;
+                imageData.data[idx + 1] = val;
+                imageData.data[idx + 2] = val;
+                imageData.data[idx + 3] = 255;
+            }
+            
+            // Scale up
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = size;
+            tempCanvas.height = size;
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCtx.putImageData(imageData, 0, 0);
+            
+            ctx.imageSmoothingEnabled = false;
+            ctx.drawImage(tempCanvas, 0, 0, size, size, 0, 0, size * 10, size * 10);
+        }
+
+        function log(message) {
+            const logEl = document.getElementById('log');
+            const time = new Date().toLocaleTimeString();
+            logEl.innerHTML += `[${time}] ${message}<br>`;
+            logEl.scrollTop = logEl.scrollHeight;
+            
+            // Keep only last 10 messages
+            const lines = logEl.innerHTML.split('<br>');
+            if (lines.length > 10) {
+                logEl.innerHTML = lines.slice(-10).join('<br>');
+            }
+        }
+    </script>
+</body>
+</html>

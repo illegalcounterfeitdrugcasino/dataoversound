@@ -3,7 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Visual Data Transfer</title>
+    <title>QR Data Transfer</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -118,18 +120,11 @@
             margin-bottom: 5px;
             font-weight: 600;
             color: #555;
+            font-size: 0.9em;
         }
 
         input[type="range"] {
             width: 100%;
-        }
-
-        select {
-            width: 100%;
-            padding: 10px;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            font-size: 1em;
         }
 
         .control-btn {
@@ -156,16 +151,34 @@
             cursor: not-allowed;
         }
 
-        #display-canvas {
-            width: 100%;
-            max-width: 600px;
+        #qr-display {
+            width: 600px;
             height: 600px;
             margin: 20px auto;
-            display: block;
-            background: black;
-            border: 8px solid #FF0000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: white;
+            border: 8px solid #333;
             border-radius: 10px;
-            image-rendering: pixelated;
+            position: relative;
+        }
+
+        #qr-display canvas {
+            max-width: 100%;
+            max-height: 100%;
+        }
+
+        .frame-indicator {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 5px;
+            font-weight: 600;
+            font-size: 1.2em;
         }
 
         .stats {
@@ -206,22 +219,6 @@
             display: block;
             border-radius: 10px;
             border: 4px solid #333;
-        }
-
-        #debug-canvas {
-            width: 100%;
-            margin-top: 10px;
-            border: 2px solid #333;
-            border-radius: 5px;
-        }
-
-        .detection-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
         }
 
         .info-box {
@@ -287,11 +284,6 @@
             animation: pulse 2s infinite;
         }
 
-        .status.warning {
-            background: #ff9800;
-            color: white;
-        }
-
         @keyframes pulse {
             0%, 100% { opacity: 1; }
             50% { opacity: 0.7; }
@@ -307,11 +299,15 @@
             overflow-y: auto;
             margin: 10px 0;
         }
+
+        #scan-canvas {
+            display: none;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>📱 Visual Data Transfer</h1>
+        <h1>📱 QR Data Transfer</h1>
         
         <div class="mode-selector">
             <button class="mode-btn active" onclick="setMode('transmit')">💻 Transmit (Laptop)</button>
@@ -321,7 +317,7 @@
         <!-- Transmit Section -->
         <div id="transmit-section" class="section active">
             <div class="input-area">
-                <textarea id="text-input" placeholder="Enter text to transmit...">Hello World!</textarea>
+                <textarea id="text-input" placeholder="Enter text to transmit...">Hello from QR codes!</textarea>
             </div>
 
             <div class="file-upload" onclick="document.getElementById('file-input').click()">
@@ -332,16 +328,12 @@
 
             <div class="controls">
                 <div class="control-group">
-                    <label>Update Frequency (Hz): <span id="fps-value">8</span></label>
-                    <input type="range" id="fps-slider" min="4" max="15" value="8" oninput="updateFPS(this.value)">
+                    <label>Display Time per QR (seconds): <span id="delay-value">1.5</span></label>
+                    <input type="range" id="delay-slider" min="0.5" max="3" step="0.1" value="1.5" oninput="updateDelay(this.value)">
                 </div>
                 <div class="control-group">
-                    <label>Grid Size</label>
-                    <select id="grid-size">
-                        <option value="20" selected>20×20 (Recommended)</option>
-                        <option value="24">24×24 (More Data)</option>
-                        <option value="28">28×28 (Advanced)</option>
-                    </select>
+                    <label>Chunk Size (bytes): <span id="chunk-value">800</span></label>
+                    <input type="range" id="chunk-slider" min="400" max="1500" step="100" value="800" oninput="updateChunkSize(this.value)">
                 </div>
             </div>
 
@@ -349,7 +341,9 @@
 
             <div class="status" id="transmit-status">Ready to transmit</div>
 
-            <canvas id="display-canvas"></canvas>
+            <div id="qr-display">
+                <p style="color: #999;">QR codes will appear here</p>
+            </div>
 
             <div class="stats" id="transmit-stats" style="display: none;">
                 <div class="stat-item">
@@ -357,16 +351,16 @@
                     <div class="stat-value" id="total-bytes">0</div>
                 </div>
                 <div class="stat-item">
-                    <div class="stat-label">Frame</div>
-                    <div class="stat-value" id="current-frame">0</div>
+                    <div class="stat-label">QR Codes</div>
+                    <div class="stat-value" id="total-qrs">0</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Current QR</div>
+                    <div class="stat-value" id="current-qr">0</div>
                 </div>
                 <div class="stat-item">
                     <div class="stat-label">Progress</div>
                     <div class="stat-value" id="progress-percent">0%</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-label">FPS</div>
-                    <div class="stat-value" id="actual-fps">0</div>
                 </div>
             </div>
         </div>
@@ -375,22 +369,11 @@
         <div id="receive-section" class="section">
             <div class="info-box">
                 <strong>📱 Instructions:</strong><br>
-                1. Set the same FPS as transmitter<br>
-                2. Click "Start Camera" and allow camera access<br>
-                3. Point at the RED BORDERED grid on laptop<br>
-                4. Keep screen brightness HIGH and phone steady<br>
-                5. Watch the debug view to see detection
-            </div>
-
-            <div class="controls">
-                <div class="control-group">
-                    <label>Scan Frequency (Hz): <span id="scan-fps-value">8</span></label>
-                    <input type="range" id="scan-fps-slider" min="4" max="15" value="8" oninput="updateScanFPS(this.value)">
-                </div>
-                <div class="control-group">
-                    <label>Brightness Threshold: <span id="threshold-value">128</span></label>
-                    <input type="range" id="threshold-slider" min="50" max="200" value="128" oninput="updateThreshold(this.value)">
-                </div>
+                1. Click "Start Camera" and allow camera access<br>
+                2. Point camera at the QR codes on laptop screen<br>
+                3. Keep camera steady and screen brightness HIGH<br>
+                4. System will automatically scan each QR code<br>
+                5. Data appears live below as it's received!
             </div>
 
             <button class="control-btn" id="camera-btn" onclick="toggleCamera()">📷 Start Camera</button>
@@ -399,10 +382,9 @@
 
             <div class="video-container">
                 <video id="video" autoplay playsinline></video>
-                <canvas class="detection-overlay" id="overlay-canvas"></canvas>
             </div>
 
-            <canvas id="debug-canvas"></canvas>
+            <canvas id="scan-canvas"></canvas>
 
             <div class="log" id="log"></div>
 
@@ -420,12 +402,12 @@
                     <div class="stat-value" id="expected-bytes">?</div>
                 </div>
                 <div class="stat-item">
-                    <div class="stat-label">Frames</div>
-                    <div class="stat-value" id="frames-decoded">0</div>
+                    <div class="stat-label">QR Scanned</div>
+                    <div class="stat-value" id="qrs-scanned">0</div>
                 </div>
                 <div class="stat-item">
-                    <div class="stat-label">Detection</div>
-                    <div class="stat-value" id="detection-rate">0%</div>
+                    <div class="stat-label">Success Rate</div>
+                    <div class="stat-value" id="success-rate">0%</div>
                 </div>
             </div>
 
@@ -444,22 +426,19 @@
         let fileType = null;
         
         // Transmission
-        let fps = 8;
-        let gridSize = 20;
+        let displayDelay = 1.5;
+        let chunkSize = 800;
         let transmitInterval = null;
-        let currentFrameIndex = 0;
-        let frames = [];
+        let currentQRIndex = 0;
+        let qrCodes = [];
         
         // Reception
         let scanInterval = null;
-        let scanFPS = 8;
-        let threshold = 128;
-        let receivedFrames = {};
-        let totalFrames = 0;
+        let receivedChunks = {};
+        let totalChunks = 0;
         let dataLength = 0;
         let receivedDataType = null;
-        let detectionAttempts = 0;
-        let successfulDetections = 0;
+        let lastScannedIndex = -1;
 
         function setMode(mode) {
             currentMode = mode;
@@ -475,27 +454,22 @@
             }
         }
 
-        function updateFPS(value) {
-            fps = parseInt(value);
-            document.getElementById('fps-value').textContent = fps;
+        function updateDelay(value) {
+            displayDelay = parseFloat(value);
+            document.getElementById('delay-value').textContent = displayDelay.toFixed(1);
         }
 
-        function updateScanFPS(value) {
-            scanFPS = parseInt(value);
-            document.getElementById('scan-fps-value').textContent = scanFPS;
-        }
-
-        function updateThreshold(value) {
-            threshold = parseInt(value);
-            document.getElementById('threshold-value').textContent = threshold;
+        function updateChunkSize(value) {
+            chunkSize = parseInt(value);
+            document.getElementById('chunk-value').textContent = chunkSize;
         }
 
         function handleFileSelect(event) {
             const file = event.target.files[0];
             if (!file) return;
 
-            if (file.size > 100000) {
-                alert('File too large! Please use files under 100KB');
+            if (file.size > 500000) {
+                alert('File too large! Please use files under 500KB');
                 return;
             }
 
@@ -531,10 +505,9 @@
                 return;
             }
 
-            gridSize = parseInt(document.getElementById('grid-size').value);
-            
-            frames = encodeDataToFrames(dataToSend, dataType, gridSize);
-            currentFrameIndex = 0;
+            // Create QR codes
+            qrCodes = createQRCodes(dataToSend, dataType);
+            currentQRIndex = 0;
             
             transmitting = true;
             document.querySelector('#transmit-section .control-btn').textContent = '⏹️ Stop Transmission';
@@ -542,132 +515,103 @@
             document.getElementById('transmit-status').className = 'status active';
             document.getElementById('transmit-stats').style.display = 'grid';
             document.getElementById('total-bytes').textContent = dataToSend.length;
+            document.getElementById('total-qrs').textContent = qrCodes.length;
             
-            const canvas = document.getElementById('display-canvas');
-            canvas.width = gridSize;
-            canvas.height = gridSize;
-            
-            let frameCount = 0;
-            let lastFPSUpdate = Date.now();
-            
-            transmitInterval = setInterval(() => {
-                if (currentFrameIndex < frames.length) {
-                    drawFrame(canvas, frames[currentFrameIndex]);
-                    currentFrameIndex++;
-                    
-                    document.getElementById('current-frame').textContent = `${currentFrameIndex}/${frames.length}`;
-                    const progress = (currentFrameIndex / frames.length * 100).toFixed(1);
-                    document.getElementById('progress-percent').textContent = progress + '%';
-                    
-                    frameCount++;
-                    const now = Date.now();
-                    if (now - lastFPSUpdate >= 1000) {
-                        document.getElementById('actual-fps').textContent = frameCount;
-                        frameCount = 0;
-                        lastFPSUpdate = now;
-                    }
-                } else {
-                    currentFrameIndex = 0;
-                }
-            }, 1000 / fps);
+            displayNextQR();
         }
 
         function stopTransmission() {
             transmitting = false;
-            clearInterval(transmitInterval);
+            clearTimeout(transmitInterval);
             document.querySelector('#transmit-section .control-btn').textContent = '🚀 Start Transmission';
             document.getElementById('transmit-status').textContent = 'Stopped';
             document.getElementById('transmit-status').className = 'status';
         }
 
-        function encodeDataToFrames(data, dataType, gridSize) {
-            const frames = [];
-            const bytesPerFrame = Math.floor((gridSize * gridSize - 20) / 8) * 8;
+        function createQRCodes(data, dataType) {
+            const codes = [];
             
+            // Create header
             const header = {
                 len: data.length,
                 type: dataType,
-                grid: gridSize
+                chunks: Math.ceil(data.length / chunkSize)
             };
             const headerStr = JSON.stringify(header);
-            const headerBytes = new TextEncoder().encode(headerStr);
+            codes.push({ index: 0, data: headerStr, isHeader: true });
             
-            // Header frame
-            const headerFrame = new Uint8Array(gridSize * gridSize);
-            // Corners for detection (white squares)
-            for (let i = 0; i < 4; i++) {
-                for (let j = 0; j < 4; j++) {
-                    headerFrame[i * gridSize + j] = 255;
-                    headerFrame[i * gridSize + (gridSize - 1 - j)] = 255;
-                    headerFrame[(gridSize - 1 - i) * gridSize + j] = 255;
-                    headerFrame[(gridSize - 1 - i) * gridSize + (gridSize - 1 - j)] = 255;
-                }
-            }
-            // Header marker (center top)
-            headerFrame[2 * gridSize + Math.floor(gridSize / 2)] = 255;
-            
-            // Pack header data
-            for (let i = 0; i < headerBytes.length && i < bytesPerFrame; i++) {
-                const byte = headerBytes[i];
-                const startIdx = 20 + i * 8;
-                for (let bit = 0; bit < 8; bit++) {
-                    headerFrame[startIdx + bit] = (byte & (1 << (7 - bit))) ? 255 : 0;
-                }
-            }
-            frames.push(headerFrame);
-            
-            // Data frames
-            for (let offset = 0; offset < data.length; offset += bytesPerFrame) {
-                const frame = new Uint8Array(gridSize * gridSize);
+            // Create data chunks
+            for (let i = 0; i < data.length; i += chunkSize) {
+                const chunk = data.slice(i, i + chunkSize);
+                const chunkIndex = Math.floor(i / chunkSize) + 1;
                 
-                // Corners
-                for (let i = 0; i < 4; i++) {
-                    for (let j = 0; j < 4; j++) {
-                        frame[i * gridSize + j] = 255;
-                        frame[i * gridSize + (gridSize - 1 - j)] = 255;
-                        frame[(gridSize - 1 - i) * gridSize + j] = 255;
-                        frame[(gridSize - 1 - i) * gridSize + (gridSize - 1 - j)] = 255;
-                    }
-                }
+                // Convert to base64 for QR encoding
+                const base64 = arrayBufferToBase64(chunk);
+                const payload = JSON.stringify({
+                    i: chunkIndex,
+                    d: base64
+                });
                 
-                // Frame number in center top (3 bytes = 24 bits)
-                const frameNum = Math.floor(offset / bytesPerFrame) + 1;
-                for (let bit = 0; bit < 24; bit++) {
-                    const idx = 2 * gridSize + Math.floor(gridSize / 2) - 12 + bit;
-                    frame[idx] = (frameNum & (1 << (23 - bit))) ? 255 : 0;
-                }
-                
-                // Data
-                for (let i = 0; i < bytesPerFrame && offset + i < data.length; i++) {
-                    const byte = data[offset + i];
-                    const startIdx = 20 + i * 8;
-                    for (let bit = 0; bit < 8; bit++) {
-                        if (startIdx + bit < frame.length) {
-                            frame[startIdx + bit] = (byte & (1 << (7 - bit))) ? 255 : 0;
-                        }
-                    }
-                }
-                
-                frames.push(frame);
+                codes.push({ index: chunkIndex, data: payload, isHeader: false });
             }
             
-            return frames;
+            return codes;
         }
 
-        function drawFrame(canvas, frameData) {
-            const ctx = canvas.getContext('2d');
-            const imageData = ctx.createImageData(canvas.width, canvas.height);
-            
-            for (let i = 0; i < frameData.length; i++) {
-                const idx = i * 4;
-                const val = frameData[i];
-                imageData.data[idx] = val;
-                imageData.data[idx + 1] = val;
-                imageData.data[idx + 2] = val;
-                imageData.data[idx + 3] = 255;
+        function arrayBufferToBase64(buffer) {
+            let binary = '';
+            const bytes = new Uint8Array(buffer);
+            for (let i = 0; i < bytes.length; i++) {
+                binary += String.fromCharCode(bytes[i]);
             }
+            return btoa(binary);
+        }
+
+        function base64ToArrayBuffer(base64) {
+            const binary = atob(base64);
+            const bytes = new Uint8Array(binary.length);
+            for (let i = 0; i < binary.length; i++) {
+                bytes[i] = binary.charCodeAt(i);
+            }
+            return bytes;
+        }
+
+        function displayNextQR() {
+            if (!transmitting || currentQRIndex >= qrCodes.length) {
+                if (transmitting) {
+                    currentQRIndex = 0; // Loop
+                } else {
+                    return;
+                }
+            }
+
+            const qrData = qrCodes[currentQRIndex];
+            const display = document.getElementById('qr-display');
+            display.innerHTML = '';
             
-            ctx.putImageData(imageData, 0, 0);
+            // Create frame indicator
+            const indicator = document.createElement('div');
+            indicator.className = 'frame-indicator';
+            indicator.textContent = qrData.isHeader ? 'HEADER' : `${qrData.index}/${qrCodes.length - 1}`;
+            display.appendChild(indicator);
+            
+            // Generate QR code
+            new QRCode(display, {
+                text: qrData.data,
+                width: 550,
+                height: 550,
+                colorDark: "#000000",
+                colorLight: "#ffffff",
+                correctLevel: QRCode.CorrectLevel.M
+            });
+            
+            document.getElementById('current-qr').textContent = `${currentQRIndex + 1}/${qrCodes.length}`;
+            const progress = ((currentQRIndex + 1) / qrCodes.length * 100).toFixed(0);
+            document.getElementById('progress-percent').textContent = progress + '%';
+            
+            currentQRIndex++;
+            
+            transmitInterval = setTimeout(displayNextQR, displayDelay * 1000);
         }
 
         // RECEIVER
@@ -699,25 +643,20 @@
                     };
                 });
                 
-                const overlay = document.getElementById('overlay-canvas');
-                overlay.width = video.videoWidth;
-                overlay.height = video.videoHeight;
-                
                 receiving = true;
                 document.getElementById('camera-btn').textContent = '⏹️ Stop Camera';
-                document.getElementById('receive-status').textContent = 'Scanning for grid...';
+                document.getElementById('receive-status').textContent = 'Scanning for QR codes...';
                 document.getElementById('receive-status').className = 'status active';
                 document.getElementById('receive-stats').style.display = 'grid';
                 
-                receivedFrames = {};
-                totalFrames = 0;
+                receivedChunks = {};
+                totalChunks = 0;
                 dataLength = 0;
-                detectionAttempts = 0;
-                successfulDetections = 0;
+                lastScannedIndex = -1;
                 
-                scanInterval = setInterval(scanFrame, 1000 / scanFPS);
+                scanInterval = setInterval(scanQR, 100);
                 
-                log('Camera started, looking for grid...');
+                log('Camera started, scanning...');
             } catch (err) {
                 alert('Camera error: ' + err.message);
                 log('ERROR: ' + err.message);
@@ -739,240 +678,92 @@
             document.getElementById('receive-status').className = 'status';
         }
 
-        function scanFrame() {
+        function scanQR() {
             const video = document.getElementById('video');
+            const canvas = document.getElementById('scan-canvas');
+            
             if (video.readyState !== video.HAVE_ENOUGH_DATA) return;
             
-            detectionAttempts++;
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
             
-            // Create processing canvas
-            const procCanvas = document.createElement('canvas');
-            procCanvas.width = video.videoWidth;
-            procCanvas.height = video.videoHeight;
-            const procCtx = procCanvas.getContext('2d');
-            procCtx.drawImage(video, 0, 0);
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const code = jsQR(imageData.data, imageData.width, imageData.height, {
+                inversionAttempts: "dontInvert",
+            });
             
-            // Find red border
-            const bounds = findRedBorder(procCtx, procCanvas.width, procCanvas.height);
-            
-            if (!bounds) {
-                if (detectionAttempts % 10 === 0) {
-                    log('No red border detected');
-                    document.getElementById('receive-status').textContent = 'Looking for RED border...';
-                    document.getElementById('receive-status').className = 'status warning';
-                }
-                return;
-            }
-            
-            // Extract and process grid
-            const gridData = extractGrid(procCtx, bounds);
-            
-            if (gridData) {
-                successfulDetections++;
-                const rate = ((successfulDetections / detectionAttempts) * 100).toFixed(0);
-                document.getElementById('detection-rate').textContent = rate + '%';
-                document.getElementById('receive-status').textContent = 'Decoding data...';
-                document.getElementById('receive-status').className = 'status active';
-                
-                const decoded = decodeGrid(gridData);
-                if (decoded) {
-                    processDecodedFrame(decoded);
-                }
-                
-                // Show debug view
-                showDebugView(gridData);
+            if (code) {
+                processQRCode(code.data);
             }
         }
 
-        function findRedBorder(ctx, width, height) {
-            const imageData = ctx.getImageData(0, 0, width, height);
-            const data = imageData.data;
-            
-            // Sample points to find red pixels
-            const redPoints = [];
-            const step = 10;
-            
-            for (let y = 0; y < height; y += step) {
-                for (let x = 0; x < width; x += step) {
-                    const idx = (y * width + x) * 4;
-                    const r = data[idx];
-                    const g = data[idx + 1];
-                    const b = data[idx + 2];
-                    
-                    // Red detection: high R, low G and B
-                    if (r > 150 && g < 100 && b < 100 && r > g + 50 && r > b + 50) {
-                        redPoints.push({ x, y });
-                    }
-                }
-            }
-            
-            if (redPoints.length < 20) return null;
-            
-            // Find bounding box of red points
-            let minX = width, maxX = 0, minY = height, maxY = 0;
-            for (const p of redPoints) {
-                minX = Math.min(minX, p.x);
-                maxX = Math.max(maxX, p.x);
-                minY = Math.min(minY, p.y);
-                maxY = Math.max(maxY, p.y);
-            }
-            
-            // Add padding and ensure square-ish
-            const padding = 20;
-            minX = Math.max(0, minX - padding);
-            maxX = Math.min(width, maxX + padding);
-            minY = Math.max(0, minY - padding);
-            maxY = Math.min(height, maxY + padding);
-            
-            const w = maxX - minX;
-            const h = maxY - minY;
-            
-            if (w < 100 || h < 100 || w > width * 0.9 || h > height * 0.9) return null;
-            
-            return { x: minX, y: minY, width: w, height: h };
-        }
-
-        function extractGrid(ctx, bounds) {
-            // Try different grid sizes
-            for (const size of [20, 24, 28, 16, 32]) {
-                const canvas = document.createElement('canvas');
-                canvas.width = size;
-                canvas.height = size;
-                const tempCtx = canvas.getContext('2d');
+        function processQRCode(data) {
+            try {
+                const parsed = JSON.parse(data);
                 
-                tempCtx.drawImage(
-                    ctx.canvas,
-                    bounds.x, bounds.y, bounds.width, bounds.height,
-                    0, 0, size, size
-                );
-                
-                const imageData = tempCtx.getImageData(0, 0, size, size);
-                const data = imageData.data;
-                const grid = new Uint8Array(size * size);
-                
-                // Convert to grayscale
-                for (let i = 0; i < size * size; i++) {
-                    const idx = i * 4;
-                    grid[i] = (data[idx] + data[idx + 1] + data[idx + 2]) / 3;
-                }
-                
-// Check if corners are white (detection markers)
-                let cornerSum = 0;
-                for (let i = 0; i < 4; i++) {
-                    for (let j = 0; j < 4; j++) {
-                        cornerSum += grid[i * size + j];
-                        cornerSum += grid[i * size + (size - 1 - j)];
-                        cornerSum += grid[(size - 1 - i) * size + j];
-                        cornerSum += grid[(size - 1 - i) * size + (size - 1 - j)];
-                    }
-                }
-                
-                const avgCorner = cornerSum / 64;
-                if (avgCorner > 180) {
-                    return { grid, size };
-                }
-            }
-            
-            return null;
-        }
-
-        function decodeGrid(gridData) {
-            const { grid, size } = gridData;
-            
-            // Apply adaptive thresholding
-            const binary = new Uint8Array(size * size);
-            for (let i = 0; i < grid.length; i++) {
-                binary[i] = grid[i] > threshold ? 255 : 0;
-            }
-            
-            // Check if this is a header frame (center top pixel is white)
-            const isHeader = binary[2 * size + Math.floor(size / 2)] > 128;
-            
-            // Decode frame number from center top (24 bits)
-            let frameNum = 0;
-            if (!isHeader) {
-                for (let bit = 0; bit < 24; bit++) {
-                    const idx = 2 * size + Math.floor(size / 2) - 12 + bit;
-                    if (binary[idx] > 128) {
-                        frameNum |= (1 << (23 - bit));
-                    }
-                }
-            }
-            
-            // Extract data bits
-            const bytesPerFrame = Math.floor((size * size - 20) / 8);
-            const bytes = [];
-            
-            for (let i = 0; i < bytesPerFrame; i++) {
-                let byte = 0;
-                const startIdx = 20 + i * 8;
-                
-                if (startIdx + 7 < binary.length) {
-                    for (let bit = 0; bit < 8; bit++) {
-                        if (binary[startIdx + bit] > 128) {
-                            byte |= (1 << (7 - bit));
-                        }
-                    }
-                    bytes.push(byte);
-                }
-            }
-            
-            return {
-                isHeader,
-                frameNum,
-                bytes: new Uint8Array(bytes),
-                size
-            };
-        }
-
-        function processDecodedFrame(decoded) {
-            if (decoded.isHeader) {
-                // Try to parse header
-                try {
-                    const headerStr = new TextDecoder().decode(decoded.bytes);
-                    const nullIdx = headerStr.indexOf('\0');
-                    const cleanStr = nullIdx >= 0 ? headerStr.substring(0, nullIdx) : headerStr;
-                    const header = JSON.parse(cleanStr);
-                    
-                    dataLength = header.len;
-                    receivedDataType = header.type;
-                    totalFrames = Math.ceil(dataLength / decoded.bytes.length) + 1;
+                // Check if header
+                if (parsed.len !== undefined) {
+                    dataLength = parsed.len;
+                    receivedDataType = parsed.type;
+                    totalChunks = parsed.chunks;
                     
                     document.getElementById('expected-bytes').textContent = dataLength;
-                    log(`Header decoded: ${dataLength} bytes, type: ${receivedDataType}`);
+                    log(`Header: ${dataLength} bytes, ${totalChunks} chunks`);
+                    receivedChunks[0] = { isHeader: true };
+                } 
+                // Data chunk
+                else if (parsed.i !== undefined && parsed.d !== undefined) {
+                    const index = parsed.i;
                     
-                    receivedFrames[0] = decoded;
-                } catch (e) {
-                    // Header not complete or corrupted
+                    // Avoid re-scanning same QR
+                    if (index === lastScannedIndex) return;
+                    lastScannedIndex = index;
+                    
+                    if (!receivedChunks[index]) {
+                        const chunkData = base64ToArrayBuffer(parsed.d);
+                        receivedChunks[index] = { data: chunkData };
+                        
+                        const scanned = Object.keys(receivedChunks).length - 1; // -1 for header
+                        document.getElementById('qrs-scanned').textContent = scanned;
+                        
+                        if (totalChunks > 0) {
+                            const rate = ((scanned / totalChunks) * 100).toFixed(0);
+                            document.getElementById('success-rate').textContent = rate + '%';
+                        }
+                        
+                        log(`Chunk ${index}/${totalChunks} received`);
+                        reconstructData();
+                    }
                 }
-            } else {
-                if (decoded.frameNum > 0 && !receivedFrames[decoded.frameNum]) {
-                    receivedFrames[decoded.frameNum] = decoded;
-                    document.getElementById('frames-decoded').textContent = Object.keys(receivedFrames).length;
-                    log(`Frame ${decoded.frameNum} decoded`);
-                }
-            }
-            
-            // Try to reconstruct data
-            if (dataLength > 0) {
-                reconstructData();
+                
+                // Reset after small delay to allow next scan
+                setTimeout(() => { lastScannedIndex = -1; }, 200);
+                
+            } catch (e) {
+                // Invalid QR data
             }
         }
 
         function reconstructData() {
-            // Get all data frames in order
-            const frameNums = Object.keys(receivedFrames)
+            if (totalChunks === 0 || dataLength === 0) return;
+            
+            // Check how many chunks we have
+            const chunkIndices = Object.keys(receivedChunks)
                 .map(k => parseInt(k))
                 .filter(k => k > 0)
                 .sort((a, b) => a - b);
             
-            if (frameNums.length === 0) return;
+            if (chunkIndices.length === 0) return;
             
-            // Concatenate bytes
+            // Concatenate chunks
             const allBytes = [];
-            for (const num of frameNums) {
-                const frame = receivedFrames[num];
-                allBytes.push(...frame.bytes);
+            for (const index of chunkIndices) {
+                const chunk = receivedChunks[index];
+                if (chunk && chunk.data) {
+                    allBytes.push(...chunk.data);
+                }
             }
             
             const receivedBytes = Math.min(allBytes.length, dataLength);
@@ -990,7 +781,7 @@
                 displayReceivedData(data);
             }
             
-            if (receivedBytes >= dataLength && dataLength > 0) {
+            if (receivedBytes >= dataLength) {
                 document.getElementById('receive-status').textContent = 'Transfer complete!';
                 document.getElementById('receive-status').className = 'status';
                 log('✓ Transfer complete!');
@@ -1007,7 +798,7 @@
                 const img = document.createElement('img');
                 img.src = url;
                 img.style.maxWidth = '100%';
-                img.onload = () => log('Image rendered');
+                img.onload = () => log('Image rendered!');
                 preview.appendChild(img);
             } else {
                 try {
@@ -1015,40 +806,10 @@
                     const pre = document.createElement('pre');
                     pre.textContent = text;
                     preview.appendChild(pre);
-                    log(`Text: "${text.substring(0, 50)}..."`);
                 } catch (e) {
                     preview.innerHTML = `<p>Binary data (${data.length} bytes)</p>`;
                 }
             }
-        }
-
-        function showDebugView(gridData) {
-            const debugCanvas = document.getElementById('debug-canvas');
-            const { grid, size } = gridData;
-            
-            debugCanvas.width = size * 10;
-            debugCanvas.height = size * 10;
-            const ctx = debugCanvas.getContext('2d');
-            
-            const imageData = ctx.createImageData(size, size);
-            for (let i = 0; i < grid.length; i++) {
-                const idx = i * 4;
-                const val = grid[i] > threshold ? 255 : 0;
-                imageData.data[idx] = val;
-                imageData.data[idx + 1] = val;
-                imageData.data[idx + 2] = val;
-                imageData.data[idx + 3] = 255;
-            }
-            
-            // Scale up
-            const tempCanvas = document.createElement('canvas');
-            tempCanvas.width = size;
-            tempCanvas.height = size;
-            const tempCtx = tempCanvas.getContext('2d');
-            tempCtx.putImageData(imageData, 0, 0);
-            
-            ctx.imageSmoothingEnabled = false;
-            ctx.drawImage(tempCanvas, 0, 0, size, size, 0, 0, size * 10, size * 10);
         }
 
         function log(message) {
@@ -1057,10 +818,9 @@
             logEl.innerHTML += `[${time}] ${message}<br>`;
             logEl.scrollTop = logEl.scrollHeight;
             
-            // Keep only last 10 messages
             const lines = logEl.innerHTML.split('<br>');
-            if (lines.length > 10) {
-                logEl.innerHTML = lines.slice(-10).join('<br>');
+            if (lines.length > 8) {
+                logEl.innerHTML = lines.slice(-8).join('<br>');
             }
         }
     </script>

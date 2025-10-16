@@ -247,7 +247,7 @@
 </head>
 <body>
     <div class="container">
-        <h1 style="text-align: center; margin-bottom: 30px; font-size: 32px; background: linear-gradient(135deg, #667eea 0%, #f093fb 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">Data Over Sound v4</h1>
+        <h1 style="text-align: center; margin-bottom: 30px; font-size: 32px; background: linear-gradient(135deg, #667eea 0%, #f093fb 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">v5 Data Over Sound</h1>
         
         <div class="mode-selector">
             <button class="mode-btn transmitter active" onclick="switchMode('transmitter')">📡 TRANSMITTER</button>
@@ -320,6 +320,10 @@
                 <div class="stat">
                     <div class="stat-label">Status</div>
                     <div class="stat-value" id="rxStatus">Idle</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">Header Detected</div>
+                    <div class="stat-value" id="headerStatus">❌</div>
                 </div>
                 <div class="stat">
                     <div class="stat-label">Data Received</div>
@@ -609,24 +613,29 @@
                         // Check multiple positions for header
                         if (recentBits.includes(expectedHeader)) {
                             headerDetected = true;
+                            document.getElementById('headerStatus').textContent = '✅';
                             document.getElementById('rxStatus').textContent = 'Header Detected!';
                             document.getElementById('listeningText').textContent = 'Receiving data...';
                             detectedData = '';
                             bitBuffer = '';
-                            console.log('✓ Header pattern matched!');
+                            recentBits = '';
+                            console.log('✓ Header pattern matched! Bits:', expectedHeader);
                         }
                     } else {
-                        // Collect data bits
+                        // Collect data bits after header
+                        bitBuffer += bit;
+                        
                         if (bitBuffer.length >= 8) {
                             detectedData += bitBuffer;
                             bitBuffer = '';
                             
-                            // Try to decode
-                            if (detectedData.length >= 16) {
+                            // Try to decode immediately
+                            if (detectedData.length >= 8) {
                                 const text = binaryToText(detectedData);
                                 if (text && text.length > 0) {
                                     document.getElementById('rxPreviewContent').textContent = text;
                                     document.getElementById('rxDataSize').textContent = text.length + ' B';
+                                    console.log('Decoded:', text, 'Bits:', detectedData.length);
                                 }
                             }
                         }

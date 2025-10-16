@@ -247,7 +247,7 @@
 </head>
 <body>
     <div class="container">
-        <h1 style="text-align: center; margin-bottom: 30px; font-size: 32px; background: linear-gradient(135deg, #667eea 0%, #f093fb 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">v6 Data Over Sound</h1>
+        <h1 style="text-align: center; margin-bottom: 30px; font-size: 32px; background: linear-gradient(135deg, #667eea 0%, #f093fb 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">v7 Data Over Sound</h1>
         
         <div class="mode-selector">
             <button class="mode-btn transmitter active" onclick="switchMode('transmitter')">📡 TRANSMITTER</button>
@@ -412,21 +412,8 @@
         }
         
         function playHeader(ctx, speed) {
-            const now = ctx.currentTime;
-            const symbolDuration = 1 / speed;
-            const headerPattern = [1, 0, 1, 0, 1, 0, 1, 1];
-            let startTime = now;
-            
-            // Play header pattern 20 times
-            for (let rep = 0; rep < 20; rep++) {
-                for (let bit of headerPattern) {
-                    const freq = bit === 0 ? 500 : 2500;
-                    generateTone(ctx, freq, symbolDuration * 0.95, startTime);
-                    startTime += symbolDuration;
-                }
-            }
-            
-            return startTime - now;
+            // No header needed, just return 0
+            return 0;
         }
         
         function encodeAndPlayData(text, speed) {
@@ -434,22 +421,9 @@
             const binary = textToBinary(text);
             
             let startTime = ctx.currentTime;
-            
-            // Play header
-            startTime += playHeader(ctx, speed);
-            startTime += 0.5; // gap after header
-            
             const symbolDuration = 1 / speed;
             
-            // Play length (16 bits)
-            const lengthBinary = text.length.toString(2).padStart(16, '0');
-            for (let bit of lengthBinary) {
-                const freq = bit === '0' ? 500 : 2500;
-                generateTone(ctx, freq, symbolDuration * 0.95, startTime);
-                startTime += symbolDuration;
-            }
-            
-            // Play data
+            // Play data directly without header or length
             for (let bit of binary) {
                 const freq = bit === '0' ? 500 : 2500;
                 generateTone(ctx, freq, symbolDuration * 0.95, startTime);
@@ -542,8 +516,6 @@
         
         let detectedBits = '';
         let lastSampleTime = 0;
-        let headerDetected = false;
-        const headerPattern = [1, 0, 1, 0, 1, 0, 1, 1];
         
         function getAverageFrequency(freqData) {
             let sum = 0;
@@ -575,12 +547,13 @@
             }
             
             document.getElementById('peakAmp').textContent = peakAmp;
+            document.getElementById('rxStatus').textContent = 'Listening... (' + detectedBits.length + ' bits)';
             
             const now = Date.now();
             const symbolDuration = 1000 / rxSpeed;
             
-            // Only detect if signal is loud enough (peak > 30)
-            if (now - lastSampleTime > symbolDuration && peakAmp > 30) {
+            // Only detect if signal is loud enough (peak > 20)
+            if (now - lastSampleTime > symbolDuration * 0.9 && peakAmp > 20) {
                 const avgFreq = getAverageFrequency(freqData);
                 document.getElementById('avgFreq').textContent = Math.floor(avgFreq) + ' Hz';
                 
@@ -590,30 +563,15 @@
                 
                 document.getElementById('bitsReceived').textContent = detectedBits.length;
                 
-                // Check for header
-                if (!headerDetected && detectedBits.length >= 160) {
-                    let expectedHeader = '';
-                    for (let i = 0; i < 20; i++) {
-                        expectedHeader += headerPattern.join('');
-                    }
+                // Decode data in real-time as we get it
+                if (detectedBits.length >= 8) {
+                    const completeBytes = Math.floor(detectedBits.length / 8);
+                    const fullBytes = detectedBits.substring(0, completeBytes * 8);
+                    const text = binaryToText(fullBytes);
                     
-                    const recentBits = detectedBits.slice(-160);
-                    if (recentBits === expectedHeader) {
-                        headerDetected = true;
-                        document.getElementById('rxStatus').textContent = '✅ Header Detected!';
-                        detectedBits = ''; // Clear bits to start fresh data
-                        console.log('HEADER DETECTED!');
-                    }
-                }
-                
-                // Decode data after header
-                if (headerDetected && detectedBits.length >= 8) {
-                    if (detectedBits.length % 8 === 0) {
-                        const text = binaryToText(detectedBits);
-                        if (text) {
-                            document.getElementById('rxPreviewContent').textContent = text;
-                            console.log('Decoded:', text, 'Bits:', detectedBits.length);
-                        }
+                    if (text) {
+                        document.getElementById('rxPreviewContent').textContent = text;
+                        console.log('Decoded:', text, 'Bits:', detectedBits.length);
                     }
                 }
                 
@@ -648,7 +606,7 @@
         function updateStats() {
             const text = document.getElementById('messageInput').value;
             const size = new TextEncoder().encode(text).length;
-            const duration = Math.ceil((size * 8 + 16 + 160) / txSpeed) + Math.ceil(1 / txSpeed);
+            const duration = Math.ceil((size * 8) / txSpeed);
             
             document.getElementById('dataSize').textContent = size + ' B';
             document.getElementById('estDuration').textContent = duration + ' s';

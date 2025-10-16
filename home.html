@@ -3,740 +3,633 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Acoustic FSK Data Link</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+    <title>Data Over Sound</title>
     <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        * {
             margin: 0;
             padding: 0;
-            background: #282c34;
-            color: #abb2bf;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
+            box-sizing: border-box;
         }
-        .container {
-            width: 95%;
-            max-width: 1200px;
-            padding: 20px;
-            background: #3c4048;
-            border-radius: 10px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-            margin-top: 20px;
-        }
-        h1 {
-            color: #61afef;
-            text-align: center;
-            margin-bottom: 20px;
-        }
-        .mode-selector {
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
             display: flex;
             justify-content: center;
-            margin-bottom: 30px;
-        }
-        .mode-btn {
-            background: #5c6370;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            margin: 0 10px;
-            cursor: pointer;
-            border-radius: 5px;
-            transition: background-color 0.3s;
-        }
-        .mode-btn.active {
-            background: #98c379;
-            color: #282c34;
-            font-weight: bold;
-        }
-        .mode-btn:hover {
-            background: #61afef;
-        }
-        .content {
-            display: none;
-            padding: 20px;
-            border: 1px solid #5c6370;
-            border-radius: 5px;
-        }
-        .content.active {
-            display: block;
-        }
-        /* Transmitter Styles */
-        #transmitter textarea {
-            width: 98%;
-            height: 100px;
-            background: #282c34;
-            color: #abb2bf;
-            border: 1px solid #5c6370;
-            border-radius: 3px;
-            padding: 10px;
-            resize: vertical;
-        }
-        .controls, .stats, .receiver-stats {
-            margin-top: 15px;
-            padding: 10px;
-            background: #353941;
-            border-radius: 5px;
-        }
-        .control-group {
-            margin-bottom: 10px;
-        }
-        label {
-            display: block;
-            margin-bottom: 5px;
-            color: #c678dd;
-        }
-        input[type="range"] {
-            width: 100%;
-            -webkit-appearance: none;
-            height: 8px;
-            background: #5c6370;
-            border-radius: 5px;
-            outline: none;
-            opacity: 0.7;
-            transition: opacity .2s;
-        }
-        input[type="range"]::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            appearance: none;
-            width: 15px;
-            height: 15px;
-            background: #e6c07b;
-            border-radius: 50%;
-            cursor: pointer;
-        }
-        .button-group {
-            margin-top: 20px;
-            display: flex;
-            justify-content: space-between;
             align-items: center;
+            padding: 20px;
         }
-        #transmitBtn, #listeningBtn {
-            padding: 15px 30px;
+
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 800px;
+            width: 100%;
+        }
+
+        h1 {
+            text-align: center;
+            color: #667eea;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+        }
+
+        .mode-selector {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 30px;
+            justify-content: center;
+        }
+
+        .mode-btn {
+            padding: 15px 40px;
             border: none;
-            border-radius: 5px;
+            border-radius: 10px;
             font-size: 1.1em;
             cursor: pointer;
-            font-weight: bold;
-            transition: background 0.3s;
+            transition: all 0.3s;
+            font-weight: 600;
         }
-        #transmitBtn {
-            background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
+
+        .mode-btn.transmit {
+            background: #667eea;
             color: white;
         }
-        #transmitBtn:disabled {
-            background: #5c6370;
+
+        .mode-btn.receive {
+            background: #764ba2;
+            color: white;
+        }
+
+        .mode-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .mode-btn.active {
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.5);
+        }
+
+        .section {
+            display: none;
+        }
+
+        .section.active {
+            display: block;
+        }
+
+        .input-area {
+            margin-bottom: 20px;
+        }
+
+        textarea {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 1em;
+            resize: vertical;
+            min-height: 150px;
+            font-family: inherit;
+        }
+
+        .file-upload {
+            margin: 20px 0;
+            padding: 30px;
+            border: 3px dashed #667eea;
+            border-radius: 10px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .file-upload:hover {
+            background: rgba(102, 126, 234, 0.1);
+        }
+
+        .file-upload input {
+            display: none;
+        }
+
+        .encoding-selector {
+            margin: 20px 0;
+        }
+
+        .encoding-selector label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .encoding-selector select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 1em;
+        }
+
+        .control-btn {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.2em;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 600;
+            margin-top: 10px;
+        }
+
+        .control-btn.transmit {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .control-btn.receive {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+        }
+
+        .control-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .control-btn:disabled {
+            opacity: 0.5;
             cursor: not-allowed;
         }
-        #txProgressContainer {
-            width: 100%;
-            background: #5c6370;
-            border-radius: 5px;
-            margin-top: 10px;
-        }
-        #txProgress {
-            height: 10px;
-            background: #98c379;
-            width: 0%;
-            border-radius: 5px;
-            transition: width 0.1s linear;
-        }
-        .stats p, .receiver-stats p {
-            margin: 5px 0;
-            display: flex;
-            justify-content: space-between;
-        }
-        .stats span, .receiver-stats span {
-            color: #61afef;
-            font-weight: bold;
-        }
-        /* Receiver Styles */
-        #rxChart {
-            max-height: 300px;
-            margin-top: 20px;
-        }
-        #listeningStatus {
-            margin-top: 10px;
-            font-size: 1.2em;
-            color: #98c379;
-        }
-        #rxPreview {
-            margin-top: 20px;
+
+        .status {
+            margin: 20px 0;
             padding: 15px;
-            background: #282c34;
-            border-radius: 5px;
-            min-height: 50px;
+            border-radius: 10px;
+            font-weight: 600;
+            text-align: center;
         }
-        #rxPreview p {
-            margin: 0;
+
+        .status.idle {
+            background: #e0e0e0;
+            color: #666;
+        }
+
+        .status.active {
+            background: #4caf50;
+            color: white;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        canvas {
+            width: 100%;
+            height: 150px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            margin: 20px 0;
+            background: #f5f5f5;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .stat-item {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 15px;
+            border-radius: 10px;
+            color: white;
+            text-align: center;
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+
+        .stat-value {
+            font-size: 1.5em;
+            font-weight: 600;
+            margin-top: 5px;
+        }
+
+        .preview {
+            margin: 20px 0;
+            padding: 20px;
+            background: #f5f5f5;
+            border-radius: 10px;
+            max-height: 400px;
+            overflow: auto;
+        }
+
+        .preview img {
+            max-width: 100%;
+            border-radius: 10px;
+        }
+
+        .preview pre {
             white-space: pre-wrap;
             word-wrap: break-word;
-            font-size: 1.1em;
-            color: #e6c07b;
+            font-family: 'Courier New', monospace;
         }
-        .hidden {
-            display: none !important;
+
+        .progress-bar {
+            width: 100%;
+            height: 30px;
+            background: #e0e0e0;
+            border-radius: 15px;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
         }
     </style>
 </head>
 <body>
+    <div class="container">
+        <h1>🔊 Data Over Sound</h1>
+        
+        <div class="mode-selector">
+            <button class="mode-btn transmit active" onclick="setMode('transmit')">📡 Transmit</button>
+            <button class="mode-btn receive" onclick="setMode('receive')">📻 Receive</button>
+        </div>
 
-<div class="container">
-    <h1>Acoustic FSK Data Link</h1>
+        <!-- Transmit Section -->
+        <div id="transmit-section" class="section active">
+            <div class="input-area">
+                <textarea id="text-input" placeholder="Enter text to transmit..."></textarea>
+            </div>
 
-    <div class="mode-selector">
-        <button class="mode-btn transmitter active" onclick="switchMode('transmitter')">Transmitter (MBP)</button>
-        <button class="mode-btn receiver" onclick="switchMode('receiver')">Receiver (iPhone)</button>
+            <div class="file-upload" onclick="document.getElementById('file-input').click()">
+                <input type="file" id="file-input" onchange="handleFileSelect(event)">
+                <p>📁 Click to upload a file (images, text, etc.)</p>
+                <p id="file-name" style="margin-top: 10px; color: #667eea; font-weight: 600;"></p>
+            </div>
+
+            <div class="encoding-selector">
+                <label>Encoding Mode:</label>
+                <select id="encoding-mode">
+                    <option value="fsk">FSK (Audible - Fast)</option>
+                    <option value="dtmf">DTMF (Audible - Reliable)</option>
+                    <option value="ultrasonic">Ultrasonic (Silent - High Frequency)</option>
+                </select>
+            </div>
+
+            <button class="control-btn transmit" onclick="startTransmission()">🚀 Start Transmission</button>
+
+            <div id="transmit-status" class="status idle">Ready to transmit</div>
+
+            <canvas id="transmit-canvas"></canvas>
+
+            <div class="stats" id="transmit-stats" style="display: none;">
+                <div class="stat-item">
+                    <div class="stat-label">File Size</div>
+                    <div class="stat-value" id="file-size">0 B</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Progress</div>
+                    <div class="stat-value" id="progress">0%</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Time Remaining</div>
+                    <div class="stat-value" id="time-remaining">--</div>
+                </div>
+            </div>
+
+            <div class="preview" id="transmit-preview" style="display: none;"></div>
+        </div>
+
+        <!-- Receive Section -->
+        <div id="receive-section" class="section">
+            <button class="control-btn receive" onclick="startListening()">👂 Start Listening</button>
+
+            <div id="receive-status" class="status idle">Not listening</div>
+
+            <canvas id="receive-canvas"></canvas>
+
+            <div class="progress-bar">
+                <div class="progress-fill" id="receive-progress" style="width: 0%">0%</div>
+            </div>
+
+            <div class="stats" id="receive-stats" style="display: none;">
+                <div class="stat-item">
+                    <div class="stat-label">Received</div>
+                    <div class="stat-value" id="received-bytes">0 B</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Mode</div>
+                    <div class="stat-value" id="detected-mode">--</div>
+                </div>
+            </div>
+
+            <div class="preview" id="receive-preview" style="display: none;"></div>
+        </div>
     </div>
 
-    <div id="transmitter" class="content active">
-        <h2>Transmitter Settings</h2>
-        
-        <label for="messageInput">Message to Transmit (ASCII text):</label>
-        <textarea id="messageInput">Hello World! This is a test message for acoustic data transmission over the air.</textarea>
+    <script>
+        let currentMode = 'transmit';
+        let audioContext;
+        let transmitting = false;
+        let receiving = false;
+        let fileData = null;
+        let fileName = null;
+        let fileType = null;
 
-        <div class="controls">
-            <div class="control-group">
-                <label for="txSpeed">Transmission Speed (Bit/s): <span id="txSpeedDisplay">1 bit/sec</span></label>
-                <input type="range" id="txSpeed" min="1" max="24" value="1" step="1">
-            </div>
-            <div class="stats">
-                <p>Data Size: <span id="dataSize">0 B (0 bits)</span></p>
-                <p>Est. Duration: <span id="estDuration">0.00 s</span></p>
-                <p>Status: <span id="txStatus">Ready</span></p>
-            </div>
-        </div>
-
-        <div class="button-group">
-            <button id="transmitBtn" onclick="transmitData()">🔊 TRANSMIT</button>
-            <div id="txProgressContainer"><div id="txProgress"></div></div>
-        </div>
-        
-        <div id="preview" class="stats">
-            <label>Binary Preview:</label>
-            <p id="previewContent"></p>
-        </div>
-    </div>
-
-    <div id="receiver" class="content">
-        <h2>Receiver Settings and Status</h2>
-
-        <div class="controls">
-             <div class="control-group">
-                <label for="rxSpeed">Receiver Speed (Bit/s): <span id="rxSpeedDisplay">1 bit/sec</span></label>
-                <input type="range" id="rxSpeed" min="1" max="24" value="1" step="1">
-            </div>
-            <div class="button-group">
-                <button id="listeningBtn" onclick="toggleListening()">🎧 START LISTENING</button>
-            </div>
-            <div class="receiver-stats">
-                <p>Status: <span id="rxStatus">Idle</span></p>
-                <p>Total Bits Received: <span id="bitsReceived">0</span></p>
-                <p>Current Peak Amplitude (0-127): <span id="peakAmp">0</span></p>
-                <p>Detected Average Freq: <span id="avgFreq">0 Hz</span></p>
-            </div>
-        </div>
-
-        <div id="listeningStatus" class="hidden">
-            <h3>Decoded Message Preview:</h3>
-            <div id="rxPreview"><p id="rxPreviewContent">Waiting for signal...</p></div>
-        </div>
-        
-        <canvas id="rxChart"></canvas>
-    </div>
-</div>
-<script>
-    let audioContext = null;
-    let rxChart = null;
-    let isListening = false;
-    let analyser = null;
-    let timeDomainData = null;
-    let freqData = null;
-    let animationId = null;
-    let sampleInterval = null; 
-    
-    // Core parameters
-    let txSpeed = 1; // bits per second
-    let rxSpeed = 1;
-    const SAMPLES_PER_BIT = 5; // How many times to sample per bit duration (must be odd)
-    const FREQ_0 = 500; // Frequency for bit '0'
-    const FREQ_1 = 2500; // Frequency for bit '1'
-    const FREQ_THRESHOLD = (FREQ_0 + FREQ_1) / 2; // Midpoint threshold
-    // CRITICAL CHANGE: Lowered amplitude threshold for better iPhone detection
-    const MIN_PEAK_AMP = 15; // Minimum required amplitude (0-127) for a valid signal
-    
-    // Preamble and Synchronization
-    const PREAMBLE = '1010101010101010'; // 16 bits for timing stabilization
-    const START_DELIMITER = '11110000'; // 8 bits
-    const CALIBRATION_TONE_FREQ = 1500; // Mid-range frequency for calibration
-    const CALIBRATION_TONE_DURATION = 3; // 3 seconds of tone
-
-    // Receiver State
-    let detectedBits = '';
-    let currentBitSamples = [];
-    let consecutiveNoSignal = 0;
-    const MAX_NO_SIGNAL = SAMPLES_PER_BIT * 3; 
-
-    // Synchronization state
-    let isSynchronized = false;
-    let bitSampleCounter = 0; 
-
-
-    function getAudioContext() {
-        if (!audioContext) {
-            audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            console.log("AudioContext Initialized. Sample Rate:", audioContext.sampleRate);
-        }
-        return audioContext;
-    }
-    
-    function textToBinary(text) {
-        let binary = '';
-        for (let i = 0; i < text.length; i++) {
-            binary += text.charCodeAt(i).toString(2).padStart(8, '0');
-        }
-        return binary;
-    }
-    
-    function binaryToText(binary) {
-        let text = '';
-        for (let i = 0; i < binary.length; i += 8) {
-            const byte = binary.substr(i, 8);
-            if (byte.length === 8) {
-                const charCode = parseInt(byte, 2);
-                if (charCode > 31 && charCode < 127) {
-                    text += String.fromCharCode(charCode);
-                } else {
-                    text += ''; 
-                }
-            }
-        }
-        return text;
-    }
-    
-    function generateTone(ctx, freq, duration, startTime) {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(freq, startTime);
-        
-        gain.gain.setValueAtTime(0, startTime);
-        gain.gain.linearRampToValueAtTime(0.7, startTime + 0.005);
-        gain.gain.linearRampToValueAtTime(0.7, startTime + duration - 0.005);
-        gain.gain.linearRampToValueAtTime(0, startTime + duration);
-        
-        osc.start(startTime);
-        osc.stop(startTime + duration);
-    }
-    
-    function encodeAndPlayData(text, speed) {
-        const ctx = getAudioContext();
-        const dataBinary = textToBinary(text);
-        
-        console.group('TRANSMITTER');
-        console.log('--- CALIBRATION TONE: 1500Hz for 3s ---');
-        console.log('PREAMBLE:', PREAMBLE);
-        console.log('START DELIMITER:', START_DELIMITER);
-        console.log('DATA BINARY:', dataBinary);
-        console.log('BIT RATE (bps):', speed);
-        console.groupEnd();
-        
-        let startTime = ctx.currentTime;
-        const symbolDuration = 1 / speed; 
-        
-        document.getElementById('txStatus').textContent = 'Transmitting...';
-        document.getElementById('txProgress').style.width = '0%';
-        
-        // 1. CALIBRATION TONE
-        console.log(`[TX Calibration] Tone @ ${CALIBRATION_TONE_FREQ}Hz. Start time: ${startTime.toFixed(3)}s`);
-        generateTone(ctx, CALIBRATION_TONE_FREQ, CALIBRATION_TONE_DURATION, startTime); 
-        startTime += CALIBRATION_TONE_DURATION;
-        
-        // 2. PREAMBLE + DELIMITER + DATA
-        const fullBinary = PREAMBLE + START_DELIMITER + dataBinary;
-
-        for (let i = 0; i < fullBinary.length; i++) {
-            const bit = fullBinary[i];
-            const freq = bit === '0' ? FREQ_0 : FREQ_1;
-            
-            let type = (i < PREAMBLE.length) ? 'Preamble' : (i < PREAMBLE.length + START_DELIMITER.length) ? 'Delimiter' : 'Data';
-            console.log(`[TX ${type}] Bit ${i+1}/${fullBinary.length}: ${bit} @ ${freq}Hz. Start time: ${startTime.toFixed(3)}s`);
-
-            generateTone(ctx, freq, symbolDuration * 0.98, startTime); 
-            
-            // Update progress bar
-            setTimeout(() => {
-                document.getElementById('txProgress').style.width = `${((i + 1) / fullBinary.length) * 100}%`;
-            }, (startTime - ctx.currentTime) * 1000);
-            
-            startTime += symbolDuration;
-        }
-        
-        const totalDuration = startTime - ctx.currentTime;
-        
-        setTimeout(() => {
-            document.getElementById('txStatus').textContent = 'Complete! Sent ' + fullBinary.length + ' bits.';
-            document.getElementById('transmitBtn').disabled = false;
-        }, totalDuration * 1000 + 50); 
-        
-        return totalDuration;
-    }
-    
-    function transmitData() {
-        const text = document.getElementById('messageInput').value;
-        if (!text) {
-            alert('Please enter a message');
-            return;
-        }
-        
-        document.getElementById('transmitBtn').disabled = true;
-        
-        try {
-            encodeAndPlayData(text, txSpeed);
-        } catch (e) {
-            console.error('Transmission Error:', e);
-            alert('Error during transmission. Check console (F12).');
-            document.getElementById('transmitBtn').disabled = false;
-        }
-    }
-    
-    function switchMode(mode) {
-        document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
-        document.querySelectorAll('.mode-btn').forEach(el => el.classList.remove('active'));
-        document.getElementById(mode).classList.add('active');
-        document.querySelector(`.mode-btn.${mode}`).classList.add('active');
-        
-        if (mode === 'transmitter' && isListening) {
-             toggleListening();
-        }
-    }
-    
-    function toggleListening() {
-        isListening = !isListening;
-        const btn = document.getElementById('listeningBtn');
-        const status = document.getElementById('listeningStatus');
-        
-        if (isListening) {
-            btn.textContent = '🎧 STOP LISTENING';
-            btn.style.background = 'linear-gradient(135deg, #f44336 0%, #d32f2f 100%)';
-            status.classList.remove('hidden');
-            startReceiving();
-        } else {
-            btn.textContent = '🎧 START LISTENING';
-            btn.style.background = 'linear-gradient(135deg, #4caf50 0%, #45a049 100%)';
-            status.classList.add('hidden');
-            stopReceiving();
-        }
-    }
-    
-    function startReceiving() {
-        const ctx = getAudioContext();
-        
-        navigator.mediaDevices.getUserMedia({ audio: true })
-            .then(stream => {
-                const source = ctx.createMediaStreamSource(stream);
-                analyser = ctx.createAnalyser();
-                analyser.fftSize = 4096;
-                analyser.smoothingTimeConstant = 0.7; 
-                source.connect(analyser);
-                
-                timeDomainData = new Uint8Array(analyser.fftSize);
-                freqData = new Uint8Array(analyser.frequencyBinCount);
-                
-                // Reset receiver state
-                detectedBits = '';
-                currentBitSamples = [];
-                consecutiveNoSignal = 0;
-                isSynchronized = false;
-                bitSampleCounter = 0; 
-                document.getElementById('rxPreviewContent').textContent = 'Listening...';
-                
-                const totalSamplesPerSecond = rxSpeed * SAMPLES_PER_BIT;
-                const sampleDelayMs = 1000 / totalSamplesPerSecond;
-                
-                console.group('RECEIVER INITIALIZATION');
-                console.log('MIN_PEAK_AMP (Signal Threshold):', MIN_PEAK_AMP);
-                console.log('RX Speed (bps):', rxSpeed);
-                console.log('Samples per Bit:', SAMPLES_PER_BIT);
-                console.log('Sample Delay (ms):', sampleDelayMs.toFixed(2));
-                console.groupEnd();
-
-                if (sampleInterval) clearInterval(sampleInterval);
-                sampleInterval = setInterval(processSample, sampleDelayMs);
-                
-                document.getElementById('rxStatus').textContent = 'Sampling @ ' + totalSamplesPerSecond.toFixed(0) + ' Hz';
-                detectSignal(); 
-            })
-            .catch(err => {
-                console.error('Microphone Error:', err);
-                alert('Microphone access denied or failed: ' + err.message);
-                isListening = true; 
-                document.getElementById('listeningBtn').click(); 
-            });
-    }
-    
-    function stopReceiving() {
-        if (animationId) {
-            cancelAnimationFrame(animationId);
-        }
-        if (sampleInterval) {
-            clearInterval(sampleInterval);
-            sampleInterval = null;
-        }
-        document.getElementById('rxStatus').textContent = 'Idle';
-    }
-
-    function getAverageFrequency(freqData) {
-        let sum = 0;
-        let count = 0;
-        const nyquist = audioContext.sampleRate / 2;
-        const freqBinSize = nyquist / freqData.length;
-        
-        const maxFreqIndex = Math.floor(3000 / freqBinSize); 
-
-        for (let i = 0; i < maxFreqIndex; i++) {
-            if (freqData[i] > 100) { 
-                sum += i * freqBinSize;
-                count++;
-            }
-        }
-        
-        return count > 0 ? sum / count : 0;
-    }
-    
-    function processSample() {
-        if (!analyser || !isListening) return;
-
-        analyser.getByteFrequencyData(freqData);
-        analyser.getByteTimeDomainData(timeDomainData);
-        
-        let peakAmp = 0;
-        for (let i = 0; i < timeDomainData.length; i++) {
-            const val = Math.abs(timeDomainData[i] - 128);
-            if (val > peakAmp) peakAmp = val;
-        }
-
-        document.getElementById('peakAmp').textContent = peakAmp;
-        
-        // -----------------------------------------------------
-        // 1. SIGNAL DETECTION AND SAMPLE COLLECTION
-        // -----------------------------------------------------
-
-        if (peakAmp > MIN_PEAK_AMP) { 
-            consecutiveNoSignal = 0; 
-            
-            const avgFreq = getAverageFrequency(freqData);
-            document.getElementById('avgFreq').textContent = Math.floor(avgFreq) + ' Hz';
-
-            // Special check for calibration tone (1500Hz) - it will be detected as a mix
-            // This tone is mainly for checking the peakAmp value during the 3s of its duration
-            if (avgFreq > FREQ_0 && avgFreq < FREQ_1) {
-                // If we're synchronized, assume it's data
-                if (isSynchronized) {
-                    const sampleBit = avgFreq > FREQ_THRESHOLD ? 1 : 0;
-                    currentBitSamples.push(sampleBit);
-                } else {
-                    // During calibration/preamble, just collect the sample
-                    const sampleBit = avgFreq > FREQ_THRESHOLD ? 1 : 0;
-                    currentBitSamples.push(sampleBit);
-                }
-            }
-            
-            // -----------------------------------------------------
-            // 2. MAJORITY VOTE AND BIT DETECTION
-            // -----------------------------------------------------
-
-            if (currentBitSamples.length >= SAMPLES_PER_BIT) {
-                const ones = currentBitSamples.filter(b => b === 1).length;
-                const majorityBit = ones > (SAMPLES_PER_BIT / 2) ? '1' : '0';
-                
-                // Only log detailed bit detection once synchronized to avoid spam
-                if (isSynchronized) {
-                    console.log(`[RX BIT - DATA] Sampled: ${currentBitSamples.join('')} (1s=${ones}). Detected Bit: ${majorityBit}.`);
-                } else {
-                    console.log(`[RX BIT - SYNC] Detected Bit: ${majorityBit}.`);
-                }
-
-                currentBitSamples = []; // Reset for the next bit
-                
-                // -----------------------------------------------------
-                // 3. SYNCHRONIZATION AND DATA PROCESSING
-                // -----------------------------------------------------
-                
-                if (!isSynchronized) {
-                    const syncSequence = PREAMBLE + START_DELIMITER;
-                    detectedBits += majorityBit;
-                    
-                    // Only keep enough bits to check the sequence
-                    if (detectedBits.length > syncSequence.length) {
-                         detectedBits = detectedBits.substring(detectedBits.length - syncSequence.length);
-                    }
-                    
-                    if (detectedBits === syncSequence) {
-                        isSynchronized = true;
-                        detectedBits = ''; // Clear the buffer to start with real data
-                        document.getElementById('rxStatus').textContent = 'Synchronized. Awaiting Data...';
-                        document.getElementById('rxPreviewContent').textContent = ''; // Clear preview
-                        console.log('*** SYNCHRONIZATION ACHIEVED! Data begins now. ***');
-                    }
-                } else {
-                    detectedBits += majorityBit;
-                    document.getElementById('bitsReceived').textContent = detectedBits.length;
-
-                    if (detectedBits.length >= 8) {
-                        const completeBytes = Math.floor(detectedBits.length / 8);
-                        const fullBytes = detectedBits.substring(0, completeBytes * 8);
-                        const text = binaryToText(fullBytes);
-                        
-                        document.getElementById('rxPreviewContent').textContent += text;
-                        console.log('--> [DECODED BYTE] <--:', text);
-                        
-                        detectedBits = detectedBits.substring(completeBytes * 8); 
-                    }
-                }
-            }
-        } else {
-            // Signal is too low
-            consecutiveNoSignal++;
-            document.getElementById('avgFreq').textContent = '0 Hz (No signal)';
-            
-            // Auto-reset logic: If no signal for too long, reset synchronization
-            if (consecutiveNoSignal >= MAX_NO_SIGNAL) {
-                if (isSynchronized) {
-                    console.warn(`[RX RESET] Lost synchronization due to extended signal loss (${consecutiveNoSignal} samples).`);
-                    isSynchronized = false;
-                }
-                currentBitSamples = []; 
-                detectedBits = ''; 
-                document.getElementById('rxStatus').textContent = 'Sampling... Awaiting Sync.';
-            }
-        }
-    }
-    
-    function detectSignal() {
-        if (!isListening) return;
-        animationId = requestAnimationFrame(detectSignal);
-    }
-    
-    function updateRxChart() {
-        if (!rxChart || !freqData) return;
-        
-        const ctx = getAudioContext();
-        const nyquist = ctx.sampleRate / 2;
-        const freqBinSize = nyquist / analyser.frequencyBinCount;
-        
-        const visibleBins = 512; 
-        const visibleData = Array.from(freqData).slice(0, visibleBins);
-        
-        if (rxChart.data.labels.length !== visibleBins) {
-            rxChart.data.labels = Array.from({length: visibleBins}, (_, i) => Math.floor(i * freqBinSize));
-            rxChart.update('none'); 
-        }
-        
-        rxChart.data.datasets[0].data = visibleData;
-        rxChart.update('none');
-    }
-    
-    // Speed controls and stats update
-    document.getElementById('txSpeed').addEventListener('input', (e) => {
-        txSpeed = parseInt(e.target.value);
-        document.getElementById('txSpeedDisplay').textContent = txSpeed + ' bit/sec';
-        updateStats();
-    });
-    
-    document.getElementById('rxSpeed').addEventListener('input', (e) => {
-        rxSpeed = parseInt(e.target.value);
-        document.getElementById('rxSpeedDisplay').textContent = rxSpeed + ' bit/sec';
-        
-        if (isListening) {
-            stopReceiving();
-            startReceiving();
-        }
-    });
-    
-    function updateStats() {
-        const text = document.getElementById('messageInput').value;
-        const size = new TextEncoder().encode(text).length;
-        const totalBits = size * 8; 
-        // Add 3 seconds for the calibration tone
-        const totalTransmissionBits = totalBits + PREAMBLE.length + START_DELIMITER.length;
-        const duration = (totalTransmissionBits / txSpeed + CALIBRATION_TONE_DURATION).toFixed(2);
-        
-        document.getElementById('dataSize').textContent = size + ' B (' + totalBits + ' data bits)';
-        document.getElementById('estDuration').textContent = duration + ' s';
-        
-        if (text) {
-            document.getElementById('preview').classList.remove('hidden');
-            document.getElementById('previewContent').textContent = `Calibration Tone (3s) + Preamble (${PREAMBLE}) + Delimiter (${START_DELIMITER}) + Data...`;
-        } else {
-            document.getElementById('preview').classList.add('hidden');
-        }
-    }
-    
-    document.getElementById('messageInput').addEventListener('input', updateStats);
-    
-    // Initialize RX chart
-    window.addEventListener('load', () => {
-        const rxCtx = document.getElementById('rxChart');
-        const initialLabels = Array.from({length: 512}, (_, i) => i); 
-
-        rxChart = new Chart(rxCtx, {
-            type: 'line',
-            data: {
-                labels: initialLabels,
-                datasets: [{
-                    label: 'Frequency Spectrum (Amplitude)',
-                    data: Array(512).fill(0),
-                    borderColor: '#f093fb',
-                    backgroundColor: 'rgba(240, 147, 251, 0.1)',
-                    tension: 0.3,
-                    pointRadius: 0,
-                    borderWidth: 2
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { 
-                    legend: { display: true, labels: { color: 'white' } },
-                    title: { display: true, text: 'Real-time Frequency Spectrum (0-3000 Hz)', color: 'white' }
-                },
-                animation: false, 
-                scales: {
-                    y: {
-                        title: { display: true, text: 'Amplitude (0-255)', color: 'rgba(255,255,255,0.8)' },
-                        beginAtZero: true,
-                        max: 255,
-                        ticks: { color: 'rgba(255,255,255,0.6)' },
-                        grid: { color: 'rgba(255,255,255,0.1)' }
-                    },
-                    x: {
-                        title: { display: true, text: 'Frequency (Hz)', color: 'rgba(255,255,255,0.8)' },
-                        ticks: { 
-                            color: 'rgba(255,255,255,0.6)',
-                            callback: function(val, index) {
-                                return index % 100 === 0 ? this.getLabelForValue(val) : '';
-                            }
-                        },
-                        grid: { color: 'rgba(255,255,255,0.1)' }
-                    }
-                }
-            }
-        });
-        
-        const chartRender = () => {
-            if (isListening) updateRxChart();
-            requestAnimationFrame(chartRender);
+        // Encoding parameters
+        const encodings = {
+            fsk: { freq0: 1200, freq1: 2200, baud: 300 },
+            dtmf: { baud: 100 },
+            ultrasonic: { freq0: 18000, freq1: 19000, baud: 400 }
         };
-        chartRender();
 
-        updateStats(); 
-    });
-</script>
+        function setMode(mode) {
+            currentMode = mode;
+            document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.section').forEach(sec => sec.classList.remove('active'));
+            
+            if (mode === 'transmit') {
+                document.querySelector('.mode-btn.transmit').classList.add('active');
+                document.getElementById('transmit-section').classList.add('active');
+            } else {
+                document.querySelector('.mode-btn.receive').classList.add('active');
+                document.getElementById('receive-section').classList.add('active');
+            }
+        }
+
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            fileName = file.name;
+            fileType = file.type;
+            document.getElementById('file-name').textContent = `Selected: ${fileName}`;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                fileData = new Uint8Array(e.target.result);
+                
+                // Show preview for images
+                if (fileType.startsWith('image/')) {
+                    const preview = document.getElementById('transmit-preview');
+                    preview.style.display = 'block';
+                    preview.innerHTML = `<img src="${e.target.result}" alt="Preview">`;
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        async function startTransmission() {
+            if (transmitting) return;
+
+            const textInput = document.getElementById('text-input').value;
+            const encodingMode = document.getElementById('encoding-mode').value;
+
+            let dataToSend;
+            let dataType = 'text';
+
+            if (fileData) {
+                dataToSend = fileData;
+                dataType = 'file';
+            } else if (textInput) {
+                dataToSend = new TextEncoder().encode(textInput);
+                dataType = 'text';
+            } else {
+                alert('Please enter text or select a file to transmit');
+                return;
+            }
+
+            transmitting = true;
+            document.getElementById('transmit-status').textContent = 'Transmitting...';
+            document.getElementById('transmit-status').className = 'status active';
+            document.getElementById('transmit-stats').style.display = 'grid';
+            document.getElementById('file-size').textContent = formatBytes(dataToSend.length);
+
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+            // Create header
+            const header = createHeader(encodingMode, dataType, dataToSend.length, fileName, fileType);
+            
+            // Transmit header then data
+            await transmitData(header, encodingMode, true);
+            await transmitData(dataToSend, encodingMode, false);
+
+            transmitting = false;
+            document.getElementById('transmit-status').textContent = 'Transmission complete!';
+            document.getElementById('transmit-status').className = 'status idle';
+            setTimeout(() => {
+                document.getElementById('progress').textContent = '100%';
+            }, 100);
+        }
+
+        function createHeader(mode, type, length, name, mimeType) {
+            const header = {
+                magic: 'DOS1', // Data Over Sound v1
+                mode: mode,
+                type: type,
+                length: length,
+                name: name || '',
+                mime: mimeType || ''
+            };
+            
+            const json = JSON.stringify(header);
+            return new TextEncoder().encode(json);
+        }
+
+        async function transmitData(data, mode, isHeader) {
+            const params = encodings[mode];
+            const canvas = document.getElementById('transmit-canvas');
+            const ctx = canvas.getContext('2d');
+            const sampleRate = audioContext.sampleRate;
+            const samplesPerBit = Math.floor(sampleRate / params.baud);
+
+            const startTime = Date.now();
+            let bytesSent = 0;
+
+            for (let i = 0; i < data.length; i++) {
+                const byte = data[i];
+                
+                // Create audio buffer for this byte
+                const buffer = audioContext.createBuffer(1, samplesPerBit * 8, sampleRate);
+                const channelData = buffer.getChannelData(0);
+
+                for (let bit = 0; bit < 8; bit++) {
+                    const bitValue = (byte >> (7 - bit)) & 1;
+                    const freq = bitValue ? params.freq1 : params.freq0;
+                    const offset = bit * samplesPerBit;
+
+                    for (let s = 0; s < samplesPerBit; s++) {
+                        const t = s / sampleRate;
+                        channelData[offset + s] = Math.sin(2 * Math.PI * freq * t) * 0.5;
+                    }
+                }
+
+                // Play the buffer
+                const source = audioContext.createBufferSource();
+                source.buffer = buffer;
+                source.connect(audioContext.destination);
+                source.start(audioContext.currentTime);
+
+                // Update visualization
+                drawWaveform(ctx, canvas, channelData, samplesPerBit * 8);
+
+                // Update stats
+                if (!isHeader) {
+                    bytesSent++;
+                    const progress = (bytesSent / data.length) * 100;
+                    document.getElementById('progress').textContent = `${progress.toFixed(1)}%`;
+                    
+                    const elapsed = (Date.now() - startTime) / 1000;
+                    const rate = bytesSent / elapsed;
+                    const remaining = (data.length - bytesSent) / rate;
+                    document.getElementById('time-remaining').textContent = `${remaining.toFixed(1)}s`;
+                }
+
+                // Wait for the audio to finish
+                await new Promise(resolve => setTimeout(resolve, (samplesPerBit * 8 / sampleRate) * 1000));
+            }
+        }
+
+        async function startListening() {
+            if (receiving) {
+                receiving = false;
+                document.getElementById('receive-status').textContent = 'Stopped listening';
+                document.getElementById('receive-status').className = 'status idle';
+                return;
+            }
+
+            receiving = true;
+            document.getElementById('receive-status').textContent = 'Listening...';
+            document.getElementById('receive-status').className = 'status active';
+            document.getElementById('receive-stats').style.display = 'grid';
+
+            try {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                const source = audioContext.createMediaStreamSource(stream);
+                const analyser = audioContext.createAnalyser();
+                analyser.fftSize = 2048;
+                source.connect(analyser);
+
+                const canvas = document.getElementById('receive-canvas');
+                const ctx = canvas.getContext('2d');
+                const dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+                let receivedData = [];
+                let headerReceived = false;
+                let expectedLength = 0;
+                let detectedMode = null;
+
+                function processAudio() {
+                    if (!receiving) return;
+
+                    analyser.getByteTimeDomainData(dataArray);
+                    drawWaveform(ctx, canvas, dataArray, dataArray.length);
+
+                    // Simple frequency detection (would need more sophisticated decoding in production)
+                    analyser.getByteFrequencyData(dataArray);
+                    
+                    // Detect peaks for FSK decoding
+                    const peaks = detectFrequencyPeaks(dataArray, analyser);
+                    
+                    if (peaks.length > 0 && !headerReceived) {
+                        // Try to decode header
+                        document.getElementById('detected-mode').textContent = 'Detecting...';
+                    }
+
+                    requestAnimationFrame(processAudio);
+                }
+
+                processAudio();
+            } catch (err) {
+                alert('Could not access microphone: ' + err.message);
+                receiving = false;
+            }
+        }
+
+        function detectFrequencyPeaks(frequencyData, analyser) {
+            const peaks = [];
+            const threshold = 150;
+            
+            for (let i = 1; i < frequencyData.length - 1; i++) {
+                if (frequencyData[i] > threshold &&
+                    frequencyData[i] > frequencyData[i - 1] &&
+                    frequencyData[i] > frequencyData[i + 1]) {
+                    const freq = (i * audioContext.sampleRate) / (analyser.fftSize * 2);
+                    peaks.push({ index: i, frequency: freq, magnitude: frequencyData[i] });
+                }
+            }
+            
+            return peaks;
+        }
+
+        function drawWaveform(ctx, canvas, data, length) {
+            const width = canvas.width;
+            const height = canvas.height;
+            
+            ctx.fillStyle = '#f5f5f5';
+            ctx.fillRect(0, 0, width, height);
+            
+            ctx.strokeStyle = '#667eea';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            
+            const sliceWidth = width / length;
+            let x = 0;
+            
+            for (let i = 0; i < length; i++) {
+                const v = data[i] / 128.0;
+                const y = (v * height) / 2;
+                
+                if (i === 0) {
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.lineTo(x, y);
+                }
+                
+                x += sliceWidth;
+            }
+            
+            ctx.stroke();
+        }
+
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        // Initialize canvases
+        window.onload = function() {
+            const canvases = document.querySelectorAll('canvas');
+            canvases.forEach(canvas => {
+                canvas.width = canvas.offsetWidth * 2;
+                canvas.height = canvas.offsetHeight * 2;
+                const ctx = canvas.getContext('2d');
+                ctx.scale(2, 2);
+            });
+        };
+    </script>
 </body>
 </html>

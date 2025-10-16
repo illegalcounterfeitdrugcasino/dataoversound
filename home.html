@@ -247,7 +247,7 @@
 </head>
 <body>
     <div class="container">
-        <h1 style="text-align: center; margin-bottom: 30px; font-size: 32px; background: linear-gradient(135deg, #667eea 0%, #f093fb 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">v9 Data Over Sound</h1>
+        <h1 style="text-align: center; margin-bottom: 30px; font-size: 32px; background: linear-gradient(135deg, #667eea 0%, #f093fb 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">v10 Data Over Sound</h1>
         
         <div class="mode-selector">
             <button class="mode-btn transmitter active" onclick="switchMode('transmitter')">📡 TRANSMITTER</button>
@@ -419,6 +419,9 @@
         function encodeAndPlayData(text, speed) {
             const ctx = getAudioContext();
             const binary = textToBinary(text);
+            
+            console.log('TRANSMITTING:', text);
+            console.log('BINARY:', binary);
             
             let startTime = ctx.currentTime;
             const symbolDuration = 1 / speed;

@@ -263,6 +263,17 @@
             color: white;
             font-weight: 600;
         }
+
+        .debug-log {
+            margin-top: 20px;
+            padding: 10px;
+            background: #f0f0f0;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 0.85em;
+            max-height: 200px;
+            overflow-y: auto;
+        }
     </style>
 </head>
 <body>
@@ -277,7 +288,7 @@
         <!-- Transmit Section -->
         <div id="transmit-section" class="section active">
             <div class="input-area">
-                <textarea id="text-input" placeholder="Enter text to transmit..."></textarea>
+                <textarea id="text-input" placeholder="Enter text to transmit...">Hello from Data Over Sound!</textarea>
             </div>
 
             <div class="file-upload" onclick="document.getElementById('file-input').click()">
@@ -289,9 +300,8 @@
             <div class="encoding-selector">
                 <label>Encoding Mode:</label>
                 <select id="encoding-mode">
-                    <option value="fsk">FSK (Audible - Fast)</option>
-                    <option value="dtmf">DTMF (Audible - Reliable)</option>
-                    <option value="ultrasonic">Ultrasonic (Silent - High Frequency)</option>
+                    <option value="fsk">FSK (Audible - Recommended)</option>
+                    <option value="dtmf">DTMF (Audible - Slower but Robust)</option>
                 </select>
             </div>
 
@@ -303,7 +313,7 @@
 
             <div class="stats" id="transmit-stats" style="display: none;">
                 <div class="stat-item">
-                    <div class="stat-label">File Size</div>
+                    <div class="stat-label">Data Size</div>
                     <div class="stat-value" id="file-size">0 B</div>
                 </div>
                 <div class="stat-item">
@@ -321,7 +331,7 @@
 
         <!-- Receive Section -->
         <div id="receive-section" class="section">
-            <button class="control-btn receive" onclick="startListening()">👂 Start Listening</button>
+            <button class="control-btn receive" id="listen-btn" onclick="toggleListening()">👂 Start Listening</button>
 
             <div id="receive-status" class="status idle">Not listening</div>
 
@@ -340,9 +350,15 @@
                     <div class="stat-label">Mode</div>
                     <div class="stat-value" id="detected-mode">--</div>
                 </div>
+                <div class="stat-item">
+                    <div class="stat-label">Quality</div>
+                    <div class="stat-value" id="signal-quality">--</div>
+                </div>
             </div>
 
             <div class="preview" id="receive-preview" style="display: none;"></div>
+            
+            <div class="debug-log" id="debug-log"></div>
         </div>
     </div>
 
@@ -355,12 +371,31 @@
         let fileName = null;
         let fileType = null;
 
-        // Encoding parameters
+        // Enhanced encoding parameters with longer tones
         const encodings = {
-            fsk: { freq0: 1200, freq1: 2200, baud: 300 },
-            dtmf: { baud: 100 },
-            ultrasonic: { freq0: 18000, freq1: 19000, baud: 400 }
+            fsk: { 
+                freq0: 1200, 
+                freq1: 2200, 
+                baud: 50,  // Slower = more reliable
+                amplitude: 0.8
+            },
+            dtmf: { 
+                freqs: [[697, 1209], [697, 1336], [697, 1477], [770, 1209], 
+                        [770, 1336], [770, 1477], [852, 1209], [852, 1336],
+                        [852, 1477], [941, 1209], [941, 1336], [941, 1477],
+                        [941, 1633], [697, 1633], [770, 1633], [852, 1633]],
+                baud: 40,
+                amplitude: 0.8
+            }
         };
+
+        // Receiver state
+        let receiveBuffer = [];
+        let headerData = null;
+        let receivedBytes = 0;
+        let lastBitTime = 0;
+        let bitBuffer = [];
+        let byteBuffer = [];
 
         function setMode(mode) {
             currentMode = mode;
@@ -388,7 +423,6 @@
             reader.onload = function(e) {
                 fileData = new Uint8Array(e.target.result);
                 
-                // Show preview for images
                 if (fileType.startsWith('image/')) {
                     const preview = document.getElementById('transmit-preview');
                     preview.style.display = 'block';
@@ -426,24 +460,29 @@
 
             audioContext = new (window.AudioContext || window.webkitAudioContext)();
 
-            // Create header
+            // Create and send header
             const header = createHeader(encodingMode, dataType, dataToSend.length, fileName, fileType);
             
-            // Transmit header then data
+            // Send sync tones first
+            await playSyncTone(encodingMode);
+            await sleep(200);
+            
+            // Send header
             await transmitData(header, encodingMode, true);
+            await sleep(300);
+            
+            // Send data
             await transmitData(dataToSend, encodingMode, false);
 
             transmitting = false;
             document.getElementById('transmit-status').textContent = 'Transmission complete!';
             document.getElementById('transmit-status').className = 'status idle';
-            setTimeout(() => {
-                document.getElementById('progress').textContent = '100%';
-            }, 100);
+            document.getElementById('progress').textContent = '100%';
         }
 
         function createHeader(mode, type, length, name, mimeType) {
             const header = {
-                magic: 'DOS1', // Data Over Sound v1
+                magic: 'DOS1',
                 mode: mode,
                 type: type,
                 length: length,
@@ -455,12 +494,32 @@
             return new TextEncoder().encode(json);
         }
 
+        async function playSyncTone(mode) {
+            const params = encodings[mode];
+            const duration = 0.5;
+            const buffer = audioContext.createBuffer(1, audioContext.sampleRate * duration, audioContext.sampleRate);
+            const data = buffer.getChannelData(0);
+            
+            for (let i = 0; i < data.length; i++) {
+                const t = i / audioContext.sampleRate;
+                data[i] = Math.sin(2 * Math.PI * 2000 * t) * params.amplitude;
+            }
+            
+            const source = audioContext.createBufferSource();
+            source.buffer = buffer;
+            source.connect(audioContext.destination);
+            source.start();
+            
+            await sleep(duration * 1000);
+        }
+
         async function transmitData(data, mode, isHeader) {
             const params = encodings[mode];
             const canvas = document.getElementById('transmit-canvas');
             const ctx = canvas.getContext('2d');
             const sampleRate = audioContext.sampleRate;
-            const samplesPerBit = Math.floor(sampleRate / params.baud);
+            const bitDuration = 1 / params.baud;
+            const samplesPerBit = Math.floor(sampleRate * bitDuration);
 
             const startTime = Date.now();
             let bytesSent = 0;
@@ -468,31 +527,44 @@
             for (let i = 0; i < data.length; i++) {
                 const byte = data[i];
                 
-                // Create audio buffer for this byte
+                // Create audio for this byte (8 bits)
                 const buffer = audioContext.createBuffer(1, samplesPerBit * 8, sampleRate);
                 const channelData = buffer.getChannelData(0);
 
-                for (let bit = 0; bit < 8; bit++) {
-                    const bitValue = (byte >> (7 - bit)) & 1;
-                    const freq = bitValue ? params.freq1 : params.freq0;
-                    const offset = bit * samplesPerBit;
+                if (mode === 'fsk') {
+                    for (let bit = 0; bit < 8; bit++) {
+                        const bitValue = (byte >> (7 - bit)) & 1;
+                        const freq = bitValue ? params.freq1 : params.freq0;
+                        const offset = bit * samplesPerBit;
 
-                    for (let s = 0; s < samplesPerBit; s++) {
-                        const t = s / sampleRate;
-                        channelData[offset + s] = Math.sin(2 * Math.PI * freq * t) * 0.5;
+                        for (let s = 0; s < samplesPerBit; s++) {
+                            const t = s / sampleRate;
+                            channelData[offset + s] = Math.sin(2 * Math.PI * freq * t) * params.amplitude;
+                        }
+                    }
+                } else if (mode === 'dtmf') {
+                    for (let bit = 0; bit < 8; bit++) {
+                        const bitValue = (byte >> (7 - bit)) & 1;
+                        const freqPair = params.freqs[bitValue ? 1 : 0];
+                        const offset = bit * samplesPerBit;
+
+                        for (let s = 0; s < samplesPerBit; s++) {
+                            const t = s / sampleRate;
+                            channelData[offset + s] = (
+                                Math.sin(2 * Math.PI * freqPair[0] * t) +
+                                Math.sin(2 * Math.PI * freqPair[1] * t)
+                            ) * params.amplitude * 0.5;
+                        }
                     }
                 }
 
-                // Play the buffer
                 const source = audioContext.createBufferSource();
                 source.buffer = buffer;
                 source.connect(audioContext.destination);
-                source.start(audioContext.currentTime);
+                source.start();
 
-                // Update visualization
-                drawWaveform(ctx, canvas, channelData, samplesPerBit * 8);
+                drawWaveform(ctx, canvas, channelData, Math.min(samplesPerBit * 8, 2000));
 
-                // Update stats
                 if (!isHeader) {
                     bytesSent++;
                     const progress = (bytesSent / data.length) * 100;
@@ -504,87 +576,215 @@
                     document.getElementById('time-remaining').textContent = `${remaining.toFixed(1)}s`;
                 }
 
-                // Wait for the audio to finish
-                await new Promise(resolve => setTimeout(resolve, (samplesPerBit * 8 / sampleRate) * 1000));
+                await sleep((samplesPerBit * 8 / sampleRate) * 1000);
+            }
+        }
+
+        async function toggleListening() {
+            if (receiving) {
+                stopListening();
+            } else {
+                await startListening();
             }
         }
 
         async function startListening() {
-            if (receiving) {
-                receiving = false;
-                document.getElementById('receive-status').textContent = 'Stopped listening';
-                document.getElementById('receive-status').className = 'status idle';
-                return;
-            }
-
             receiving = true;
-            document.getElementById('receive-status').textContent = 'Listening...';
+            document.getElementById('listen-btn').textContent = '⏹️ Stop Listening';
+            document.getElementById('receive-status').textContent = 'Listening for signal...';
             document.getElementById('receive-status').className = 'status active';
             document.getElementById('receive-stats').style.display = 'grid';
 
+            // Reset state
+            receiveBuffer = [];
+            headerData = null;
+            receivedBytes = 0;
+            bitBuffer = [];
+            byteBuffer = [];
+            lastBitTime = 0;
+
             try {
                 audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    audio: { 
+                        echoCancellation: false,
+                        noiseSuppression: false,
+                        autoGainControl: false
+                    } 
+                });
+                
                 const source = audioContext.createMediaStreamSource(stream);
                 const analyser = audioContext.createAnalyser();
-                analyser.fftSize = 2048;
+                analyser.fftSize = 4096;
+                analyser.smoothingTimeConstant = 0.3;
                 source.connect(analyser);
 
-                const canvas = document.getElementById('receive-canvas');
-                const ctx = canvas.getContext('2d');
-                const dataArray = new Uint8Array(analyser.frequencyBinCount);
+                window.receiverStream = stream;
+                window.receiverAnalyser = analyser;
 
-                let receivedData = [];
-                let headerReceived = false;
-                let expectedLength = 0;
-                let detectedMode = null;
-
-                function processAudio() {
-                    if (!receiving) return;
-
-                    analyser.getByteTimeDomainData(dataArray);
-                    drawWaveform(ctx, canvas, dataArray, dataArray.length);
-
-                    // Simple frequency detection (would need more sophisticated decoding in production)
-                    analyser.getByteFrequencyData(dataArray);
-                    
-                    // Detect peaks for FSK decoding
-                    const peaks = detectFrequencyPeaks(dataArray, analyser);
-                    
-                    if (peaks.length > 0 && !headerReceived) {
-                        // Try to decode header
-                        document.getElementById('detected-mode').textContent = 'Detecting...';
-                    }
-
-                    requestAnimationFrame(processAudio);
-                }
-
-                processAudio();
+                processReceivedAudio(analyser);
             } catch (err) {
                 alert('Could not access microphone: ' + err.message);
                 receiving = false;
+                document.getElementById('listen-btn').textContent = '👂 Start Listening';
             }
         }
 
-        function detectFrequencyPeaks(frequencyData, analyser) {
-            const peaks = [];
-            const threshold = 150;
+        function stopListening() {
+            receiving = false;
+            document.getElementById('listen-btn').textContent = '👂 Start Listening';
+            document.getElementById('receive-status').textContent = 'Stopped';
+            document.getElementById('receive-status').className = 'status idle';
             
-            for (let i = 1; i < frequencyData.length - 1; i++) {
-                if (frequencyData[i] > threshold &&
-                    frequencyData[i] > frequencyData[i - 1] &&
-                    frequencyData[i] > frequencyData[i + 1]) {
-                    const freq = (i * audioContext.sampleRate) / (analyser.fftSize * 2);
-                    peaks.push({ index: i, frequency: freq, magnitude: frequencyData[i] });
+            if (window.receiverStream) {
+                window.receiverStream.getTracks().forEach(track => track.stop());
+            }
+        }
+
+        function processReceivedAudio(analyser) {
+            if (!receiving) return;
+
+            const canvas = document.getElementById('receive-canvas');
+            const ctx = canvas.getContext('2d');
+            const freqData = new Uint8Array(analyser.frequencyBinCount);
+            const timeData = new Uint8Array(analyser.frequencyBinCount);
+            
+            analyser.getByteFrequencyData(freqData);
+            analyser.getByteTimeDomainData(timeData);
+
+            drawWaveform(ctx, canvas, timeData, Math.min(timeData.length, 2000));
+
+            // Detect FSK frequencies
+            const freq0 = 1200;
+            const freq1 = 2200;
+            const binSize = audioContext.sampleRate / analyser.fftSize;
+            
+            const bin0 = Math.round(freq0 / binSize);
+            const bin1 = Math.round(freq1 / binSize);
+            
+            const power0 = getFrequencyPower(freqData, bin0, 3);
+            const power1 = getFrequencyPower(freqData, bin1, 3);
+            
+            const threshold = 100;
+            const maxPower = Math.max(power0, power1);
+            
+            if (maxPower > threshold) {
+                const bit = power1 > power0 ? 1 : 0;
+                const now = Date.now();
+                
+                if (now - lastBitTime > 15) {  // Debounce
+                    bitBuffer.push(bit);
+                    lastBitTime = now;
+                    
+                    if (bitBuffer.length === 8) {
+                        const byte = bitBuffer.reduce((acc, bit, i) => acc | (bit << (7 - i)), 0);
+                        byteBuffer.push(byte);
+                        bitBuffer = [];
+                        
+                        log(`Received byte: ${byte} (${String.fromCharCode(byte)})`);
+                        
+                        if (!headerData) {
+                            tryDecodeHeader();
+                        } else {
+                            receiveBuffer.push(byte);
+                            receivedBytes++;
+                            updateReceiveProgress();
+                            
+                            if (receivedBytes >= headerData.length) {
+                                completeReception();
+                            }
+                        }
+                    }
                 }
+                
+                const quality = Math.round((maxPower / 255) * 100);
+                document.getElementById('signal-quality').textContent = `${quality}%`;
+            }
+
+            requestAnimationFrame(() => processReceivedAudio(analyser));
+        }
+
+        function getFrequencyPower(freqData, bin, range) {
+            let sum = 0;
+            for (let i = Math.max(0, bin - range); i <= Math.min(freqData.length - 1, bin + range); i++) {
+                sum += freqData[i];
+            }
+            return sum / (range * 2 + 1);
+        }
+
+        function tryDecodeHeader() {
+            try {
+                const text = new TextDecoder().decode(new Uint8Array(byteBuffer));
+                if (text.includes('"magic":"DOS1"')) {
+                    const jsonStart = text.indexOf('{');
+                    const jsonEnd = text.lastIndexOf('}') + 1;
+                    const jsonStr = text.substring(jsonStart, jsonEnd);
+                    headerData = JSON.parse(jsonStr);
+                    
+                    log(`Header decoded! Mode: ${headerData.mode}, Length: ${headerData.length} bytes`);
+                    document.getElementById('detected-mode').textContent = headerData.mode.toUpperCase();
+                    document.getElementById('receive-status').textContent = 'Receiving data...';
+                    
+                    byteBuffer = [];
+                    receiveBuffer = [];
+                    receivedBytes = 0;
+                }
+            } catch (e) {
+                // Not a valid header yet
+            }
+        }
+
+        function updateReceiveProgress() {
+            if (!headerData) return;
+            
+            const progress = (receivedBytes / headerData.length) * 100;
+            document.getElementById('received-bytes').textContent = formatBytes(receivedBytes);
+            document.getElementById('receive-progress').style.width = `${progress}%`;
+            document.getElementById('receive-progress').textContent = `${progress.toFixed(1)}%`;
+            
+            if (headerData.type === 'text') {
+                try {
+                    const text = new TextDecoder().decode(new Uint8Array(receiveBuffer));
+                    const preview = document.getElementById('receive-preview');
+                    preview.style.display = 'block';
+                    preview.innerHTML = `<pre>${text}</pre>`;
+                } catch (e) {}
+            }
+        }
+
+        function completeReception() {
+            log('Reception complete!');
+            document.getElementById('receive-status').textContent = 'Reception complete!';
+            document.getElementById('receive-status').className = 'status idle';
+            
+            const finalData = new Uint8Array(receiveBuffer);
+            
+            if (headerData.type === 'text') {
+                const text = new TextDecoder().decode(finalData);
+                const preview = document.getElementById('receive-preview');
+                preview.style.display = 'block';
+                preview.innerHTML = `<pre>${text}</pre>`;
+            } else if (headerData.type === 'file' && headerData.mime.startsWith('image/')) {
+                const blob = new Blob([finalData], { type: headerData.mime });
+                const url = URL.createObjectURL(blob);
+                const preview = document.getElementById('receive-preview');
+                preview.style.display = 'block';
+                preview.innerHTML = `<img src="${url}" alt="Received image">`;
             }
             
-            return peaks;
+            stopListening();
+        }
+
+        function log(message) {
+            const logEl = document.getElementById('debug-log');
+            const time = new Date().toLocaleTimeString();
+            logEl.innerHTML += `[${time}] ${message}<br>`;
+            logEl.scrollTop = logEl.scrollHeight;
         }
 
         function drawWaveform(ctx, canvas, data, length) {
-            const width = canvas.width;
-            const height = canvas.height;
+            const width = canvas.width / 2;
+            const height = canvas.height / 2;
             
             ctx.fillStyle = '#f5f5f5';
             ctx.fillRect(0, 0, width, height);
@@ -620,14 +820,15 @@
             return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
         }
 
-        // Initialize canvases
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
         window.onload = function() {
             const canvases = document.querySelectorAll('canvas');
             canvases.forEach(canvas => {
                 canvas.width = canvas.offsetWidth * 2;
                 canvas.height = canvas.offsetHeight * 2;
-                const ctx = canvas.getContext('2d');
-                ctx.scale(2, 2);
             });
         };
     </script>

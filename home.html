@@ -247,7 +247,7 @@
 </head>
 <body>
     <div class="container">
-        <h1 style="text-align: center; margin-bottom: 30px; font-size: 32px; background: linear-gradient(135deg, #667eea 0%, #f093fb 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">v7 Data Over Sound</h1>
+        <h1 style="text-align: center; margin-bottom: 30px; font-size: 32px; background: linear-gradient(135deg, #667eea 0%, #f093fb 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">v8 Data Over Sound</h1>
         
         <div class="mode-selector">
             <button class="mode-btn transmitter active" onclick="switchMode('transmitter')">📡 TRANSMITTER</button>
@@ -261,7 +261,7 @@
                 <label style="display: block; margin-bottom: 10px;">
                     <span style="color: #64b5f6;">Bits per second:</span>
                     <div style="display: flex; gap: 10px; align-items: center; margin-top: 5px;">
-                        <input type="range" id="txSpeed" min="1" max="10" value="1" style="flex: 1;">
+                        <input type="range" id="txSpeed" min="1" max="30" value="1" style="flex: 1;">
                         <span class="speed-display" id="txSpeedDisplay">1 bit/sec</span>
                     </div>
                 </label>
@@ -308,7 +308,7 @@
                 <label style="display: block; margin-bottom: 10px;">
                     <span style="color: #64b5f6;">Bits per second:</span>
                     <div style="display: flex; gap: 10px; align-items: center; margin-top: 5px;">
-                        <input type="range" id="rxSpeed" min="1" max="10" value="1" style="flex: 1;">
+                        <input type="range" id="rxSpeed" min="1" max="30" value="1" style="flex: 1;">
                         <span class="speed-display" id="rxSpeedDisplay">1 bit/sec</span>
                     </div>
                 </label>
@@ -571,7 +571,7 @@
                     
                     if (text) {
                         document.getElementById('rxPreviewContent').textContent = text;
-                        console.log('Decoded:', text, 'Bits:', detectedBits.length);
+                        console.log('Decoded:', text, 'Bits:', detectedBits.substring(0, completeBytes * 8));
                     }
                 }
                 

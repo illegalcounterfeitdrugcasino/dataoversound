@@ -1,0 +1,1308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Color Flash Data Transfer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #ffffff;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 24px;
+            box-shadow: 0 25px 80px rgba(0,0,0,0.3);
+            max-width: 900px;
+            width: 100%;
+            overflow: hidden;
+            animation: slideIn 0.5s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 30px;
+            text-align: center;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+
+        .mode-selector {
+            display: flex;
+            background: #f7f7f7;
+            padding: 8px;
+            gap: 8px;
+        }
+
+        .mode-btn {
+            flex: 1;
+            padding: 16px;
+            background: white;
+            border: 2px solid transparent;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: #666;
+            position: relative;
+        }
+
+        .mode-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .mode-btn.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-color: #667eea;
+            box-shadow: 0 4px 16px rgba(102, 126, 234, 0.3);
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .section {
+            display: none;
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .section.active {
+            display: block;
+        }
+
+        .input-group {
+            margin-bottom: 24px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: 600;
+            color: #333;
+            font-size: 14px;
+        }
+
+        .info-badge {
+            display: inline-block;
+            background: #fef3c7;
+            color: #92400e;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-left: 8px;
+            text-transform: uppercase;
+        }
+
+        .info-badge.experimental {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        textarea, input[type="file"], input[type="number"], select {
+            width: 100%;
+            padding: 14px;
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            font-size: 14px;
+            font-family: inherit;
+            transition: all 0.3s ease;
+            background: #fafafa;
+        }
+
+        textarea {
+            min-height: 140px;
+            resize: vertical;
+        }
+
+        textarea:focus, input:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .method-selector {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .method-btn {
+            flex: 1;
+            padding: 12px;
+            background: #f3f4f6;
+            border: 2px solid transparent;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            color: #6b7280;
+        }
+
+        .method-btn:hover {
+            background: #e5e7eb;
+        }
+
+        .method-btn.active {
+            background: white;
+            color: #667eea;
+            border-color: #667eea;
+        }
+
+        .options {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+            margin-bottom: 20px;
+            padding: 20px;
+            background: #f9fafb;
+            border-radius: 12px;
+            border: 2px solid #e5e7eb;
+        }
+
+        .option-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .option-item input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            accent-color: #667eea;
+        }
+
+        .option-item input[type="number"] {
+            width: 90px;
+            padding: 8px;
+        }
+
+        .option-item label {
+            margin: 0;
+            font-size: 13px;
+        }
+
+        button {
+            font-family: inherit;
+        }
+
+        button.primary {
+            padding: 16px 32px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+            margin-bottom: 12px;
+            box-shadow: 0 4px 16px rgba(102, 126, 234, 0.3);
+        }
+
+        button.primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 24px rgba(102, 126, 234, 0.4);
+        }
+
+        button.primary:active {
+            transform: translateY(0);
+        }
+
+        button.secondary {
+            padding: 16px 32px;
+            background: white;
+            color: #667eea;
+            border: 2px solid #667eea;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+            margin-bottom: 12px;
+        }
+
+        button.secondary:hover {
+            background: #f0f4ff;
+        }
+
+        button.danger {
+            padding: 16px 32px;
+            background: #ef4444;
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+            box-shadow: 0 4px 16px rgba(239, 68, 68, 0.3);
+        }
+
+        button.danger:hover {
+            background: #dc2626;
+            transform: translateY(-2px);
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 16px;
+            margin-top: 24px;
+            padding: 24px;
+            background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
+            border-radius: 12px;
+            border: 2px solid #e5e7eb;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 12px;
+            background: white;
+            border-radius: 10px;
+            transition: transform 0.2s ease;
+        }
+
+        .stat-item:hover {
+            transform: translateY(-2px);
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #6b7280;
+            margin-bottom: 8px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        #flashScreen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 33.3333%;
+            height: 100%;
+            z-index: 9999;
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #flashScreen.active {
+            display: flex;
+        }
+
+        .flash-info {
+            position: absolute;
+            bottom: 30px;
+            left: 50%; 
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.85);
+            backdrop-filter: blur(10px);
+            color: white;
+            padding: 18px 32px;
+            border-radius: 16px;
+            font-size: 14px;
+            font-weight: 500;
+            z-index: 10000;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+        }
+        
+        #colorReceive {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        #receivedArea {
+            width: 100%;
+        }
+
+        #receivedPreview {
+            margin-top: 24px; 
+            padding: 24px;
+            background: #f9fafb;
+            border-radius: 12px;
+            min-height: 120px;
+            border: 2px solid #e5e7eb;
+        }
+
+        #receivedImage {
+            max-width: 100%;
+            border-radius: 12px;
+            display: block; 
+            min-height: 50px; 
+            background: #e5e7eb;
+            image-rendering: pixelated;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        #receivedText {
+            font-family: 'Courier New', monospace;
+            white-space: pre-wrap;
+            word-break: break-all;
+            line-height: 1.6;
+            color: #374151;
+        }
+
+        .info-box {
+            background: #eff6ff;
+            border: 2px solid #bfdbfe;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 20px;
+            color: #1e40af;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .info-box.warning {
+            background: #fef3c7;
+            border-color: #fde68a;
+            color: #92400e;
+        }
+        
+        .info-box.success {
+            background: #f0fdf4;
+            border-color: #bbf7d0;
+            color: #166534;
+        }
+
+        .info-box strong {
+            display: block;
+            margin-bottom: 6px;
+            font-size: 15px;
+        }
+
+        .speed-presets {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .speed-preset-btn {
+            padding: 10px;
+            background: white;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            color: #6b7280;
+        }
+
+        .speed-preset-btn:hover {
+            border-color: #667eea;
+            color: #667eea;
+        }
+
+        .color-legend {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-top: 16px;
+            padding: 16px;
+            background: white;
+            border-radius: 10px;
+        }
+
+        .color-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 13px;
+        }
+
+        .color-swatch {
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            border: 2px solid #e5e7eb;
+        }
+
+        #calibrationSection {
+            padding: 20px;
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            margin-top: 20px;
+        }
+
+        .calibration-row {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 12px;
+            padding: 10px;
+            background: #f9fafb;
+            border-radius: 8px;
+        }
+        .calibration-row .color-swatch {
+            width: 40px;
+            height: 40px;
+        }
+        .calibration-row select {
+            flex: 1;
+            padding: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Color Flash Transfer</h1>
+            <p>Transfer data using colored light between devices</p>
+        </div>
+
+        <div class="mode-selector">
+            <button class="mode-btn active" onclick="switchMode('send')">📤 Send</button>
+            <button class="mode-btn" onclick="switchMode('receive')">📥 Receive</button>
+        </div>
+
+        <div class="content">
+            <div id="sendMode" class="section active">
+                <div class="input-group">
+                    <label>Data Type:</label>
+                    <div class="method-selector">
+                        <button class="method-btn active" onclick="switchDataType('text', this)">📝 Text</button>
+                        <button class="method-btn" onclick="switchDataType('image', this)">🖼️ Image</button>
+                    </div>
+                </div>
+
+                <div id="textInput" class="input-group">
+                    <label>Enter Text:</label>
+                    <textarea id="inputText" placeholder="Type your message here..."></textarea>
+                </div>
+
+                <div id="imageInput" class="input-group" style="display: none;">
+                    <label>Select Image:</label>
+                    <input type="file" id="inputImage" accept="image/*">
+                    <div class="options">
+                        <div class="option-item">
+                            <input type="checkbox" id="resizeImage">
+                            <label for="resizeImage">Resize to:</label>
+                            <input type="number" id="resizeWidth" value="64" min="1" max="512" step="1">
+                            <span>px</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label>Transmission Mode:</label>
+                    <div class="method-selector" id="sendModeSelector">
+                        <button class="method-btn active" onclick="setTransmissionMode('standard', this)">Standard</button>
+                        <button class="method-btn" onclick="setTransmissionMode('turbo', this)">Turbo <span class="info-badge">2x</span></button>
+                        <button class="method-btn" onclick="setTransmissionMode('super-turbo', this)">Super Turbo <span class="info-badge experimental">3x</span></button>
+                    </div>
+                </div>
+                 <div id="turboWarning" class="info-box warning" style="display: none;">
+                    <strong>Mode Mismatch Warning</strong>
+                    Make sure BOTH devices are set to the same mode (Turbo or Super Turbo) to ensure a successful transfer.
+                </div>
+
+                <div id="colorLegend" style="display: none;">
+                    <div class="color-legend">
+                        <div class="color-item">
+                            <div class="color-swatch" style="background: #ff0000;"></div>
+                            <span><strong>Red</strong> = 00</span>
+                        </div>
+                        <div class="color-item">
+                            <div class="color-swatch" style="background: #00ff00;"></div>
+                            <span><strong>Green</strong> = 01</span>
+                        </div>
+                        <div class="color-item">
+                            <div class="color-swatch" style="background: #0000ff;"></div>
+                            <span><strong>Blue</strong> = 10</span>
+                        </div>
+                        <div class="color-item">
+                            <div class="color-swatch" style="background: #ffff00;"></div>
+                            <span><strong>Yellow</strong> = 11</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="options">
+                    <div class="option-item" style="flex-direction: column; align-items: flex-start;">
+                        <label>Transfer Speed (ms/symbol):</label>
+                        <input type="number" id="bitSpeed" value="100" min="50" max="500" step="10" style="width: 100%;">
+                        <div class="speed-presets">
+                            <button class="speed-preset-btn" onclick="setSpeed(150)">Slow</button>
+                            <button class="speed-preset-btn" onclick="setSpeed(100)">Normal</button>
+                            <button class="speed-preset-btn" onclick="setSpeed(75)">Fast</button>
+                        </div>
+                    </div>
+                </div>
+
+                <button class="primary" onclick="startTransmission()">🚀 Start Transmission</button>
+                <button class="secondary" id="startCalibrationTxBtn" style="display: none;" onclick="startCalibrationTransmission()">Start Super Turbo Calibration Signal</button>
+
+                <div id="sendStats" class="stats" style="display: none;">
+                    <div class="stat-item">
+                        <div class="stat-label">Size</div>
+                        <div class="stat-value" id="dataSize">0 bytes</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Progress</div>
+                        <div class="stat-value" id="progress">0%</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Time Left</div>
+                        <div class="stat-value" id="timeRemaining">--</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Mode</div>
+                        <div class="stat-value" id="modeIndicator" style="font-size: 18px;">Standard</div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="receiveMode" class="section">
+                <div class="info-box">
+                    <strong>📱 Setup Instructions:</strong>
+                    1. Place your camera against the LEFT edge of the flashing screen.<br>
+                    2. Ensure both devices use the same mode (Standard, Turbo, or Super Turbo).<br>
+                    3. For Super Turbo, calibrate first for best results.<br>
+                    4. Keep devices stable during transfer.
+                </div>
+                
+                 <div class="input-group">
+                    <label>Transmission Mode:</label>
+                    <div class="method-selector" id="receiveModeSelector">
+                        <button class="method-btn active" onclick="setTransmissionMode('standard', this)">Standard</button>
+                        <button class="method-btn" onclick="setTransmissionMode('turbo', this)">Turbo</button>
+                        <button class="method-btn" onclick="setTransmissionMode('super-turbo', this)">Super Turbo</button>
+                    </div>
+                    <div id="superTurboStatus" class="info-box" style="display: none; margin-top: 15px;">
+                        <strong id="calibrationStatusTitle">Super Turbo requires calibration.</strong>
+                        <span id="calibrationStatusText">Status: Not Calibrated</span><br>
+                        <button class="secondary" id="calibrateBtn" onclick="startCalibrationCapture()" style="width: auto; padding: 8px 16px; margin-top: 10px;">Calibrate Now</button>
+                    </div>
+                </div>
+                
+                 <div id="calibrationSection" style="display: none;">
+                    <div class="info-box">
+                        <strong>Calibration Process:</strong>
+                        1. On the sending device, select "Super Turbo" and click "Start ... Calibration Signal".<br>
+                        2. Point this device's camera at the sender's flashing screen.<br>
+                        3. Once 8 colors are captured below, match each swatch to the binary value shown on the sender's screen.
+                    </div>
+                    <div id="calibrationCaptureArea">
+                        <p id="calibrationCaptureStatus">Waiting to capture colors...</p>
+                    </div>
+                    <button class="primary" id="saveCalibrationBtn" style="display:none;" onclick="saveCalibration()">Save Calibration</button>
+                    <button class="danger" onclick="cancelCalibration()">Cancel</button>
+                </div>
+
+
+                <div id="colorReceive">
+                    <button class="primary" onclick="startColorReceive()">📹 Start Receiving</button>
+                    <button class="danger" onclick="stopReceiving()">⏹️ Stop</button>
+                    
+                    <div id="receiveLayout" style="display: flex; flex-direction: column; gap: 20px; margin-top: 20px;">
+                        <video id="cameraView" autoplay playsinline style="width: 100%; border-radius: 12px; background: #eee; display: none;"></video>
+                        
+                        <div id="receivedArea" style="width: 100%;">
+                             <div id="receiveStats" class="stats" style="display: none;">
+                                <div class="stat-item">
+                                    <div class="stat-label">Received</div>
+                                    <div class="stat-value" id="receivedBits">0 bits</div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-label">Mode</div>
+                                    <div class="stat-value" id="receiveModeIndicator" style="font-size: 18px;">Standard</div>
+                                </div>
+                            </div>
+                            
+                            <div id="receivedPreview">
+                                <div class="stat-label">📊 Live Received Data:</div>
+                                <div id="receivedText"></div>
+                                <img id="receivedImage" style="display: none;">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="flashScreen">
+        <div class="flash-info" id="flashInfo">Preparing transmission...</div>
+    </div>
+
+    <script>
+        // --- State and Constants ---
+        let currentMode = 'send';
+        let currentDataType = 'text';
+        let transmissionMode = 'standard';
+        let transmissionActive = false;
+        let receivingActive = false;
+        let bitStream = [];
+        let currentBitIndex = 0;
+        let receivedBits = [];
+        let startTime = 0;
+        let calibrationData = null;
+        let calibrationInProgress = false;
+
+        const CALIBRATION_KEY = 'superTurboCalibrationData';
+        const SUPER_TURBO_MAP = {
+            '000': { name: 'Black',   hex: '#000000' },
+            '001': { name: 'Blue',    hex: '#0000ff' },
+            '010': { name: 'Green',   hex: '#00ff00' },
+            '011': { name: 'Cyan',    hex: '#00ffff' },
+            '100': { name: 'Red',     hex: '#ff0000' },
+            '101': { name: 'Magenta', hex: '#ff00ff' },
+            '110': { name: 'Yellow',  hex: '#ffff00' },
+            '111': { name: 'Orange',  hex: '#ff9900' }
+        };
+
+        // --- Utility Functions ---
+        function stringToBytes(str) {
+            const bytes = new Uint8Array(str.length * 2);
+            for (let i = 0; i < str.length; i++) {
+                const charCode = str.charCodeAt(i);
+                bytes[i*2] = (charCode >> 8) & 0xFF;
+                bytes[i*2 + 1] = charCode & 0xFF;
+            }
+            return bytes;
+        }
+
+        function bytesToString(bytes) {
+            let str = '';
+            for (let i = 0; i < bytes.length; i += 2) {
+                if(i + 1 < bytes.length) {
+                    let charCode = (bytes[i] << 8) | bytes[i + 1];
+                    str += String.fromCharCode(charCode);
+                }
+            }
+            return str;
+        }
+
+        function bytesToBits(bytes) {
+            const bits = [];
+            bytes.forEach(byte => {
+                for (let j = 7; j >= 0; j--) {
+                    bits.push((byte >> j) & 1);
+                }
+            });
+            return bits;
+        }
+
+        function bitsToBytes(bits) {
+            const bytes = [];
+            for (let i = 0; i < bits.length; i += 8) {
+                if (i + 7 < bits.length) {
+                    let byte = 0;
+                    for (let j = 0; j < 8; j++) {
+                        byte = (byte << 1) | bits[i + j];
+                    }
+                    bytes.push(byte);
+                }
+            }
+            return new Uint8Array(bytes);
+        }
+
+        function loadImage(file) {
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.onload = () => resolve(img);
+                img.onerror = reject;
+                img.src = URL.createObjectURL(file);
+            });
+        }
+        
+        // --- UI Switching ---
+        function switchMode(mode) {
+            currentMode = mode;
+            document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            document.getElementById('sendMode').classList.toggle('active', mode === 'send');
+            document.getElementById('receiveMode').classList.toggle('active', mode === 'receive');
+            if (mode === 'receive') {
+                stopReceiving();
+                setTransmissionMode(transmissionMode, document.querySelector('#receiveModeSelector .active'));
+            }
+        }
+
+        function switchDataType(type, element) {
+            currentDataType = type;
+            element.parentElement.querySelectorAll('.method-btn').forEach(btn => btn.classList.remove('active'));
+            element.classList.add('active');
+
+            document.getElementById('textInput').style.display = type === 'text' ? 'block' : 'none';
+            document.getElementById('imageInput').style.display = type === 'image' ? 'block' : 'none';
+        }
+
+        function setSpeed(ms) {
+            document.getElementById('bitSpeed').value = ms;
+        }
+
+        function setTransmissionMode(mode, element) {
+            transmissionMode = mode;
+            element.parentElement.querySelectorAll('.method-btn').forEach(btn => btn.classList.remove('active'));
+            element.classList.add('active');
+            
+            const isSend = currentMode === 'send';
+            const showTurboWarning = mode === 'turbo' || mode === 'super-turbo';
+            const showLegend = mode === 'turbo';
+            const showCalibrateBtn = isSend && mode === 'super-turbo';
+            const showSuperTurboStatus = !isSend && mode === 'super-turbo';
+            
+            document.getElementById('turboWarning').style.display = showTurboWarning ? 'block' : 'none';
+            document.getElementById('colorLegend').style.display = showLegend ? 'block' : 'none';
+            document.getElementById('startCalibrationTxBtn').style.display = showCalibrateBtn ? 'block' : 'none';
+            document.getElementById('superTurboStatus').style.display = showSuperTurboStatus ? 'block' : 'none';
+            
+            if (showSuperTurboStatus) {
+                loadCalibration();
+            }
+        }
+
+        // --- Data Preparation ---
+        async function prepareData() {
+            let payloadBytes;
+            let header;
+
+            if (currentDataType === 'text') {
+                const text = document.getElementById('inputText').value;
+                if (!text) { alert('Please enter some text'); return null; }
+                header = 'T:';
+                payloadBytes = stringToBytes(text);
+            } else {
+                const file = document.getElementById('inputImage').files[0];
+                if (!file) { alert('Please select an image'); return null; }
+
+                const img = await loadImage(file);
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                
+                let targetWidth = img.width, targetHeight = img.height;
+                if (document.getElementById('resizeImage').checked) {
+                    const size = parseInt(document.getElementById('resizeWidth').value);
+                    targetWidth = size;
+                    targetHeight = size;
+                }
+                
+                canvas.width = targetWidth;
+                canvas.height = targetHeight;
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                
+                const imageData = ctx.getImageData(0, 0, targetWidth, targetHeight).data;
+                const rgbArray = [];
+                for (let i = 0; i < imageData.length; i += 4) {
+                    rgbArray.push(imageData[i], imageData[i + 1], imageData[i + 2]);
+                }
+
+                header = `I:${String.fromCharCode(targetWidth)}|${String.fromCharCode(targetHeight)}|`;
+                payloadBytes = new Uint8Array(rgbArray);
+            }
+
+            const headerBytes = stringToBytes(header);
+            const combinedBytes = new Uint8Array(headerBytes.length + payloadBytes.length);
+            combinedBytes.set(headerBytes, 0);
+            combinedBytes.set(payloadBytes, headerBytes.length);
+            return combinedBytes;
+        }
+        
+        // --- Transmission Logic ---
+        async function startTransmission() {
+            if (transmissionActive) return;
+
+            if (transmissionMode === 'super-turbo' && currentMode === 'receive' && !calibrationData) {
+                alert('Super Turbo mode is not calibrated. Please calibrate first.');
+                return;
+            }
+
+            const dataBytes = await prepareData();
+            if (!dataBytes) return;
+
+            bitStream = bytesToBits(dataBytes);
+            currentBitIndex = 0;
+            transmissionActive = true;
+            startTime = Date.now();
+
+            let modeName = 'Standard';
+            if (transmissionMode === 'turbo') modeName = '⚡ Turbo';
+            if (transmissionMode === 'super-turbo') modeName = '🚀 Super Turbo';
+
+            document.getElementById('sendStats').style.display = 'grid';
+            document.getElementById('dataSize').textContent = dataBytes.length + ' bytes';
+            document.getElementById('modeIndicator').textContent = modeName;
+
+            startColorTransmission();
+        }
+
+        function startColorTransmission() {
+            const flashScreen = document.getElementById('flashScreen');
+            const flashInfo = document.getElementById('flashInfo');
+            flashScreen.classList.add('active');
+
+            const bitSpeed = parseInt(document.getElementById('bitSpeed').value);
+            
+            function transmitNextBit() {
+                if (!transmissionActive || currentBitIndex >= bitStream.length) {
+                    flashScreen.style.backgroundColor = '#00ff00';
+                    flashInfo.textContent = '✅ Transmission Complete!';
+                    setTimeout(() => {
+                        flashScreen.classList.remove('active');
+                        transmissionActive = false;
+                    }, 2000);
+                    return;
+                }
+
+                let color = '#ffffff';
+                let bitsToSend = 0;
+                let symbolText = '';
+
+                if (transmissionMode === 'super-turbo') {
+                    bitsToSend = 3;
+                    if (currentBitIndex + 2 < bitStream.length) {
+                        const bits = bitStream.slice(currentBitIndex, currentBitIndex + 3).join('');
+                        color = SUPER_TURBO_MAP[bits].hex;
+                        symbolText = `Symbol ${Math.floor(currentBitIndex / 3) + 1} [${bits}]`;
+                    } else { // Handle padding for last bits
+                        bitsToSend = bitStream.length - currentBitIndex;
+                        const bits = bitStream.slice(currentBitIndex).join('').padEnd(3, '0');
+                        color = SUPER_TURBO_MAP[bits].hex;
+                    }
+                } else if (transmissionMode === 'turbo') {
+                    bitsToSend = 2;
+                    if (currentBitIndex + 1 < bitStream.length) {
+                        const b1 = bitStream[currentBitIndex], b2 = bitStream[currentBitIndex + 1];
+                        if (b1 === 0 && b2 === 0) color = '#ff0000'; // Red
+                        else if (b1 === 0 && b2 === 1) color = '#00ff00'; // Green
+                        else if (b1 === 1 && b2 === 0) color = '#0000ff'; // Blue
+                        else color = '#ffff00'; // Yellow
+                    } else { // Pad last bit
+                        bitsToSend = 1;
+                        color = bitStream[currentBitIndex] === 0 ? '#ff0000' : '#0000ff';
+                    }
+                } else { // Standard
+                    bitsToSend = 1;
+                    const bit = bitStream[currentBitIndex];
+                    color = bit === 0 ? '#ff0000' : '#0000ff';
+                }
+
+                flashScreen.style.backgroundColor = color;
+                
+                const progress = ((currentBitIndex / bitStream.length) * 100).toFixed(1);
+                document.getElementById('progress').textContent = progress + '%';
+                
+                const elapsed = Date.now() - startTime;
+                const bitsPerMs = currentBitIndex / elapsed;
+                const remaining = bitsPerMs > 0 ? (bitStream.length - currentBitIndex) / bitsPerMs : 0;
+                document.getElementById('timeRemaining').textContent = Math.ceil(remaining / 1000) + 's';
+                
+                flashInfo.textContent = symbolText || `Bit ${currentBitIndex + 1} - ${progress}%`;
+
+                currentBitIndex += bitsToSend;
+
+                setTimeout(() => {
+                    flashScreen.style.backgroundColor = '#ffffff'; // Separator
+                    setTimeout(transmitNextBit, bitSpeed / 2);
+                }, bitSpeed / 2);
+            }
+
+            transmitNextBit();
+        }
+
+        // --- Receiving Logic ---
+        async function startColorReceive() {
+            if (receivingActive) return;
+            if (transmissionMode === 'super-turbo' && !calibrationData) {
+                alert('Super Turbo mode is not calibrated. Please calibrate first.');
+                return;
+            }
+
+            const video = document.getElementById('cameraView');
+            video.style.display = 'block';
+            
+            try {
+                if (video.srcObject) video.srcObject.getTracks().forEach(track => track.stop());
+
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+                video.srcObject = stream;
+                
+                receivingActive = true;
+                receivedBits = [];
+                document.getElementById('receivedText').textContent = '';
+                document.getElementById('receivedImage').style.display = 'none';
+                document.getElementById('receivedImage').src = '';
+                
+                let modeName = 'Standard';
+                if (transmissionMode === 'turbo') modeName = '⚡ Turbo';
+                if (transmissionMode === 'super-turbo') modeName = '🚀 Super Turbo';
+                
+                document.getElementById('receiveStats').style.display = 'grid';
+                document.getElementById('receiveModeIndicator').textContent = modeName;
+                
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                
+                let waitingForSeparator = false;
+                
+                function captureFrame() {
+                    if (!receivingActive) return;
+
+                    if (video.readyState < video.HAVE_METADATA) {
+                        requestAnimationFrame(captureFrame);
+                        return;
+                    }
+
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    ctx.drawImage(video, 0, 0);
+                    
+                    const sampleSize = 50;
+                    const imageData = ctx.getImageData(canvas.width / 2 - sampleSize / 2, canvas.height / 2 - sampleSize / 2, sampleSize, sampleSize).data;
+                    
+                    let r = 0, g = 0, b = 0;
+                    const pixelCount = imageData.length / 4;
+                    for (let i = 0; i < imageData.length; i += 4) {
+                        r += imageData[i]; g += imageData[i + 1]; b += imageData[i + 2];
+                    }
+                    r /= pixelCount; g /= pixelCount; b /= pixelCount;
+
+                    if (r > 200 && g > 200 && b > 200) { // White separator
+                        waitingForSeparator = false;
+                    } else if (!waitingForSeparator) {
+                        let detected = false;
+                        
+                        if (transmissionMode === 'super-turbo') {
+                             const bitsStr = findClosestCalibratedColor(r, g, b);
+                             if (bitsStr) {
+                                 receivedBits.push(...bitsStr.split('').map(Number));
+                                 detected = true;
+                             }
+                        } else if (transmissionMode === 'turbo') {
+                            let bits = null;
+                            if (r > 150 && g < 100 && b < 100) bits = [0, 0];
+                            else if (g > 150 && r < 100 && b < 100) bits = [0, 1];
+                            else if (b > 150 && r < 100 && g < 100) bits = [1, 0];
+                            else if (r > 150 && g > 150 && b < 100) bits = [1, 1];
+                            if (bits) { receivedBits.push(...bits); detected = true; }
+                        } else {
+                            let bit = -1;
+                            if (r > b + 50 && r > g + 50) bit = 0;
+                            else if (b > r + 50 && b > g + 50) bit = 1;
+                            if (bit !== -1) { receivedBits.push(bit); detected = true; }
+                        }
+
+                        if (detected) {
+                            waitingForSeparator = true;
+                            document.getElementById('receivedBits').textContent = receivedBits.length + ' bits';
+                            updateReceivedPreview();
+                        }
+                    }
+                    requestAnimationFrame(captureFrame);
+                }
+                video.onloadedmetadata = () => requestAnimationFrame(captureFrame);
+            } catch (err) {
+                alert('Camera access denied: ' + err.message);
+                video.style.display = 'none';
+            }
+        }
+
+        function updateReceivedPreview() {
+            if (receivedBits.length < 32) return; 
+
+            const receivedBytes = bitsToBytes(receivedBits);
+            const potentialHeader = bytesToString(receivedBytes.slice(0, 10));
+
+            if (potentialHeader.startsWith('T:')) {
+                const fullText = bytesToString(receivedBytes);
+                document.getElementById('receivedText').textContent = fullText.substring(2);
+                document.getElementById('receivedImage').style.display = 'none';
+            } else if (potentialHeader.startsWith('I:')) {
+                const fullHeaderString = bytesToString(receivedBytes);
+                const [_, meta] = fullHeaderString.split(':');
+                const [widthChar, heightChar] = meta.split('|');
+                
+                if (!widthChar || !heightChar) return;
+
+                const width = widthChar.charCodeAt(0);
+                const height = heightChar.charCodeAt(0);
+                const headerEndIndex = fullHeaderString.indexOf('|', fullHeaderString.indexOf('|') + 1) + 1;
+                const headerBytesLength = headerEndIndex * 2;
+                const expectedPixelDataLength = width * height * 3;
+                
+                if (receivedBytes.length < headerBytesLength + expectedPixelDataLength) {
+                     document.getElementById('receivedText').textContent = `Receiving Image: ${width}x${height}...`;
+                     return;
+                }
+
+                const rawPixelData = receivedBytes.slice(headerBytesLength, headerBytesLength + expectedPixelDataLength);
+                const canvas = document.createElement('canvas');
+                canvas.width = width; canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                const imageData = ctx.createImageData(width, height);
+                
+                for (let i = 0; i < expectedPixelDataLength / 3; i++) {
+                    imageData.data[i * 4]     = rawPixelData[i * 3];
+                    imageData.data[i * 4 + 1] = rawPixelData[i * 3 + 1];
+                    imageData.data[i * 4 + 2] = rawPixelData[i * 3 + 2];
+                    imageData.data[i * 4 + 3] = 255;
+                }
+                ctx.putImageData(imageData, 0, 0);
+
+                document.getElementById('receivedImage').src = canvas.toDataURL('image/png');
+                document.getElementById('receivedImage').style.display = 'block';
+                document.getElementById('receivedText').textContent = '✅ Image Transfer Complete!';
+                stopReceiving();
+            }
+        }
+
+        function stopReceiving() {
+            receivingActive = false;
+            calibrationInProgress = false;
+            const video = document.getElementById('cameraView');
+            video.style.display = 'none';
+            if (video.srcObject) {
+                video.srcObject.getTracks().forEach(track => track.stop());
+                video.srcObject = null;
+            }
+        }
+        
+        // --- Calibration Logic ---
+        function startCalibrationTransmission() {
+            let i = 0;
+            const colors = Object.entries(SUPER_TURBO_MAP);
+            const flashScreen = document.getElementById('flashScreen');
+            const flashInfo = document.getElementById('flashInfo');
+            flashScreen.classList.add('active');
+
+            function showNextColor() {
+                if (i >= colors.length) {
+                    flashScreen.style.backgroundColor = 'white';
+                    flashInfo.textContent = '✅ Calibration Signal Finished';
+                    setTimeout(() => flashScreen.classList.remove('active'), 2000);
+                    return;
+                }
+                const [bits, {name, hex}] = colors[i];
+                flashScreen.style.backgroundColor = hex;
+                flashInfo.textContent = `Calibrating ${name}: ${bits}`;
+                i++;
+                setTimeout(showNextColor, 2000); // Hold each color for 2 seconds
+            }
+            showNextColor();
+        }
+
+        async function startCalibrationCapture() {
+            if (calibrationInProgress) return;
+            document.getElementById('calibrationSection').style.display = 'block';
+            document.getElementById('colorReceive').style.display = 'none';
+            
+            const video = document.getElementById('cameraView');
+            video.style.display = 'block';
+
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+                video.srcObject = stream;
+                calibrationInProgress = true;
+                
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                const capturedColors = [];
+                const statusEl = document.getElementById('calibrationCaptureStatus');
+
+                function captureColors() {
+                    if (!calibrationInProgress || capturedColors.length >= 8) {
+                        populateCalibrationUI(capturedColors);
+                        stopReceiving();
+                        return;
+                    }
+
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    if (!canvas.width) { requestAnimationFrame(captureColors); return; }
+                    
+                    ctx.drawImage(video, 0, 0);
+                    const imageData = ctx.getImageData(canvas.width / 2 - 25, canvas.height / 2 - 25, 50, 50).data;
+                    let r = 0, g = 0, b = 0;
+                    for (let i = 0; i < imageData.length; i += 4) { r += imageData[i]; g += imageData[i + 1]; b += imageData[i + 2]; }
+                    r = Math.round(r / (imageData.length / 4));
+                    g = Math.round(g / (imageData.length / 4));
+                    b = Math.round(b / (imageData.length / 4));
+                    
+                    // Ignore white/separator
+                    if (r > 200 && g > 200 && b > 200) { requestAnimationFrame(captureColors); return; }
+                    
+                    // Check if color is new
+                    const isNew = !capturedColors.some(c => colorDistance(c, {r,g,b}) < 50);
+                    if (isNew) {
+                        capturedColors.push({r,g,b});
+                        statusEl.textContent = `Captured ${capturedColors.length} / 8 colors...`;
+                    }
+                    requestAnimationFrame(captureColors);
+                }
+                video.onloadedmetadata = () => requestAnimationFrame(captureColors);
+            } catch (err) {
+                 alert('Camera access denied: ' + err.message);
+                 cancelCalibration();
+            }
+        }
+        
+        function populateCalibrationUI(colors) {
+            const area = document.getElementById('calibrationCaptureArea');
+            area.innerHTML = '';
+            colors.forEach((color, i) => {
+                const row = document.createElement('div');
+                row.className = 'calibration-row';
+                row.dataset.rgb = JSON.stringify(color);
+                
+                const swatch = document.createElement('div');
+                swatch.className = 'color-swatch';
+                swatch.style.backgroundColor = `rgb(${color.r}, ${color.g}, ${color.b})`;
+                
+                const select = document.createElement('select');
+                let optionsHtml = '<option value="">-- Select Binary Value --</option>';
+                for (const bits in SUPER_TURBO_MAP) {
+                    optionsHtml += `<option value="${bits}">${bits} (${SUPER_TURBO_MAP[bits].name})</option>`;
+                }
+                select.innerHTML = optionsHtml;
+                
+                row.appendChild(swatch);
+                row.appendChild(select);
+                area.appendChild(row);
+            });
+            document.getElementById('saveCalibrationBtn').style.display = 'block';
+        }
+        
+        function saveCalibration() {
+            const newCalibData = {};
+            const rows = document.querySelectorAll('.calibration-row');
+            let allSet = true;
+            rows.forEach(row => {
+                const rgb = JSON.parse(row.dataset.rgb);
+                const bits = row.querySelector('select').value;
+                if (bits) {
+                    newCalibData[bits] = rgb;
+                } else {
+                    allSet = false;
+                }
+            });
+
+            if (!allSet || Object.keys(newCalibData).length < 8) {
+                alert('Please assign a unique binary value to every captured color.');
+                return;
+            }
+
+            localStorage.setItem(CALIBRATION_KEY, JSON.stringify(newCalibData));
+            alert('Calibration saved successfully!');
+            cancelCalibration();
+            loadCalibration();
+        }
+
+        function cancelCalibration() {
+            calibrationInProgress = false;
+            stopReceiving();
+            document.getElementById('calibrationSection').style.display = 'none';
+            document.getElementById('colorReceive').style.display = 'flex';
+        }
+
+        function loadCalibration() {
+            const data = localStorage.getItem(CALIBRATION_KEY);
+            if (data) {
+                calibrationData = JSON.parse(data);
+                const statusEl = document.getElementById('superTurboStatus');
+                statusEl.className = 'info-box success';
+                document.getElementById('calibrationStatusTitle').textContent = '✅ Super Turbo Calibrated';
+                document.getElementById('calibrationStatusText').textContent = `Last calibrated: ${new Date().toLocaleDateString()}`;
+                document.getElementById('calibrateBtn').textContent = 'Recalibrate';
+            } else {
+                 const statusEl = document.getElementById('superTurboStatus');
+                statusEl.className = 'info-box warning';
+                document.getElementById('calibrationStatusTitle').textContent = 'Super Turbo requires calibration.';
+                document.getElementById('calibrationStatusText').textContent = `Status: Not Calibrated`;
+                document.getElementById('calibrateBtn').textContent = 'Calibrate Now';
+            }
+        }
+        
+        function findClosestCalibratedColor(r, g, b) {
+            if (!calibrationData) return null;
+            let minDistance = Infinity;
+            let bestMatch = null;
+            for (const bits in calibrationData) {
+                const calibColor = calibrationData[bits];
+                const distance = colorDistance({r,g,b}, calibColor);
+                if (distance < minDistance) {
+                    minDistance = distance;
+                    bestMatch = bits;
+                }
+            }
+            return minDistance < 80 ? bestMatch : null; // Threshold to prevent misreads
+        }
+
+        function colorDistance(c1, c2) {
+            return Math.sqrt(Math.pow(c1.r - c2.r, 2) + Math.pow(c1.g - c2.g, 2) + Math.pow(c1.b - c2.b, 2));
+        }
+
+
+        // --- Lifecycle ---
+        window.addEventListener('beforeunload', () => {
+            transmissionActive = false;
+            stopReceiving();
+        });
+
+    </script>
+</body>
+</html>

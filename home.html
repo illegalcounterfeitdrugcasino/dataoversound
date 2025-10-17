@@ -486,6 +486,12 @@
             border-radius: 12px;
             margin-top: 20px;
         }
+        
+        .calibration-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
 
         .calibration-row {
             display: flex;
@@ -633,8 +639,11 @@
                     </div>
                     <div id="superTurboStatus" class="info-box" style="display: none; margin-top: 15px;">
                         <strong id="calibrationStatusTitle">Super Turbo requires calibration.</strong>
-                        <span id="calibrationStatusText">Status: Not Calibrated</span><br>
-                        <button class="secondary" id="calibrateBtn" onclick="startCalibrationCapture()" style="width: auto; padding: 8px 16px; margin-top: 10px;">Calibrate Now</button>
+                        <span id="calibrationStatusText">Status: Not Calibrated</span>
+                        <div class="calibration-actions">
+                             <button class="secondary" id="calibrateBtn" onclick="startCalibrationCapture()" style="width: auto; padding: 8px 16px;">Calibrate Now</button>
+                             <button class="secondary" onclick="useDefaultCalibration()" style="width: auto; padding: 8px 16px; background: #f3f4f6; border-color: #d1d5db; color: #4b5563;">Skip & Use Defaults</button>
+                        </div>
                     </div>
                 </div>
                 
@@ -868,7 +877,7 @@
             if (transmissionActive) return;
 
             if (transmissionMode === 'super-turbo' && currentMode === 'receive' && !calibrationData) {
-                alert('Super Turbo mode is not calibrated. Please calibrate first.');
+                alert('Super Turbo mode is not calibrated. Please calibrate first or skip to use defaults.');
                 return;
             }
 
@@ -969,7 +978,7 @@
         async function startColorReceive() {
             if (receivingActive) return;
             if (transmissionMode === 'super-turbo' && !calibrationData) {
-                alert('Super Turbo mode is not calibrated. Please calibrate first.');
+                alert('Super Turbo mode is not calibrated. Please calibrate first or skip to use defaults.');
                 return;
             }
 
@@ -1115,11 +1124,11 @@
             receivingActive = false;
             calibrationInProgress = false;
             const video = document.getElementById('cameraView');
-            video.style.display = 'none';
             if (video.srcObject) {
                 video.srcObject.getTracks().forEach(track => track.stop());
                 video.srcObject = null;
             }
+            video.style.display = 'none';
         }
         
         // --- Calibration Logic ---
@@ -1163,18 +1172,23 @@
                 const ctx = canvas.getContext('2d');
                 const capturedColors = [];
                 const statusEl = document.getElementById('calibrationCaptureStatus');
+                statusEl.textContent = 'Point camera at sending screen...';
+                
+                let readyToCaptureNextColor = true;
 
                 function captureColors() {
                     if (!calibrationInProgress || capturedColors.length >= 8) {
-                        populateCalibrationUI(capturedColors);
+                        if (capturedColors.length >= 8) populateCalibrationUI(capturedColors);
                         stopReceiving();
+                        return;
+                    }
+                    if (video.readyState < video.HAVE_METADATA || video.videoWidth === 0) {
+                        requestAnimationFrame(captureColors);
                         return;
                     }
 
                     canvas.width = video.videoWidth;
                     canvas.height = video.videoHeight;
-                    if (!canvas.width) { requestAnimationFrame(captureColors); return; }
-                    
                     ctx.drawImage(video, 0, 0);
                     const imageData = ctx.getImageData(canvas.width / 2 - 25, canvas.height / 2 - 25, 50, 50).data;
                     let r = 0, g = 0, b = 0;
@@ -1183,14 +1197,16 @@
                     g = Math.round(g / (imageData.length / 4));
                     b = Math.round(b / (imageData.length / 4));
                     
-                    // Ignore white/separator
-                    if (r > 200 && g > 200 && b > 200) { requestAnimationFrame(captureColors); return; }
-                    
-                    // Check if color is new
-                    const isNew = !capturedColors.some(c => colorDistance(c, {r,g,b}) < 50);
-                    if (isNew) {
-                        capturedColors.push({r,g,b});
-                        statusEl.textContent = `Captured ${capturedColors.length} / 8 colors...`;
+                    if (r > 200 && g > 200 && b > 200) { // white separator
+                        readyToCaptureNextColor = true;
+                    } 
+                    else if (readyToCaptureNextColor) { // non-white and ready
+                        const isNew = !capturedColors.some(c => colorDistance(c, {r,g,b}) < 40);
+                        if (isNew) {
+                            capturedColors.push({r,g,b});
+                            statusEl.textContent = `Captured ${capturedColors.length} / 8 colors...`;
+                            readyToCaptureNextColor = false; // Wait for separator before next capture
+                        }
                     }
                     requestAnimationFrame(captureColors);
                 }
@@ -1258,23 +1274,41 @@
             document.getElementById('calibrationSection').style.display = 'none';
             document.getElementById('colorReceive').style.display = 'flex';
         }
+        
+        function useDefaultCalibration() {
+            const defaultData = {};
+            for (const bits in SUPER_TURBO_MAP) {
+                defaultData[bits] = hexToRgb(SUPER_TURBO_MAP[bits].hex);
+            }
+            calibrationData = defaultData;
+            alert('Using default calibration. For best results, calibrating with your specific devices is recommended.');
+            updateCalibrationStatus(true, 'Using Defaults');
+        }
 
         function loadCalibration() {
             const data = localStorage.getItem(CALIBRATION_KEY);
             if (data) {
                 calibrationData = JSON.parse(data);
-                const statusEl = document.getElementById('superTurboStatus');
+                updateCalibrationStatus(true, `Last calibrated: ${new Date().toLocaleDateString()}`);
+            } else {
+                calibrationData = null;
+                updateCalibrationStatus(false);
+            }
+        }
+        
+        function updateCalibrationStatus(isCalibrated, message = 'Not Calibrated') {
+             const statusEl = document.getElementById('superTurboStatus');
+             if(isCalibrated) {
                 statusEl.className = 'info-box success';
                 document.getElementById('calibrationStatusTitle').textContent = '✅ Super Turbo Calibrated';
-                document.getElementById('calibrationStatusText').textContent = `Last calibrated: ${new Date().toLocaleDateString()}`;
+                document.getElementById('calibrationStatusText').textContent = `Status: ${message}`;
                 document.getElementById('calibrateBtn').textContent = 'Recalibrate';
-            } else {
-                 const statusEl = document.getElementById('superTurboStatus');
+             } else {
                 statusEl.className = 'info-box warning';
                 document.getElementById('calibrationStatusTitle').textContent = 'Super Turbo requires calibration.';
-                document.getElementById('calibrationStatusText').textContent = `Status: Not Calibrated`;
+                document.getElementById('calibrationStatusText').textContent = `Status: ${message}`;
                 document.getElementById('calibrateBtn').textContent = 'Calibrate Now';
-            }
+             }
         }
         
         function findClosestCalibratedColor(r, g, b) {
@@ -1294,6 +1328,15 @@
 
         function colorDistance(c1, c2) {
             return Math.sqrt(Math.pow(c1.r - c2.r, 2) + Math.pow(c1.g - c2.g, 2) + Math.pow(c1.b - c2.b, 2));
+        }
+        
+        function hexToRgb(hex) {
+            const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+            return result ? {
+                r: parseInt(result[1], 16),
+                g: parseInt(result[2], 16),
+                b: parseInt(result[3], 16)
+            } : null;
         }
 
 

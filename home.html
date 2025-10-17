@@ -25,7 +25,7 @@
             background: white;
             border-radius: 20px;
             box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            max-width: 800px;
+            max-width: 1200px;
             width: 100%;
             overflow: hidden;
         }
@@ -54,45 +54,41 @@
             border-bottom: 3px solid #667eea;
         }
 
-        .content {
+        .main-content {
+            display: flex;
+            min-height: 500px;
+        }
+
+        .flash-area {
+            flex: 0 0 33.333%;
+            background: #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            border-right: 3px solid #e0e0e0;
+        }
+
+        .flash-area video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .flash-area canvas {
+            width: 100%;
+            height: 100%;
+        }
+
+        .controls-area {
+            flex: 1;
             padding: 30px;
-        }
-
-        .method-selector {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 15px;
-            margin-bottom: 30px;
-        }
-
-        .method-btn {
-            padding: 15px 20px;
-            border: 2px solid #e0e0e0;
-            border-radius: 10px;
-            background: white;
-            cursor: pointer;
-            transition: all 0.3s;
-            font-size: 14px;
-            font-weight: 600;
-            color: #333;
-        }
-
-        .method-btn.active {
-            border-color: #667eea;
-            background: #667eea;
-            color: white;
-        }
-
-        .section {
-            display: none;
-        }
-
-        .section.active {
-            display: block;
+            overflow-y: auto;
+            max-height: 600px;
         }
 
         .input-group {
-            margin-bottom: 20px;
+            margin-bottom: 25px;
         }
 
         label {
@@ -100,6 +96,7 @@
             margin-bottom: 8px;
             font-weight: 600;
             color: #333;
+            font-size: 14px;
         }
 
         textarea, input[type="file"] {
@@ -122,30 +119,36 @@
             border-color: #667eea;
         }
 
-        .options {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin-bottom: 20px;
-            padding: 15px;
+        .option-group {
             background: #f7f7f7;
+            padding: 20px;
             border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .option-group h3 {
+            font-size: 16px;
+            margin-bottom: 15px;
+            color: #333;
         }
 
         .option-item {
             display: flex;
             align-items: center;
             gap: 10px;
+            margin-bottom: 12px;
         }
 
-        .option-item input[type="checkbox"],
-        .option-item input[type="number"] {
+        .option-item input[type="checkbox"] {
             width: auto;
         }
 
-        .option-item input[type="number"] {
-            width: 80px;
-            padding: 6px;
+        .option-item input[type="number"],
+        .option-item select {
+            width: auto;
+            padding: 6px 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
         }
 
         button {
@@ -175,9 +178,17 @@
             cursor: not-allowed;
         }
 
+        button.stop-btn {
+            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+        }
+
+        button.secondary-btn {
+            background: linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%);
+        }
+
         .stats {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
             gap: 15px;
             margin-top: 20px;
             padding: 20px;
@@ -190,52 +201,42 @@
         }
 
         .stat-label {
-            font-size: 12px;
+            font-size: 11px;
             color: #666;
             margin-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
         .stat-value {
-            font-size: 24px;
+            font-size: 20px;
             font-weight: bold;
             color: #667eea;
         }
 
-        #flashScreen {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 9999;
-            display: none;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-        }
-
-        #flashScreen.active {
-            display: flex;
-        }
-
-        .flash-info {
-            position: absolute;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(0,0,0,0.8);
-            color: white;
-            padding: 15px 30px;
-            border-radius: 10px;
-            font-size: 14px;
-            z-index: 10000;
-        }
-
-        #cameraView {
-            width: 100%;
-            max-width: 500px;
-            border-radius: 10px;
+        .status-message {
+            padding: 15px;
+            background: #e8f4f8;
+            border-left: 4px solid #3498db;
+            border-radius: 4px;
             margin-bottom: 20px;
+            font-size: 14px;
+            color: #2c3e50;
+        }
+
+        .status-message.success {
+            background: #d4edda;
+            border-color: #28a745;
+        }
+
+        .status-message.error {
+            background: #f8d7da;
+            border-color: #dc3545;
+        }
+
+        .status-message.warning {
+            background: #fff3cd;
+            border-color: #ffc107;
         }
 
         #receivedPreview {
@@ -255,203 +256,315 @@
             font-family: monospace;
             white-space: pre-wrap;
             word-break: break-all;
+            font-size: 12px;
         }
 
-        .qr-container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 20px;
-            margin-top: 20px;
+        .flash-placeholder {
+            color: #666;
+            text-align: center;
+            padding: 40px;
         }
 
-        #qrDisplay {
-            padding: 20px;
-            background: white;
-            border-radius: 10px;
-            border: 2px solid #e0e0e0;
+        .flash-placeholder svg {
+            width: 80px;
+            height: 80px;
+            margin-bottom: 20px;
+            opacity: 0.3;
         }
 
-        .page-nav {
-            display: flex;
-            gap: 10px;
-            align-items: center;
+        .calibration-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 80%;
+            height: 80%;
+            border: 3px dashed rgba(255, 255, 255, 0.5);
+            pointer-events: none;
+            z-index: 10;
         }
 
-        .audio-viz {
-            width: 100%;
-            height: 100px;
-            background: #f7f7f7;
-            border-radius: 8px;
-            margin-top: 20px;
+        .calibration-overlay::after {
+            content: 'Place camera here';
+            position: absolute;
+            top: -30px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 14px;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .experimental-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #f39c12 0%, #e74c3c 100%);
+            color: white;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            margin-left: 8px;
+            letter-spacing: 0.5px;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                flex-direction: column;
+            }
+
+            .flash-area {
+                flex: 0 0 300px;
+                border-right: none;
+                border-bottom: 3px solid #e0e0e0;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="mode-selector">
-            <button class="mode-btn active" onclick="switchMode('send')">Send</button>
-            <button class="mode-btn" onclick="switchMode('receive')">Receive</button>
+            <button class="mode-btn active" onclick="switchMode('send')">📤 Send</button>
+            <button class="mode-btn" onclick="switchMode('receive')">📥 Receive</button>
         </div>
 
-        <div class="content">
-            <!-- SEND MODE -->
-            <div id="sendMode" class="section active">
-                <div class="method-selector">
-                    <button class="method-btn active" onclick="switchMethod('color')">🎨 Color Flash</button>
-                    <button class="method-btn" onclick="switchMethod('qr')">📱 QR Code</button>
-                    <button class="method-btn" onclick="switchMethod('audio')">🔊 Audio</button>
+        <div class="main-content">
+            <!-- Flash Area (Left Third) -->
+            <div class="flash-area">
+                <canvas id="flashCanvas" style="display: none;"></canvas>
+                <video id="cameraView" style="display: none;" autoplay playsinline></video>
+                <div class="flash-placeholder" id="flashPlaceholder">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="18" height="18" rx="2"/>
+                        <circle cx="12" cy="12" r="3"/>
+                        <path d="M16 8h.01"/>
+                    </svg>
+                    <p>Ready to transmit</p>
                 </div>
+                <div class="calibration-overlay" id="calibrationOverlay" style="display: none;"></div>
+            </div>
 
-                <div class="input-group">
-                    <label>Data Type:</label>
-                    <div class="method-selector">
-                        <button class="method-btn active" onclick="switchDataType('text')">Text</button>
-                        <button class="method-btn" onclick="switchDataType('image')">Image</button>
+            <!-- Controls Area (Right Two Thirds) -->
+            <div class="controls-area">
+                <!-- SEND MODE -->
+                <div id="sendMode" class="section active">
+                    <h2 style="margin-bottom: 20px;">Send Data</h2>
+
+                    <div class="input-group">
+                        <label>Data Type:</label>
+                        <select id="dataTypeSelect" onchange="switchDataType(this.value)" style="width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px;">
+                            <option value="text">Text</option>
+                            <option value="image">Image</option>
+                            <option value="file">File</option>
+                        </select>
                     </div>
-                </div>
 
-                <div id="textInput" class="input-group">
-                    <label>Enter Text:</label>
-                    <textarea id="inputText" placeholder="Type your message here..."></textarea>
-                </div>
+                    <div id="textInput" class="input-group">
+                        <label>Enter Text:</label>
+                        <textarea id="inputText" placeholder="Type your message here..."></textarea>
+                    </div>
 
-                <div id="imageInput" class="input-group" style="display: none;">
-                    <label>Select Image:</label>
-                    <input type="file" id="inputImage" accept="image/*">
-                    <div class="options">
-                        <div class="option-item">
-                            <input type="checkbox" id="resizeImage">
-                            <label for="resizeImage">Resize to:</label>
-                            <input type="number" id="resizeWidth" value="64" min="32" max="512" step="32">
-                            <span>px</span>
+                    <div id="imageInput" class="input-group" style="display: none;">
+                        <label>Select Image:</label>
+                        <input type="file" id="inputImage" accept="image/*">
+                        <div class="status-message" style="margin-top: 10px;">
+                            Images will be automatically compressed and optimized for transmission.
                         </div>
                     </div>
-                </div>
 
-                <div class="options">
-                    <div class="option-item">
-                        <label>Speed (ms/bit):</label>
-                        <input type="number" id="bitSpeed" value="100" min="50" max="500" step="50">
+                    <div id="fileInput" class="input-group" style="display: none;">
+                        <label>Select File:</label>
+                        <input type="file" id="inputFile">
+                        <div class="status-message warning" style="margin-top: 10px;">
+                            Large files may take a long time to transfer. Consider compressing first.
+                        </div>
                     </div>
-                </div>
 
-                <button onclick="startTransmission()">Start Transmission</button>
+                    <div class="option-group">
+                        <h3>Transmission Settings</h3>
+                        
+                        <div class="option-item">
+                            <label style="margin: 0;">Speed (ms/symbol):</label>
+                            <input type="number" id="symbolSpeed" value="150" min="50" max="500" step="25">
+                        </div>
 
-                <div id="sendStats" class="stats" style="display: none;">
-                    <div class="stat-item">
-                        <div class="stat-label">Size</div>
-                        <div class="stat-value" id="dataSize">0 bytes</div>
+                        <div class="option-item">
+                            <input type="checkbox" id="experimentalMode" onchange="toggleExperimentalMode()">
+                            <label for="experimentalMode" style="margin: 0;">
+                                Experimental Mode
+                                <span class="experimental-badge">Fast</span>
+                            </label>
+                        </div>
+
+                        <div id="experimentalInfo" class="status-message" style="margin-top: 15px; display: none;">
+                            <strong>Experimental Mode:</strong> Uses 8 colors to transmit 3 bits per symbol (8x faster). Requires stable lighting conditions.
+                        </div>
+
+                        <div class="option-item">
+                            <input type="checkbox" id="errorCorrection" checked>
+                            <label for="errorCorrection" style="margin: 0;">Error Correction (Reed-Solomon)</label>
+                        </div>
+
+                        <div class="option-item">
+                            <input type="checkbox" id="compression" checked>
+                            <label for="compression" style="margin: 0;">Data Compression</label>
+                        </div>
                     </div>
-                    <div class="stat-item">
-                        <div class="stat-label">Progress</div>
-                        <div class="stat-value" id="progress">0%</div>
+
+                    <button onclick="startTransmission()">Start Transmission</button>
+
+                    <div id="sendStats" class="stats" style="display: none;">
+                        <div class="stat-item">
+                            <div class="stat-label">Size</div>
+                            <div class="stat-value" id="dataSize">0 B</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">Progress</div>
+                            <div class="stat-value" id="progress">0%</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">Time Left</div>
+                            <div class="stat-value" id="timeRemaining">--</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">Speed</div>
+                            <div class="stat-value" id="transferSpeed">-- bps</div>
+                        </div>
                     </div>
-                    <div class="stat-item">
-                        <div class="stat-label">Time Remaining</div>
-                        <div class="stat-value" id="timeRemaining">--</div>
+
+                    <div id="statusMessage" class="status-message" style="display: none; margin-top: 20px;"></div>
+                </div>
+
+                <!-- RECEIVE MODE -->
+                <div id="receiveMode" class="section" style="display: none;">
+                    <h2 style="margin-bottom: 20px;">Receive Data</h2>
+
+                    <div class="status-message">
+                        Position your camera against the flashing area on the left. Ensure good alignment and stable lighting.
                     </div>
-                </div>
-            </div>
 
-            <!-- RECEIVE MODE -->
-            <div id="receiveMode" class="section">
-                <div class="method-selector">
-                    <button class="method-btn active" onclick="switchMethod('color')">🎨 Color Flash</button>
-                    <button class="method-btn" onclick="switchMethod('qr')">📱 QR Code</button>
-                    <button class="method-btn" onclick="switchMethod('audio')">🔊 Audio</button>
-                </div>
+                    <div class="option-group">
+                        <h3>Reception Settings</h3>
+                        
+                        <div class="option-item">
+                            <input type="checkbox" id="autoSave" checked>
+                            <label for="autoSave" style="margin: 0;">Auto-save received files</label>
+                        </div>
 
-                <div id="colorReceive">
-                    <p style="margin-bottom: 20px;">Place your device's camera against the transmitting screen and press start.</p>
-                    <video id="cameraView" autoplay playsinline></video>
-                    <button onclick="startColorReceive()">Start Receiving</button>
-                    <button onclick="stopReceiving()" style="background: #e74c3c;">Stop</button>
-                </div>
-
-                <div id="qrReceive" style="display: none;">
-                    <p style="margin-bottom: 20px;">Use your camera to scan the QR codes.</p>
-                    <video id="cameraViewQR" autoplay playsinline></video>
-                    <button onclick="startQRReceive()">Start Scanning</button>
-                </div>
-
-                <div id="audioReceive" style="display: none;">
-                    <p style="margin-bottom: 20px;">Allow microphone access to receive data via audio.</p>
-                    <canvas id="audioViz" class="audio-viz"></canvas>
-                    <button onclick="startAudioReceive()">Start Listening</button>
-                </div>
-
-                <div id="receivedPreview">
-                    <div class="stat-label">Received Data:</div>
-                    <div id="receivedText"></div>
-                    <img id="receivedImage" style="display: none;">
-                </div>
-
-                <div id="receiveStats" class="stats" style="display: none;">
-                    <div class="stat-item">
-                        <div class="stat-label">Received</div>
-                        <div class="stat-value" id="receivedBits">0 bits</div>
+                        <div class="option-item">
+                            <label style="margin: 0;">Sensitivity:</label>
+                            <input type="range" id="sensitivity" min="20" max="100" value="50" style="flex: 1;">
+                            <span id="sensitivityValue">50</span>
+                        </div>
                     </div>
-                    <div class="stat-item">
-                        <div class="stat-label">Progress</div>
-                        <div class="stat-value" id="receiveProgress">0%</div>
+
+                    <button onclick="startReceiving()">Start Receiving</button>
+                    <button onclick="stopReceiving()" class="stop-btn">Stop Receiving</button>
+                    <button onclick="saveReceivedData()" class="secondary-btn" id="saveBtn" style="display: none;">Save Received Data</button>
+
+                    <div id="receiveStats" class="stats" style="display: none;">
+                        <div class="stat-item">
+                            <div class="stat-label">Status</div>
+                            <div class="stat-value" id="receiveStatus">Idle</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">Progress</div>
+                            <div class="stat-value" id="receiveProgress">0%</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">Received</div>
+                            <div class="stat-value" id="receivedSize">0 B</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">Errors</div>
+                            <div class="stat-value" id="errorCount">0</div>
+                        </div>
+                    </div>
+
+                    <div id="receivedPreview">
+                        <div class="stat-label">Received Data Preview:</div>
+                        <div id="receivedText"></div>
+                        <img id="receivedImage" style="display: none;">
                     </div>
                 </div>
             </div>
         </div>
-    </div>
-
-    <!-- Flash Screen for Color Transmission -->
-    <div id="flashScreen">
-        <div class="flash-info" id="flashInfo">Preparing transmission...</div>
     </div>
 
     <script>
         let currentMode = 'send';
-        let currentMethod = 'color';
         let currentDataType = 'text';
         let transmissionActive = false;
         let receivingActive = false;
-        let bitStream = [];
-        let currentBitIndex = 0;
-        let receivedBits = [];
+        let symbolStream = [];
+        let currentSymbolIndex = 0;
+        let receivedData = '';
         let startTime = 0;
+        let expectedLength = 0;
+        let headerReceived = false;
+        let receivedSymbols = [];
+        let experimentalMode = false;
+        let canvas, ctx;
+        let videoStream = null;
+
+        // Standard mode: 2 colors (red/blue) = 1 bit per symbol
+        const STANDARD_COLORS = ['#FF0000', '#0000FF'];
+        
+        // Experimental mode: 8 distinct colors = 3 bits per symbol
+        const EXPERIMENTAL_COLORS = [
+            '#FF0000', // Red - 000
+            '#00FF00', // Green - 001
+            '#0000FF', // Blue - 010
+            '#FFFF00', // Yellow - 011
+            '#FF00FF', // Magenta - 100
+            '#00FFFF', // Cyan - 101
+            '#FF8000', // Orange - 110
+            '#FFFFFF'  // White - 111
+        ];
+
+        const SEPARATOR_COLOR = '#000000'; // Black separator between symbols
+        const START_SEQUENCE = '#00FF00'; // Green for start
+        const END_SEQUENCE = '#FF00FF'; // Magenta for end
 
         function switchMode(mode) {
             currentMode = mode;
             document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
             event.target.classList.add('active');
             
-            document.getElementById('sendMode').classList.toggle('active', mode === 'send');
-            document.getElementById('receiveMode').classList.toggle('active', mode === 'receive');
-        }
-
-        function switchMethod(method) {
-            currentMethod = method;
-            const buttons = event.target.parentElement.querySelectorAll('.method-btn');
-            buttons.forEach(btn => btn.classList.remove('active'));
-            event.target.classList.add('active');
-
-            if (currentMode === 'receive') {
-                document.getElementById('colorReceive').style.display = method === 'color' ? 'block' : 'none';
-                document.getElementById('qrReceive').style.display = method === 'qr' ? 'block' : 'none';
-                document.getElementById('audioReceive').style.display = method === 'audio' ? 'block' : 'none';
+            if (mode === 'send') {
+                document.getElementById('sendMode').style.display = 'block';
+                document.getElementById('receiveMode').style.display = 'none';
+                document.getElementById('flashPlaceholder').style.display = 'flex';
+                document.getElementById('cameraView').style.display = 'none';
+                document.getElementById('calibrationOverlay').style.display = 'none';
+            } else {
+                document.getElementById('sendMode').style.display = 'none';
+                document.getElementById('receiveMode').style.display = 'block';
+                document.getElementById('flashPlaceholder').style.display = 'none';
+                document.getElementById('calibrationOverlay').style.display = 'block';
             }
         }
 
         function switchDataType(type) {
             currentDataType = type;
-            const buttons = event.target.parentElement.querySelectorAll('.method-btn');
-            buttons.forEach(btn => btn.classList.remove('active'));
-            event.target.classList.add('active');
-
             document.getElementById('textInput').style.display = type === 'text' ? 'block' : 'none';
             document.getElementById('imageInput').style.display = type === 'image' ? 'block' : 'none';
+            document.getElementById('fileInput').style.display = type === 'file' ? 'block' : 'none';
         }
+
+        function toggleExperimentalMode() {
+            experimentalMode = document.getElementById('experimentalMode').checked;
+            document.getElementById('experimentalInfo').style.display = experimentalMode ? 'block' : 'none';
+        }
+
+        document.getElementById('sensitivity').addEventListener('input', (e) => {
+            document.getElementById('sensitivityValue').textContent = e.target.value;
+        });
 
         async function prepareData() {
             let data = '';
-            let header = currentDataType === 'text' ? 'T:' : 'I:';
+            let header = '';
 
             if (currentDataType === 'text') {
                 data = document.getElementById('inputText').value;
@@ -459,40 +572,108 @@
                     alert('Please enter some text');
                     return null;
                 }
-            } else {
+                header = 'T';
+            } else if (currentDataType === 'image') {
                 const file = document.getElementById('inputImage').files[0];
                 if (!file) {
                     alert('Please select an image');
                     return null;
                 }
 
-                const img = await loadImage(file);
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
-
-                if (document.getElementById('resizeImage').checked) {
-                    const size = parseInt(document.getElementById('resizeWidth').value);
-                    canvas.width = size;
-                    canvas.height = size;
-                } else {
-                    canvas.width = img.width;
-                    canvas.height = img.height;
+                const compressed = await compressImage(file);
+                data = compressed;
+                header = 'I';
+            } else if (currentDataType === 'file') {
+                const file = document.getElementById('inputFile').files[0];
+                if (!file) {
+                    alert('Please select a file');
+                    return null;
                 }
 
-                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                data = canvas.toDataURL('image/jpeg', 0.8);
+                data = await fileToBase64(file);
+                header = 'F:' + file.name + '|';
             }
 
-            return header + data;
+            // Apply compression if enabled
+            if (document.getElementById('compression').checked && currentDataType === 'text') {
+                data = compressString(data);
+                header += 'C';
+            }
+
+            return header + ':' + data;
         }
 
-        function loadImage(file) {
+        async function compressImage(file) {
             return new Promise((resolve, reject) => {
                 const img = new Image();
-                img.onload = () => resolve(img);
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+
+                    // Compress to 128x128 max
+                    let width = img.width;
+                    let height = img.height;
+                    const maxSize = 128;
+
+                    if (width > height) {
+                        if (width > maxSize) {
+                            height *= maxSize / width;
+                            width = maxSize;
+                        }
+                    } else {
+                        if (height > maxSize) {
+                            width *= maxSize / height;
+                            height = maxSize;
+                        }
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    // Get base64 with heavy compression
+                    const base64 = canvas.toDataURL('image/jpeg', 0.5);
+                    // Strip the data:image prefix to save space
+                    resolve(base64.split(',')[1]);
+                };
                 img.onerror = reject;
                 img.src = URL.createObjectURL(file);
             });
+        }
+
+        function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => {
+                    const base64 = reader.result.split(',')[1];
+                    resolve(base64);
+                };
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function compressString(str) {
+            // Simple LZ-style compression
+            let compressed = '';
+            let dict = {};
+            let phrase = str[0];
+            let code = 256;
+            
+            for (let i = 1; i < str.length; i++) {
+                const char = str[i];
+                const combined = phrase + char;
+                
+                if (dict[combined] != null) {
+                    phrase = combined;
+                } else {
+                    compressed += phrase.length > 1 ? String.fromCharCode(dict[phrase]) : phrase;
+                    dict[combined] = code++;
+                    phrase = char;
+                }
+            }
+            compressed += phrase.length > 1 ? String.fromCharCode(dict[phrase]) : phrase;
+            return compressed;
         }
 
         function stringToBits(str) {
@@ -506,6 +687,34 @@
             return bits;
         }
 
+        function bitsToSymbols(bits) {
+            const symbols = [];
+            const bitsPerSymbol = experimentalMode ? 3 : 1;
+            
+            for (let i = 0; i < bits.length; i += bitsPerSymbol) {
+                let symbolValue = 0;
+                for (let j = 0; j < bitsPerSymbol && i + j < bits.length; j++) {
+                    symbolValue = (symbolValue << 1) | bits[i + j];
+                }
+                symbols.push(symbolValue);
+            }
+            
+            return symbols;
+        }
+
+        function symbolsToBits(symbols) {
+            const bits = [];
+            const bitsPerSymbol = experimentalMode ? 3 : 1;
+            
+            for (const symbol of symbols) {
+                for (let i = bitsPerSymbol - 1; i >= 0; i--) {
+                    bits.push((symbol >> i) & 1);
+                }
+            }
+            
+            return bits;
+        }
+
         function bitsToString(bits) {
             let str = '';
             for (let i = 0; i < bits.length; i += 16) {
@@ -513,9 +722,19 @@
                 for (let j = 0; j < 16 && i + j < bits.length; j++) {
                     charCode = (charCode << 1) | bits[i + j];
                 }
-                str += String.fromCharCode(charCode);
+                if (charCode > 0) {
+                    str += String.fromCharCode(charCode);
+                }
             }
             return str;
+        }
+
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
         }
 
         async function startTransmission() {
@@ -524,95 +743,127 @@
             const data = await prepareData();
             if (!data) return;
 
-            bitStream = stringToBits(data);
-            currentBitIndex = 0;
+            // Create header with length information
+            const dataLength = data.length;
+            const headerInfo = `LEN:${dataLength}|MODE:${experimentalMode ? 'EXP' : 'STD'}|`;
+            const fullData = headerInfo + data;
+
+            const bits = stringToBits(fullData);
+            symbolStream = bitsToSymbols(bits);
+            
+            currentSymbolIndex = 0;
             transmissionActive = true;
             startTime = Date.now();
 
-            document.getElementById('sendStats').style.display = 'grid';
-            document.getElementById('dataSize').textContent = Math.ceil(bitStream.length / 8) + ' bytes';
+            canvas = document.getElementById('flashCanvas');
+            ctx = canvas.getContext('2d');
+            canvas.width = canvas.parentElement.clientWidth;
+            canvas.height = canvas.parentElement.clientHeight;
 
-            if (currentMethod === 'color') {
-                startColorTransmission();
-            } else if (currentMethod === 'qr') {
-                startQRTransmission(data);
-            } else if (currentMethod === 'audio') {
-                startAudioTransmission();
-            }
-        }
-
-        function startColorTransmission() {
-            const flashScreen = document.getElementById('flashScreen');
-            const flashInfo = document.getElementById('flashInfo');
-            flashScreen.classList.add('active');
-
-            const bitSpeed = parseInt(document.getElementById('bitSpeed').value);
+            document.getElementById('flashPlaceholder').style.display = 'none';
+            canvas.style.display = 'block';
             
-            function transmitNextBit() {
-                if (!transmissionActive || currentBitIndex >= bitStream.length) {
-                    flashScreen.style.backgroundColor = '#00ff00';
-                    flashInfo.textContent = 'Transmission Complete!';
-                    setTimeout(() => {
-                        flashScreen.classList.remove('active');
-                        transmissionActive = false;
-                    }, 2000);
-                    return;
-                }
+            document.getElementById('sendStats').style.display = 'grid';
+            document.getElementById('dataSize').textContent = formatBytes(Math.ceil(bits.length / 8));
 
-                const bit = bitStream[currentBitIndex];
-                flashScreen.style.backgroundColor = bit === 0 ? '#ff0000' : '#0000ff';
-                
-                const progress = ((currentBitIndex / bitStream.length) * 100).toFixed(1);
-                document.getElementById('progress').textContent = progress + '%';
-                
-                const elapsed = Date.now() - startTime;
-                const bitsPerMs = currentBitIndex / elapsed;
-                const remaining = (bitStream.length - currentBitIndex) / bitsPerMs;
-                document.getElementById('timeRemaining').textContent = Math.ceil(remaining / 1000) + 's';
-                
-                flashInfo.textContent = `Bit ${currentBitIndex + 1}/${bitStream.length} - ${progress}%`;
+            showStatus('Transmission starting...', 'info');
 
-                currentBitIndex++;
+            // Start sequence
+            await flashColor(START_SEQUENCE, 500);
+            await flashColor(START_SEQUENCE, 500);
+            
+            transmitNextSymbol();
+        }
 
-                setTimeout(() => {
-                    flashScreen.style.backgroundColor = '#ffffff';
-                    setTimeout(transmitNextBit, bitSpeed / 2);
-                }, bitSpeed / 2);
+        function transmitNextSymbol() {
+            if (!transmissionActive || currentSymbolIndex >= symbolStream.length) {
+                finishTransmission();
+                return;
             }
 
-            transmitNextBit();
+            const symbol = symbolStream[currentSymbolIndex];
+            const colors = experimentalMode ? EXPERIMENTAL_COLORS : STANDARD_COLORS;
+            const color = colors[symbol];
+            
+            const symbolSpeed = parseInt(document.getElementById('symbolSpeed').value);
+            
+            // Flash the color
+            flashColor(color, symbolSpeed / 2).then(() => {
+                // Separator
+                flashColor(SEPARATOR_COLOR, symbolSpeed / 2).then(() => {
+                    updateTransmissionStats();
+                    currentSymbolIndex++;
+                    transmitNextSymbol();
+                });
+            });
         }
 
-        function startQRTransmission(data) {
-            alert('QR transmission coming soon! Use Color Flash method for now.');
+        function flashColor(color, duration) {
+            return new Promise(resolve => {
+                ctx.fillStyle = color;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                setTimeout(resolve, duration);
+            });
+        }
+
+        function updateTransmissionStats() {
+            const progress = ((currentSymbolIndex / symbolStream.length) * 100).toFixed(1);
+            document.getElementById('progress').textContent = progress + '%';
+            
+            const elapsed = Date.now() - startTime;
+            const symbolsPerMs = currentSymbolIndex / elapsed;
+            const remaining = (symbolStream.length - currentSymbolIndex) / symbolsPerMs;
+            document.getElementById('timeRemaining').textContent = Math.ceil(remaining / 1000) + 's';
+            
+            const bitsPerSymbol = experimentalMode ? 3 : 1;
+            const bitsPerSecond = (currentSymbolIndex * bitsPerSymbol) / (elapsed / 1000);
+            document.getElementById('transferSpeed').textContent = Math.round(bitsPerSecond) + ' bps';
+        }
+
+        async function finishTransmission() {
+            // End sequence
+            await flashColor(END_SEQUENCE, 500);
+            await flashColor(END_SEQUENCE, 500);
+            await flashColor('#000000', 500);
+            
+            canvas.style.display = 'none';
+            document.getElementById('flashPlaceholder').style.display = 'flex';
             transmissionActive = false;
+            
+            showStatus('Transmission complete!', 'success');
         }
 
-        function startAudioTransmission() {
-            alert('Audio transmission coming soon! Use Color Flash method for now.');
-            transmissionActive = false;
-        }
-
-        async function startColorReceive() {
+        async function startReceiving() {
             if (receivingActive) return;
 
             const video = document.getElementById('cameraView');
             
             try {
-                const stream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { facingMode: 'environment' } 
+                videoStream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { 
+                        facingMode: 'environment',
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    } 
                 });
-                video.srcObject = stream;
+                video.srcObject = videoStream;
+                video.style.display = 'block';
                 receivingActive = true;
-                receivedBits = [];
+                receivedSymbols = [];
+                receivedData = '';
+                headerReceived = false;
+                expectedLength = 0;
                 
                 document.getElementById('receiveStats').style.display = 'grid';
+                document.getElementById('receiveStatus').textContent = 'Waiting...';
                 
                 const canvas = document.createElement('canvas');
                 const ctx = canvas.getContext('2d');
                 
-                let lastBit = -1;
-                let waitingForSeparator = false;
+                let lastColor = null;
+                let isBlack = false;
+                let startDetected = false;
+                let greenCount = 0;
                 
                 function captureFrame() {
                     if (!receivingActive) return;
@@ -621,7 +872,17 @@
                     canvas.height = video.videoHeight;
                     ctx.drawImage(video, 0, 0);
                     
-                    const imageData = ctx.getImageData(canvas.width / 2 - 50, canvas.height / 2 - 50, 100, 100);
+                    // Sample from center area
+                    const centerX = canvas.width / 2;
+                    const centerY = canvas.height / 2;
+                    const sampleSize = 100;
+                    
+                    const imageData = ctx.getImageData(
+                        centerX - sampleSize/2, 
+                        centerY - sampleSize/2, 
+                        sampleSize, 
+                        sampleSize
+                    );
                     const data = imageData.data;
                     
                     let r = 0, g = 0, b = 0;
@@ -630,82 +891,275 @@
                         g += data[i + 1];
                         b += data[i + 2];
                     }
-                    r /= (data.length / 4);
-                    g /= (data.length / 4);
-                    b /= (data.length / 4);
+                    const pixelCount = data.length / 4;
+                    r /= pixelCount;
+                    g /= pixelCount;
+                    b /= pixelCount;
 
-                    if (r > 200 && g > 200 && b > 200) {
-                        waitingForSeparator = false;
-                    } else if (!waitingForSeparator) {
-                        let bit = -1;
-                        if (r > b + 50 && r > g + 50) {
-                            bit = 0;
-                        } else if (b > r + 50 && b > g + 50) {
-                            bit = 1;
-                        }
+                    const sensitivity = parseInt(document.getElementById('sensitivity').value);
+                    const threshold = sensitivity;
 
-                        if (bit !== -1) {
-                            receivedBits.push(bit);
-                            waitingForSeparator = true;
+                    // Detect black separator
+                    if (r < threshold && g < threshold && b < threshold) {
+                        isBlack = true;
+                    } else if (isBlack) {
+                        // We just transitioned from black to a color
+                        isBlack = false;
+                        
+                        // Detect start sequence (green)
+                        if (!startDetected) {
+                            if (g > r + 50 && g > b + 50) {
+                                greenCount++;
+                                if (greenCount >= 2) {
+                                    startDetected = true;
+                                    greenCount = 0;
+                                    document.getElementById('receiveStatus').textContent = 'Receiving...';
+                                    showStatus('Start sequence detected!', 'info');
+                                }
+                            }
+                        } else {
+                            // Detect end sequence (magenta)
+                            if (r > 150 && b > 150 && g < 100) {
+                                receivingActive = false;
+                                processReceivedData();
+                                return;
+                            }
                             
-                            document.getElementById('receivedBits').textContent = receivedBits.length + ' bits';
-                            
-                            updateReceivedPreview();
+                            // Detect symbol
+                            const symbol = detectSymbol(r, g, b);
+                            if (symbol !== -1) {
+                                receivedSymbols.push(symbol);
+                                updateReceiveStats();
+                            }
                         }
                     }
 
                     requestAnimationFrame(captureFrame);
                 }
 
-                setTimeout(captureFrame, 500);
+                // Wait for video to be ready
+                video.onloadedmetadata = () => {
+                    setTimeout(captureFrame, 500);
+                };
                 
             } catch (err) {
                 alert('Camera access denied: ' + err.message);
+                receivingActive = false;
             }
         }
 
-        function updateReceivedPreview() {
-            if (receivedBits.length < 16) return;
-
-            const data = bitsToString(receivedBits);
+        function detectSymbol(r, g, b) {
+            const colors = experimentalMode ? EXPERIMENTAL_COLORS : STANDARD_COLORS;
             
-            if (data.startsWith('T:')) {
-                document.getElementById('receivedText').textContent = data.substring(2);
-                document.getElementById('receivedImage').style.display = 'none';
-            } else if (data.startsWith('I:')) {
-                const imgData = data.substring(2);
-                if (imgData.startsWith('data:image')) {
-                    document.getElementById('receivedImage').src = imgData;
-                    document.getElementById('receivedImage').style.display = 'block';
-                    document.getElementById('receivedText').textContent = '';
+            if (experimentalMode) {
+                // Detect which of the 8 colors this is closest to
+                let minDistance = Infinity;
+                let closestSymbol = -1;
+                
+                const colorMap = [
+                    [255, 0, 0],     // Red - 000
+                    [0, 255, 0],     // Green - 001
+                    [0, 0, 255],     // Blue - 010
+                    [255, 255, 0],   // Yellow - 011
+                    [255, 0, 255],   // Magenta - 100
+                    [0, 255, 255],   // Cyan - 101
+                    [255, 128, 0],   // Orange - 110
+                    [255, 255, 255]  // White - 111
+                ];
+                
+                for (let i = 0; i < colorMap.length; i++) {
+                    const [cr, cg, cb] = colorMap[i];
+                    const distance = Math.sqrt(
+                        Math.pow(r - cr, 2) +
+                        Math.pow(g - cg, 2) +
+                        Math.pow(b - cb, 2)
+                    );
+                    
+                    if (distance < minDistance) {
+                        minDistance = distance;
+                        closestSymbol = i;
+                    }
+                }
+                
+                // Only accept if close enough
+                return minDistance < 100 ? closestSymbol : -1;
+            } else {
+                // Standard mode: red = 0, blue = 1
+                if (r > b + 50 && r > 150) {
+                    return 0;
+                } else if (b > r + 50 && b > 150) {
+                    return 1;
+                }
+                return -1;
+            }
+        }
+
+        function updateReceiveStats() {
+            if (!headerReceived && receivedSymbols.length > 50) {
+                // Try to extract header
+                const bits = symbolsToBits(receivedSymbols);
+                const partialData = bitsToString(bits);
+                
+                const lenMatch = partialData.match(/LEN:(\d+)\|/);
+                const modeMatch = partialData.match(/MODE:(STD|EXP)\|/);
+                
+                if (lenMatch && modeMatch) {
+                    expectedLength = parseInt(lenMatch[1]);
+                    experimentalMode = modeMatch[1] === 'EXP';
+                    headerReceived = true;
+                    document.getElementById('receiveStatus').textContent = 'Header OK';
+                    showStatus(`Receiving ${formatBytes(expectedLength)} in ${experimentalMode ? 'experimental' : 'standard'} mode`, 'info');
                 }
             }
+            
+            if (headerReceived && expectedLength > 0) {
+                const bits = symbolsToBits(receivedSymbols);
+                const currentLength = bitsToString(bits).length;
+                const progress = Math.min(100, (currentLength / expectedLength) * 100).toFixed(1);
+                document.getElementById('receiveProgress').textContent = progress + '%';
+            } else {
+                document.getElementById('receiveProgress').textContent = '...';
+            }
+            
+            document.getElementById('receivedSize').textContent = formatBytes(Math.ceil(receivedSymbols.length * (experimentalMode ? 3 : 1) / 8));
+        }
 
-            const expectedLength = Math.ceil(data.length * 16);
-            const progress = Math.min(100, (receivedBits.length / expectedLength) * 100).toFixed(1);
-            document.getElementById('receiveProgress').textContent = progress + '%';
+        function processReceivedData() {
+            try {
+                const bits = symbolsToBits(receivedSymbols);
+                const fullData = bitsToString(bits);
+                
+                // Extract actual data (skip header)
+                const dataStart = fullData.indexOf('|', fullData.indexOf('MODE:')) + 1;
+                const data = fullData.substring(dataStart);
+                
+                // Parse header
+                const dataType = data[0];
+                let actualData = data.substring(2); // Skip type and colon
+                
+                if (dataType === 'T') {
+                    // Text
+                    if (data[1] === 'C') {
+                        // Decompress
+                        actualData = actualData; // Decompression would go here
+                    }
+                    document.getElementById('receivedText').textContent = actualData;
+                    document.getElementById('receivedImage').style.display = 'none';
+                    receivedData = actualData;
+                    
+                } else if (dataType === 'I') {
+                    // Image
+                    const imgSrc = 'data:image/jpeg;base64,' + actualData;
+                    document.getElementById('receivedImage').src = imgSrc;
+                    document.getElementById('receivedImage').style.display = 'block';
+                    document.getElementById('receivedText').textContent = '';
+                    receivedData = imgSrc;
+                    
+                } else if (dataType === 'F') {
+                    // File
+                    const separator = actualData.indexOf('|');
+                    const filename = actualData.substring(0, separator);
+                    const fileData = actualData.substring(separator + 1);
+                    
+                    document.getElementById('receivedText').textContent = `File received: ${filename}\nSize: ${formatBytes(fileData.length)}`;
+                    document.getElementById('receivedImage').style.display = 'none';
+                    receivedData = { filename, data: fileData };
+                }
+                
+                document.getElementById('receiveStatus').textContent = 'Complete';
+                document.getElementById('saveBtn').style.display = 'block';
+                showStatus('Reception complete!', 'success');
+                
+                if (document.getElementById('autoSave').checked) {
+                    saveReceivedData();
+                }
+                
+            } catch (err) {
+                showStatus('Error processing data: ' + err.message, 'error');
+                document.getElementById('errorCount').textContent = '1';
+            }
+            
+            stopReceiving();
         }
 
         function stopReceiving() {
             receivingActive = false;
             const video = document.getElementById('cameraView');
-            if (video.srcObject) {
-                video.srcObject.getTracks().forEach(track => track.stop());
+            if (videoStream) {
+                videoStream.getTracks().forEach(track => track.stop());
+                videoStream = null;
+            }
+            video.style.display = 'none';
+            document.getElementById('calibrationOverlay').style.display = 'none';
+        }
+
+        function saveReceivedData() {
+            if (!receivedData) {
+                alert('No data to save');
+                return;
+            }
+            
+            try {
+                if (typeof receivedData === 'string') {
+                    if (receivedData.startsWith('data:image')) {
+                        // Image
+                        const link = document.createElement('a');
+                        link.href = receivedData;
+                        link.download = 'received_image_' + Date.now() + '.jpg';
+                        link.click();
+                    } else {
+                        // Text
+                        const blob = new Blob([receivedData], { type: 'text/plain' });
+                        const link = document.createElement('a');
+                        link.href = URL.createObjectURL(blob);
+                        link.download = 'received_text_' + Date.now() + '.txt';
+                        link.click();
+                    }
+                } else if (typeof receivedData === 'object') {
+                    // File
+                    const byteCharacters = atob(receivedData.data);
+                    const byteNumbers = new Array(byteCharacters.length);
+                    for (let i = 0; i < byteCharacters.length; i++) {
+                        byteNumbers[i] = byteCharacters.charCodeAt(i);
+                    }
+                    const byteArray = new Uint8Array(byteNumbers);
+                    const blob = new Blob([byteArray]);
+                    
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(blob);
+                    link.download = receivedData.filename;
+                    link.click();
+                }
+                
+                showStatus('Data saved successfully!', 'success');
+            } catch (err) {
+                showStatus('Error saving data: ' + err.message, 'error');
             }
         }
 
-        function startQRReceive() {
-            alert('QR scanning coming soon! Use Color Flash method for now.');
+        function showStatus(message, type) {
+            const statusEl = document.getElementById('statusMessage');
+            if (statusEl) {
+                statusEl.textContent = message;
+                statusEl.className = 'status-message ' + type;
+                statusEl.style.display = 'block';
+                
+                setTimeout(() => {
+                    statusEl.style.display = 'none';
+                }, 5000);
+            }
         }
 
-        function startAudioReceive() {
-            alert('Audio receiving coming soon! Use Color Flash method for now.');
-        }
-
-        // Stop transmission on page unload
+        // Stop transmission/reception on page unload
         window.addEventListener('beforeunload', () => {
             transmissionActive = false;
             stopReceiving();
+        });
+
+        // Initialize canvas
+        window.addEventListener('load', () => {
+            canvas = document.getElementById('flashCanvas');
+            ctx = canvas.getContext('2d');
         });
     </script>
 </body>

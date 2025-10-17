@@ -14,7 +14,7 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: #ffffff; /* Changed to solid white as requested */
+            background: #ffffff; /* Solid white */
             min-height: 100vh;
             display: flex;
             justify-content: center;
@@ -206,24 +206,7 @@
             gap: 10px;
         }
         
-        #receiveLayout {
-            display: grid;
-            grid-template-columns: 1fr 2fr; /* One third for the (hidden) camera, two thirds for the result */
-            gap: 20px;
-            align-items: flex-start;
-        }
-
-        #cameraView {
-            width: 100%;
-            max-width: 500px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-            display: none; 
-        }
-        
-        /* Receiver Stats and Preview */
         #receivedArea {
-            grid-column: 1 / 3; /* Use full width if camera is hidden */
             width: 100%;
         }
 
@@ -241,6 +224,7 @@
             display: block; 
             min-height: 50px; 
             background: #ccc;
+            image-rendering: pixelated; /* Essential for tiny images */
         }
 
         #receivedText {
@@ -353,8 +337,7 @@
         let receivedBits = [];
         let startTime = 0;
         
-        // Image metadata to be transmitted (width, height)
-        let imageMetadata = { width: 0, height: 0 }; 
+        // --- DATA UTILITIES (Bytes/Bits/String conversion) ---
 
         // Utility to convert a string into an array of bytes
         function stringToBytes(str) {
@@ -373,7 +356,7 @@
             let str = '';
             for (let i = 0; i < bytes.length; i += 2) {
                 // Reconstruct 16-bit char code from two 8-bit bytes
-                let charCode = (bytes[i] << 8) | bytes[i + 1];
+                let charCode = (bytes[i] << 8) | (bytes[i + 1] || 0); // Use 0 if the last byte is missing
                 str += String.fromCharCode(charCode);
             }
             return str;
@@ -404,6 +387,8 @@
             return new Uint8Array(bytes);
         }
 
+        // --- MODE/UI FUNCTIONS ---
+
         function switchMode(mode) {
             currentMode = mode;
             document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
@@ -425,6 +410,8 @@
             document.getElementById('textInput').style.display = type === 'text' ? 'block' : 'none';
             document.getElementById('imageInput').style.display = type === 'image' ? 'block' : 'none';
         }
+
+        // --- TRANSMISSION FUNCTIONS ---
 
         async function prepareData() {
             let payloadBytes;
@@ -456,7 +443,6 @@
                 if (document.getElementById('resizeImage').checked) {
                     const size = parseInt(document.getElementById('resizeWidth').value);
                     targetWidth = size;
-                    // For simplicity and matching your input structure, we assume square or resize only width
                     targetHeight = size; 
                 }
                 
@@ -473,14 +459,10 @@
                     rgbArray.push(imageData[i]);     // R
                     rgbArray.push(imageData[i + 1]); // G
                     rgbArray.push(imageData[i + 2]); // B
-                    // Ignore A for simple color transmission
                 }
 
-                imageMetadata.width = targetWidth;
-                imageMetadata.height = targetHeight;
-
-                // I: [2-byte width] [2-byte height] [raw RGB bytes]
-                // Convert dimensions to two 16-bit characters (4 bytes)
+                // I: [W]| [H]| [raw RGB bytes]
+                // Encode dimensions as single characters using their charCode
                 const metaString = `${String.fromCharCode(targetWidth)}|${String.fromCharCode(targetHeight)}|`;
                 
                 header = `I:${metaString}`; // This is the string part of the header
@@ -564,6 +546,8 @@
             transmitNextBit();
         }
 
+        // --- RECEIVE FUNCTIONS ---
+
         async function startColorReceive() {
             if (receivingActive) return;
 
@@ -578,8 +562,14 @@
                     video: { facingMode: 'environment' } 
                 });
                 video.srcObject = stream;
+                
+                // IMPORTANT FIX: Reset all data on start of a new reception
                 receivingActive = true;
-                receivedBits = [];
+                receivedBits = []; 
+                document.getElementById('receivedText').textContent = '';
+                document.getElementById('receivedImage').style.display = 'none';
+                document.getElementById('receivedImage').src = '';
+                // END FIX: Reset
                 
                 document.getElementById('receiveStats').style.display = 'grid';
                 
@@ -656,45 +646,49 @@
         }
 
         function updateReceivedPreview() {
-            // Need at least 8 bits (1 byte) for a minimal decode attempt
-            if (receivedBits.length < 8) return; 
+            // Need at least 4 bytes (32 bits) to reliably check for T: or I:
+            if (receivedBits.length < 32) return; 
 
-            // Convert all received bits to bytes
             const receivedBytes = bitsToBytes(receivedBits);
-            
-            // Convert leading bytes back to a string to check the header
-            const headerString = bytesToString(receivedBytes.slice(0, Math.min(receivedBytes.length, 16)));
+            const fullHeaderString = bytesToString(receivedBytes);
             
             // Check for Text Header
-            if (headerString.startsWith('T:')) {
-                const textBytes = receivedBytes.slice(2);
-                document.getElementById('receivedText').textContent = bytesToString(textBytes);
+            if (fullHeaderString.startsWith('T:')) {
+                const dataText = fullHeaderString.substring(2);
+                document.getElementById('receivedText').textContent = dataText;
                 document.getElementById('receivedImage').style.display = 'none';
                 document.getElementById('receivedImage').src = '';
             } 
             // Check for Image Header
-            else if (headerString.startsWith('I:')) {
-                // I: [W]| [H]| [raw RGB bytes]
-                const headerEndIndex = headerString.indexOf('||') + 2;
-                if (headerEndIndex < 4) return; // Not enough header info yet
+            else if (fullHeaderString.startsWith('I:')) {
+                // Find the end of the metadata section "W|H|"
+                const headerEndIndex = fullHeaderString.indexOf('||') + 2;
 
-                const fullHeaderString = bytesToString(receivedBytes.slice(0, receivedBytes.length));
-                const parts = fullHeaderString.split('|');
+                // We need at least the header (I: W| H|), which is 6 characters/12 bytes (16-bit encoding)
+                if (headerEndIndex < 6) return; 
+
+                // --- Extract Metadata ---
+                // The metadata is between I: and the first '|', and between the two '|'
+                const widthChar = fullHeaderString.substring(2, fullHeaderString.indexOf('|'));
+                const heightChar = fullHeaderString.substring(fullHeaderString.indexOf('|') + 1, headerEndIndex - 1);
+
+                if (!widthChar || !heightChar) return; // Not enough header info yet
+
+                // FIX: Get the charCode for the actual dimensions
+                const width = widthChar.charCodeAt(0); 
+                const height = heightChar.charCodeAt(0);
                 
-                // Check if we have enough parts for width and height
-                if (parts.length < 3) return;
-
-                const width = parts[0].substring(2).charCodeAt(0); // CharCode of W
-                const height = parts[1].charCodeAt(0);             // CharCode of H
+                // --- Reconstruct Image Data ---
+                // The raw pixel data starts after the byte length of the header string (which is headerEndIndex * 2 bytes)
+                const headerBytesLength = headerEndIndex * 2;
+                const rawPixelData = receivedBytes.slice(headerBytesLength);
                 
                 // Calculate expected data size (3 bytes per pixel)
                 const expectedPixelDataLength = width * height * 3;
-                const expectedTotalBytes = headerEndIndex + expectedPixelDataLength;
                 
-                // Get the raw pixel data after the header
-                const rawPixelData = receivedBytes.slice(headerEndIndex);
+                // We must have at least one pixel's worth of data to proceed with image reconstruction
+                if (rawPixelData.length < 3) return;
 
-                // Reconstruct the image from raw RGB data for live display
                 const canvas = document.createElement('canvas');
                 canvas.width = width;
                 canvas.height = height;
@@ -702,7 +696,7 @@
                 const imageData = ctx.createImageData(width, height);
                 const data = imageData.data;
                 
-                // Populate image data with received RGB bytes
+                // Populate image data with received RGB bytes (3 bytes to 4 bytes: R, G, B, 255)
                 for (let i = 0; i < rawPixelData.length / 3; i++) {
                     data[i * 4]     = rawPixelData[i * 3];     // R
                     data[i * 4 + 1] = rawPixelData[i * 3 + 1]; // G
@@ -710,10 +704,10 @@
                     data[i * 4 + 3] = 255;                     // A (fully opaque)
                 }
 
-                // Put the partial image data onto the canvas
+                // Put the partial/complete image data onto the canvas
                 ctx.putImageData(imageData, 0, 0);
 
-                // Convert the partial canvas to a Base64 PNG for display
+                // Convert the partial canvas to a Base64 PNG for live display
                 const imgDataUrl = canvas.toDataURL('image/png');
                 
                 document.getElementById('receivedImage').src = imgDataUrl;

@@ -3,19 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Color Flash Data Transfer</title>
+    <title>Offline Data Transfer</title>
     <style>
-        :root {
-            --primary-color: #6a11cb;
-            --secondary-color: #2575fc;
-            --background-color: #f0f2f5;
-            --container-bg: #ffffff;
-            --text-color: #333;
-            --light-gray: #e9ecef;
-            --border-radius: 12px;
-            --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-        }
-
         * {
             margin: 0;
             padding: 0;
@@ -23,405 +12,492 @@
         }
 
         body {
-            font-family: var(--font-family);
-            background-color: var(--background-color);
-            color: var(--text-color);
-            display: flex;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
-            overflow: hidden;
-        }
-
-        /* --- Layout --- */
-        #flash-container {
-            flex: 1;
-            background-color: #000;
             display: flex;
             justify-content: center;
             align-items: center;
-            transition: background-color 0.05s linear;
-            position: relative;
+            padding: 20px;
         }
 
-        #controls-container {
-            flex: 2;
-            padding: 2rem 3rem;
-            background-color: var(--container-bg);
-            overflow-y: auto;
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 1400px;
+            width: 100%;
+            overflow: hidden;
             display: flex;
             flex-direction: column;
-        }
-        
-        #flash-info {
-            background: rgba(0, 0, 0, 0.7);
-            color: white;
-            padding: 10px 20px;
-            border-radius: 8px;
-            font-size: 1.1rem;
-            text-align: center;
-            opacity: 0;
-            transition: opacity 0.3s;
-        }
-
-        #flash-container.transmitting #flash-info {
-            opacity: 1;
-        }
-
-
-        /* --- Controls --- */
-        .container-wrapper {
-            max-width: 700px;
-            margin: auto;
-            width: 100%;
-        }
-        
-        h1 {
-            text-align: center;
-            margin-bottom: 2rem;
-            font-weight: 700;
-            color: var(--primary-color);
         }
 
         .mode-selector {
             display: flex;
-            background: var(--light-gray);
-            border-radius: var(--border-radius);
-            padding: 5px;
-            margin-bottom: 1.5rem;
+            background: #f7f7f7;
+            border-bottom: 2px solid #e0e0e0;
         }
 
         .mode-btn {
             flex: 1;
-            padding: 12px;
-            background: transparent;
+            padding: 20px;
+            background: none;
             border: none;
-            font-size: 1rem;
+            font-size: 16px;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s;
-            color: #555;
-            border-radius: 9px;
+            color: #666;
         }
 
         .mode-btn.active {
-            background: var(--container-bg);
-            color: var(--primary-color);
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            background: white;
+            color: #667eea;
+            border-bottom: 3px solid #667eea;
         }
-        
-        .section { display: none; }
-        .section.active { display: block; }
-        .input-group { margin-bottom: 1.5rem; }
 
-        label, .label {
-            display: block;
-            margin-bottom: 0.5rem;
-            font-weight: 600;
+        .main-content {
+            display: flex;
+            min-height: 600px;
         }
-        
-        textarea, input[type="file"] {
+
+        .flash-zone {
+            flex: 0 0 33.333%;
+            background: #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            border-right: 3px solid #e0e0e0;
+        }
+
+        .flash-display {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+        }
+
+        .flash-status {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 14px;
+            z-index: 10;
+            max-width: 90%;
+            text-align: center;
+        }
+
+        .controls-area {
+            flex: 1;
+            padding: 30px;
+            overflow-y: auto;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        textarea, input[type="file"], input[type="text"] {
             width: 100%;
             padding: 12px;
-            border: 2px solid var(--light-gray);
+            border: 2px solid #e0e0e0;
             border-radius: 8px;
-            font-size: 1rem;
+            font-size: 14px;
             font-family: inherit;
             transition: border-color 0.3s;
-            background: #fafafa;
+        }
+
+        textarea {
+            min-height: 120px;
+            resize: vertical;
         }
 
         textarea:focus, input:focus {
             outline: none;
-            border-color: var(--secondary-color);
+            border-color: #667eea;
         }
-        
+
         .options {
-            padding: 1rem;
-            background: var(--light-gray);
-            border-radius: var(--border-radius);
-            margin-bottom: 1.5rem;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 1.5rem;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f7f7f7;
+            border-radius: 8px;
         }
-        
+
         .option-item {
             display: flex;
             align-items: center;
-            gap: 0.5rem;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .option-item input[type="checkbox"] {
+            width: auto;
         }
 
         .option-item input[type="number"] {
-            width: 70px;
+            width: 80px;
             padding: 6px;
-            border: 2px solid #ccc;
-            border-radius: 6px;
+            border: 2px solid #e0e0e0;
+            border-radius: 4px;
         }
 
-        .toggle-switch {
-            position: relative;
-            display: inline-block;
-            width: 50px;
-            height: 28px;
-        }
-        .toggle-switch input { opacity: 0; width: 0; height: 0; }
-        .slider {
-            position: absolute;
-            cursor: pointer;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background-color: #ccc;
-            transition: .4s;
-            border-radius: 28px;
-        }
-        .slider:before {
-            position: absolute;
-            content: "";
-            height: 20px; width: 20px;
-            left: 4px; bottom: 4px;
-            background-color: white;
-            transition: .4s;
-            border-radius: 50%;
-        }
-        input:checked + .slider { background-color: var(--secondary-color); }
-        input:checked + .slider:before { transform: translateX(22px); }
-
-
-        .main-btn {
+        button {
             padding: 15px 30px;
-            background: linear-gradient(135deg, var(--secondary-color) 0%, var(--primary-color) 100%);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             border: none;
             border-radius: 8px;
-            font-size: 1.1rem;
+            font-size: 16px;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: transform 0.2s;
             width: 100%;
             margin-bottom: 10px;
         }
-        .main-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 15px rgba(0,0,0,0.15); }
-        .main-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none;}
-        
-        .stop-btn { background: #e74c3c; }
 
-        /* --- Stats & Previews --- */
+        button:hover {
+            transform: translateY(-2px);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .stop-btn {
+            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+        }
+
         .stats {
             display: grid;
-            grid-template-columns: 1fr;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
             gap: 15px;
             margin-top: 20px;
             padding: 20px;
-            background: var(--light-gray);
-            border-radius: var(--border-radius);
+            background: #f7f7f7;
+            border-radius: 8px;
         }
 
-        #progress-bar-container {
-            width: 100%;
-            height: 20px;
-            background: #ddd;
-            border-radius: 10px;
-            overflow: hidden;
+        .stat-item {
+            text-align: center;
         }
-        #progress-bar {
-            width: 0%;
-            height: 100%;
-            background: linear-gradient(135deg, var(--secondary-color) 0%, var(--primary-color) 100%);
-            transition: width 0.2s linear;
+
+        .stat-label {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 5px;
         }
-        
-        #receiver-view {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #667eea;
         }
-        
+
         #cameraView {
             width: 100%;
-            max-width: 400px;
-            border-radius: var(--border-radius);
-            margin-bottom: 1rem;
-            border: 2px solid var(--light-gray);
+            height: 100%;
+            object-fit: cover;
         }
 
-        #received-preview {
-            margin-top: 1rem;
+        #receivedPreview {
+            margin-top: 20px;
             padding: 20px;
-            background: var(--light-gray);
-            border-radius: var(--border-radius);
+            background: #f7f7f7;
+            border-radius: 8px;
             min-height: 100px;
-            width: 100%;
         }
 
-        #received-content a {
-            display: inline-block;
-            margin-top: 10px;
-            padding: 10px 15px;
-            background: var(--primary-color);
-            color: white;
-            text-decoration: none;
-            border-radius: 6px;
-        }
-        #received-content img {
+        #receivedImage {
             max-width: 100%;
             border-radius: 8px;
-            margin-top: 10px;
         }
-        #received-content pre {
+
+        #receivedText {
+            font-family: monospace;
             white-space: pre-wrap;
             word-break: break-all;
-            font-family: monospace;
+        }
+
+        .mode-toggle {
+            margin-bottom: 20px;
+        }
+
+        .toggle-container {
+            display: flex;
+            gap: 10px;
+            padding: 15px;
+            background: #f7f7f7;
+            border-radius: 8px;
+            align-items: center;
+        }
+
+        .experimental-badge {
+            background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                flex-direction: column;
+            }
+            
+            .flash-zone {
+                flex: 0 0 300px;
+                border-right: none;
+                border-bottom: 3px solid #e0e0e0;
+            }
         }
     </style>
 </head>
 <body>
-    <div id="flash-container">
-        <div id="flash-info">Place receiver in the left 1/3 of the screen</div>
-    </div>
+    <div class="container">
+        <div class="mode-selector">
+            <button class="mode-btn active" onclick="switchMode('send')">Send</button>
+            <button class="mode-btn" onclick="switchMode('receive')">Receive</button>
+        </div>
 
-    <div id="controls-container">
-        <div class="container-wrapper">
-            <h1>Offline Data Transfer</h1>
-
-            <div class="mode-selector">
-                <button class="mode-btn active" onclick="switchMode('send')">📤 Send</button>
-                <button class="mode-btn" onclick="switchMode('receive')">📥 Receive</button>
+        <div class="main-content">
+            <!-- Flash Zone (Left Third) -->
+            <div class="flash-zone">
+                <div class="flash-display" id="flashDisplay">
+                    <div style="color: white; font-size: 18px; text-align: center; padding: 20px;">
+                        <div id="idleMessage">Ready to transmit or receive</div>
+                    </div>
+                </div>
+                <div class="flash-status" id="flashStatus" style="display: none;">Preparing...</div>
             </div>
 
-            <div id="sendMode" class="section active">
-                <div class="input-group">
-                    <label class="label">Data Type:</label>
-                    <div class="mode-selector">
-                        <button class="data-type-btn active" onclick="switchDataType('text')">Text</button>
-                        <button class="data-type-btn" onclick="switchDataType('file')">File</button>
+            <!-- Controls Area (Right Two Thirds) -->
+            <div class="controls-area">
+                <!-- SEND MODE -->
+                <div id="sendMode" class="section active">
+                    <h2 style="margin-bottom: 20px;">Send Data</h2>
+
+                    <div class="input-group">
+                        <label>Data Type:</label>
+                        <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                            <button style="flex: 1;" class="mode-btn active" onclick="switchDataType('text')">Text</button>
+                            <button style="flex: 1;" class="mode-btn" onclick="switchDataType('file')">File</button>
+                        </div>
                     </div>
-                </div>
 
-                <div id="textInput" class="input-group">
-                    <label for="inputText">Enter Text:</label>
-                    <textarea id="inputText" placeholder="Type your message here..."></textarea>
-                </div>
-
-                <div id="fileInput" class="input-group" style="display: none;">
-                    <label for="inputFile">Select File:</label>
-                    <input type="file" id="inputFile">
-                </div>
-
-                <div class="options">
-                    <div class="option-item">
-                        <label for="bitSpeed">Speed (ms/flash):</label>
-                        <input type="number" id="bitSpeed" value="100" min="20" max="1000" step="10">
+                    <div id="textInput" class="input-group">
+                        <label>Enter Text:</label>
+                        <textarea id="inputText" placeholder="Type your message here..."></textarea>
                     </div>
-                    <div class="option-item">
-                        <label for="experimentalMode">Experimental Mode (8 colors):</label>
-                        <label class="toggle-switch">
+
+                    <div id="fileInput" class="input-group" style="display: none;">
+                        <label>Select File:</label>
+                        <input type="file" id="inputFile">
+                    </div>
+
+                    <div class="mode-toggle">
+                        <div class="toggle-container">
                             <input type="checkbox" id="experimentalMode">
-                            <span class="slider"></span>
-                        </label>
+                            <label for="experimentalMode" style="margin: 0; flex: 1;">Experimental Mode (Faster with more colors)</label>
+                            <span class="experimental-badge">BETA</span>
+                        </div>
+                    </div>
+
+                    <div class="options">
+                        <div class="option-item">
+                            <label>Speed (ms/symbol):</label>
+                            <input type="number" id="bitSpeed" value="100" min="50" max="500" step="10">
+                        </div>
+                        <div class="option-item">
+                            <label>Error Correction:</label>
+                            <input type="checkbox" id="errorCorrection" checked>
+                        </div>
+                    </div>
+
+                    <button onclick="startTransmission()">Start Transmission</button>
+
+                    <div id="sendStats" class="stats" style="display: none;">
+                        <div class="stat-item">
+                            <div class="stat-label">Size</div>
+                            <div class="stat-value" id="dataSize">0 bytes</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">Progress</div>
+                            <div class="stat-value" id="progress">0%</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">Time Remaining</div>
+                            <div class="stat-value" id="timeRemaining">--</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">Speed</div>
+                            <div class="stat-value" id="transferSpeed">-- bps</div>
+                        </div>
                     </div>
                 </div>
 
-                <button id="transmitBtn" class="main-btn" onclick="startTransmission()">Start Transmission</button>
+                <!-- RECEIVE MODE -->
+                <div id="receiveMode" class="section" style="display: none;">
+                    <h2 style="margin-bottom: 20px;">Receive Data</h2>
 
-                <div id="sendStats" class="stats" style="display: none;">
-                    <div id="progress-info">
-                        <span id="progress-text">0%</span> - <span id="data-size">0 bytes</span>
+                    <p style="margin-bottom: 20px; color: #666;">Place your device's camera against the left panel (flash zone) of the transmitting screen.</p>
+
+                    <button onclick="startColorReceive()">Start Receiving</button>
+                    <button onclick="stopReceiving()" class="stop-btn">Stop</button>
+
+                    <div id="receivedPreview">
+                        <div class="stat-label">Received Data:</div>
+                        <div id="receivedText" style="margin-top: 10px;"></div>
+                        <img id="receivedImage" style="display: none; margin-top: 10px;">
+                        <a id="downloadLink" style="display: none; margin-top: 10px; color: #667eea; text-decoration: none; font-weight: 600;">Download File</a>
                     </div>
-                    <div id="progress-bar-container">
-                        <div id="progress-bar"></div>
+
+                    <div id="receiveStats" class="stats" style="display: none;">
+                        <div class="stat-item">
+                            <div class="stat-label">Status</div>
+                            <div class="stat-value" id="receiveStatus">Ready</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">Received</div>
+                            <div class="stat-value" id="receivedBits">0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">Progress</div>
+                            <div class="stat-value" id="receiveProgress">0%</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">Speed</div>
+                            <div class="stat-value" id="receiveSpeed">-- bps</div>
+                        </div>
                     </div>
-                    <div id="time-remaining">Time Remaining: --</div>
-                </div>
-            </div>
-
-            <div id="receiveMode" class="section">
-                 <div id="receiver-view">
-                    <p style="text-align: center; margin-bottom: 1rem;">Position camera over the flashing area on the other screen.</p>
-                    <video id="cameraView" autoplay playsinline muted></video>
-                    <button id="receiveBtn" class="main-btn" onclick="startColorReceive()">Start Receiving</button>
-                    <button id="stopReceiveBtn" class="main-btn stop-btn" onclick="stopReceiving()" style="display:none;">Stop Receiving</button>
-                </div>
-
-                <div id="receiveStats" class="stats" style="display: none;">
-                    <div id="receive-status">Status: Idle</div>
-                    <div id="progress-bar-container">
-                        <div id="receive-progress-bar" style="width:0%; height: 100%; background: var(--primary-color);"></div>
-                    </div>
-                    <div id="receive-progress-text">0 / 0 bits</div>
-                </div>
-
-                <div id="received-preview">
-                    <div class="label">Received Data:</div>
-                    <div id="received-content">Awaiting transmission...</div>
                 </div>
             </div>
         </div>
     </div>
 
     <script>
-        // --- State Management ---
         let currentMode = 'send';
         let currentDataType = 'text';
-        let transmissionInterval = null;
+        let transmissionActive = false;
         let receivingActive = false;
-        let videoStream = null;
+        let dataStream = [];
+        let currentIndex = 0;
+        let receivedData = [];
+        let startTime = 0;
+        let expectedLength = 0;
+        let headerReceived = false;
 
-        // --- Constants ---
-        const BITS_PER_CHAR = 16; // Using UTF-16
-        const SYNC_PULSE = [0, 7, 0, 7]; // A distinct start sequence (black, white, black, white) for experimental mode
-        const HEADER_TERMINATOR = '\n';
-
-        // --- Color Mappings ---
-        const STANDARD_COLORS = { 0: '#ff0000', 1: '#0000ff' }; // Red: 0, Blue: 1
-        const EXPERIMENTAL_COLORS = { // Maps 3-bit value to a color
-            0: '#000000', // 000: Black
-            1: '#ff0000', // 001: Red
-            2: '#00ff00', // 010: Green
-            3: '#ffff00', // 011: Yellow
-            4: '#0000ff', // 100: Blue
-            5: '#ff00ff', // 101: Magenta
-            6: '#00ffff', // 110: Cyan
-            7: '#ffffff', // 111: White
+        // Color mappings
+        const STANDARD_COLORS = {
+            0: '#FF0000',  // Red - 0
+            1: '#0000FF'   // Blue - 1
         };
 
-        // --- UI Switching ---
+        const EXPERIMENTAL_COLORS = {
+            0: '#FF0000',  // Red - 00
+            1: '#00FF00',  // Green - 01
+            2: '#0000FF',  // Blue - 10
+            3: '#FFFF00'   // Yellow - 11
+        };
+
         function switchMode(mode) {
             currentMode = mode;
             document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
             event.target.classList.add('active');
             
-            document.getElementById('sendMode').classList.toggle('active', mode === 'send');
-            document.getElementById('receiveMode').classList.toggle('active', mode === 'receive');
+            document.getElementById('sendMode').style.display = mode === 'send' ? 'block' : 'none';
+            document.getElementById('receiveMode').style.display = mode === 'receive' ? 'block' : 'none';
             
-            stopTransmission();
-            stopReceiving();
+            // Reset flash zone
+            document.getElementById('flashDisplay').innerHTML = '<div style="color: white; font-size: 18px; text-align: center; padding: 20px;"><div id="idleMessage">Ready to transmit or receive</div></div>';
+            document.getElementById('flashStatus').style.display = 'none';
         }
 
         function switchDataType(type) {
             currentDataType = type;
-            document.querySelectorAll('.data-type-btn').forEach(btn => btn.classList.remove('active'));
+            const buttons = event.target.parentElement.querySelectorAll('button');
+            buttons.forEach(btn => btn.classList.remove('active'));
             event.target.classList.add('active');
-            
+
             document.getElementById('textInput').style.display = type === 'text' ? 'block' : 'none';
             document.getElementById('fileInput').style.display = type === 'file' ? 'block' : 'none';
         }
 
-        // --- Data Handling ---
-        function stringToBits(str) {
+        async function prepareData() {
+            let data = '';
+            let dataType = '';
+
+            if (currentDataType === 'text') {
+                const text = document.getElementById('inputText').value;
+                if (!text) {
+                    alert('Please enter some text');
+                    return null;
+                }
+                dataType = 'TXT';
+                data = text;
+            } else {
+                const file = document.getElementById('inputFile').files[0];
+                if (!file) {
+                    alert('Please select a file');
+                    return null;
+                }
+
+                // Read file as base64
+                const reader = new FileReader();
+                const base64 = await new Promise((resolve) => {
+                    reader.onload = (e) => resolve(e.target.result);
+                    reader.readAsDataURL(file);
+                });
+
+                dataType = file.type.startsWith('image/') ? 'IMG' : 'FILE';
+                data = base64.split(',')[1]; // Get only base64 part
+                data = file.name + '|' + data; // Include filename
+            }
+
+            return { type: dataType, data: data };
+        }
+
+        function stringToBinary(str) {
             const bits = [];
             for (let i = 0; i < str.length; i++) {
                 const charCode = str.charCodeAt(i);
-                for (let j = BITS_PER_CHAR - 1; j >= 0; j--) {
+                for (let j = 7; j >= 0; j--) {
                     bits.push((charCode >> j) & 1);
                 }
             }
             return bits;
         }
 
-        function bitsToString(bits) {
+        function binaryToString(bits) {
             let str = '';
-            for (let i = 0; i < bits.length; i += BITS_PER_CHAR) {
-                if (i + BITS_PER_CHAR > bits.length) break;
+            for (let i = 0; i < bits.length; i += 8) {
+                if (i + 8 > bits.length) break;
                 let charCode = 0;
-                for (let j = 0; j < BITS_PER_CHAR; j++) {
+                for (let j = 0; j < 8; j++) {
                     charCode = (charCode << 1) | bits[i + j];
                 }
                 str += String.fromCharCode(charCode);
@@ -429,337 +505,333 @@
             return str;
         }
 
-        async function fileToBase64(file) {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.readAsDataURL(file);
-                reader.onload = () => resolve(reader.result);
-                reader.onerror = error => reject(error);
-            });
+        function createHeader(dataType, dataLength) {
+            // Header format: TYPE:LENGTH:
+            const header = `${dataType}:${dataLength}:`;
+            return header;
         }
-        
-        // --- SENDER LOGIC ---
-        async function prepareDataForTransmission() {
-            let payload = '';
-            let mimeType = 'text/plain';
-            let fileName = 'text.txt';
 
-            if (currentDataType === 'text') {
-                payload = document.getElementById('inputText').value;
-                if (!payload) { alert('Please enter some text.'); return null; }
-            } else {
-                const file = document.getElementById('inputFile').files[0];
-                if (!file) { alert('Please select a file.'); return null; }
-                const base64Data = await fileToBase64(file);
-                payload = base64Data.split(',')[1]; // Strip the data URL prefix
-                mimeType = file.type || 'application/octet-stream';
-                fileName = file.name;
+        function parseHeader(str) {
+            const match = str.match(/^([A-Z]+):(\d+):/);
+            if (match) {
+                return {
+                    type: match[1],
+                    length: parseInt(match[2]),
+                    headerLength: match[0].length
+                };
             }
-
-            const payloadBits = stringToBits(payload);
-            const header = `${mimeType}|${fileName}|${payloadBits.length}${HEADER_TERMINATOR}`;
-            const headerBits = stringToBits(header);
-            
-            return headerBits.concat(payloadBits);
+            return null;
         }
 
         async function startTransmission() {
-            if (transmissionInterval) stopTransmission();
+            if (transmissionActive) return;
 
-            const bitStream = await prepareDataForTransmission();
-            if (!bitStream) return;
+            const prepared = await prepareData();
+            if (!prepared) return;
 
-            const flashContainer = document.getElementById('flash-container');
-            const flashInfo = document.getElementById('flash-info');
-            const transmitBtn = document.getElementById('transmitBtn');
-            const sendStats = document.getElementById('sendStats');
-            const bitSpeed = parseInt(document.getElementById('bitSpeed').value);
-            const isExperimental = document.getElementById('experimentalMode').checked;
-            const bitsPerFlash = isExperimental ? 3 : 1;
-            const colors = isExperimental ? EXPERIMENTAL_COLORS : STANDARD_COLORS;
+            const { type, data } = prepared;
+            const fullData = data;
+            const header = createHeader(type, fullData.length);
+            const transmitData = header + fullData;
 
-            let currentBitIndex = 0;
-            const totalBits = bitStream.length;
-            const startTime = Date.now();
-            
-            // Add sync pulse for experimental mode
-            const transmissionQueue = isExperimental ? [...SYNC_PULSE] : [];
-            for (let i = 0; i < totalBits; i += bitsPerFlash) {
-                if (i + bitsPerFlash > totalBits) {
-                    // Pad with zeros if not a full chunk
-                    const remainingBits = bitStream.slice(i);
-                    while(remainingBits.length < bitsPerFlash) remainingBits.push(0);
-                    let value = 0;
-                    remainingBits.forEach(b => value = (value << 1) | b);
-                    transmissionQueue.push(value);
-                } else {
-                    let value = 0;
-                    for (let j = 0; j < bitsPerFlash; j++) {
-                        value = (value << 1) | bitStream[i + j];
-                    }
-                    transmissionQueue.push(value);
+            const experimental = document.getElementById('experimentalMode').checked;
+
+            if (experimental) {
+                // Convert to 2-bit symbols (4 colors)
+                const bits = stringToBinary(transmitData);
+                dataStream = [];
+                for (let i = 0; i < bits.length; i += 2) {
+                    const symbol = (bits[i] << 1) | (bits[i + 1] || 0);
+                    dataStream.push(symbol);
                 }
+            } else {
+                // Standard 1-bit transmission
+                dataStream = stringToBinary(transmitData);
             }
 
-            let queueIndex = 0;
-            transmitBtn.disabled = true;
-            flashContainer.classList.add('transmitting');
-            sendStats.style.display = 'grid';
-            document.getElementById('data-size').textContent = `${Math.ceil(totalBits / 8)} bytes`;
+            currentIndex = 0;
+            transmissionActive = true;
+            startTime = Date.now();
 
-            transmissionInterval = setInterval(() => {
-                if (queueIndex >= transmissionQueue.length) {
-                    stopTransmission(true); // true for successful completion
+            document.getElementById('sendStats').style.display = 'grid';
+            document.getElementById('dataSize').textContent = transmitData.length + ' bytes';
+
+            startColorTransmission(experimental);
+        }
+
+        function startColorTransmission(experimental) {
+            const flashDisplay = document.getElementById('flashDisplay');
+            const flashStatus = document.getElementById('flashStatus');
+            flashStatus.style.display = 'block';
+
+            const symbolSpeed = parseInt(document.getElementById('bitSpeed').value);
+            const colors = experimental ? EXPERIMENTAL_COLORS : STANDARD_COLORS;
+            
+            function transmitNext() {
+                if (!transmissionActive || currentIndex >= dataStream.length) {
+                    flashDisplay.style.backgroundColor = '#00FF00';
+                    flashStatus.textContent = 'Transmission Complete!';
+                    setTimeout(() => {
+                        flashDisplay.style.backgroundColor = '#000';
+                        flashDisplay.innerHTML = '<div style="color: white; font-size: 18px; text-align: center; padding: 20px;"><div id="idleMessage">Transmission complete!</div></div>';
+                        flashStatus.style.display = 'none';
+                        transmissionActive = false;
+                    }, 2000);
                     return;
                 }
 
-                const value = transmissionQueue[queueIndex];
-                flashContainer.style.backgroundColor = colors[value];
+                const symbol = dataStream[currentIndex];
+                flashDisplay.style.backgroundColor = colors[symbol];
+                flashDisplay.innerHTML = '';
+                
+                const progress = ((currentIndex / dataStream.length) * 100).toFixed(1);
+                document.getElementById('progress').textContent = progress + '%';
+                
+                const elapsed = (Date.now() - startTime) / 1000;
+                const bitsTransmitted = currentIndex * (experimental ? 2 : 1);
+                const bps = Math.round(bitsTransmitted / elapsed);
+                document.getElementById('transferSpeed').textContent = bps + ' bps';
+                
+                const symbolsPerSec = currentIndex / elapsed;
+                const remaining = (dataStream.length - currentIndex) / symbolsPerSec;
+                document.getElementById('timeRemaining').textContent = Math.ceil(remaining) + 's';
+                
+                flashStatus.textContent = `${currentIndex + 1}/${dataStream.length} - ${progress}%`;
 
-                // Update progress
-                if (isExperimental && queueIndex < SYNC_PULSE.length) {
-                    flashInfo.textContent = "SYNC PULSE";
-                } else {
-                    currentBitIndex = isExperimental ? (queueIndex - SYNC_PULSE.length) * bitsPerFlash : queueIndex;
-                    currentBitIndex = Math.min(currentBitIndex, totalBits);
+                currentIndex++;
 
-                    const progress = (currentBitIndex / totalBits) * 100;
-                    document.getElementById('progress-bar').style.width = `${progress}%`;
-                    document.getElementById('progress-text').textContent = `${progress.toFixed(1)}%`;
-                    
-                    const elapsedMs = Date.now() - startTime;
-                    const bitsPerMs = currentBitIndex / elapsedMs;
-                    const remainingBits = totalBits - currentBitIndex;
-                    const remainingMs = remainingBits / bitsPerMs;
-                    if(isFinite(remainingMs) && remainingMs > 0) {
-                        document.getElementById('time-remaining').textContent = `Time Remaining: ${Math.ceil(remainingMs / 1000)}s`;
-                    }
-                    
-                    flashInfo.textContent = `Transmitting Bit ${currentBitIndex} / ${totalBits}`;
-                }
+                setTimeout(() => {
+                    flashDisplay.style.backgroundColor = '#000000';
+                    setTimeout(transmitNext, symbolSpeed / 2);
+                }, symbolSpeed / 2);
+            }
 
-                queueIndex++;
-            }, bitSpeed);
+            transmitNext();
         }
 
-        function stopTransmission(isSuccess = false) {
-            clearInterval(transmissionInterval);
-            transmissionInterval = null;
-            document.getElementById('transmitBtn').disabled = false;
-            
-            const flashContainer = document.getElementById('flash-container');
-            const flashInfo = document.getElementById('flash-info');
-            
-            flashInfo.textContent = isSuccess ? "Transmission Complete!" : "Transmission Stopped.";
-            flashContainer.style.backgroundColor = isSuccess ? '#2ecc71' : '#e74c3c'; // Green for success, Red for stop
-
-            setTimeout(() => {
-                flashContainer.classList.remove('transmitting');
-                flashContainer.style.backgroundColor = '#000';
-                document.getElementById('sendStats').style.display = 'none';
-            }, 2000);
-        }
-
-        // --- RECEIVER LOGIC ---
         async function startColorReceive() {
             if (receivingActive) return;
 
-            const video = document.getElementById('cameraView');
+            const flashDisplay = document.getElementById('flashDisplay');
+            
             try {
-                videoStream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { facingMode: 'environment', width: { ideal: 640 }, height: { ideal: 480 } }
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } } 
                 });
-                video.srcObject = videoStream;
-                await video.play();
+                
+                const video = document.createElement('video');
+                video.autoplay = true;
+                video.playsInline = true;
+                video.srcObject = stream;
+                
+                flashDisplay.innerHTML = '';
+                flashDisplay.appendChild(video);
+                video.style.width = '100%';
+                video.style.height = '100%';
+                video.style.objectFit = 'cover';
                 
                 receivingActive = true;
-                document.getElementById('receiveBtn').style.display = 'none';
-                document.getElementById('stopReceiveBtn').style.display = 'block';
-                document.getElementById('receiveStats').style.display = 'grid';
-                document.getElementById('received-content').innerHTML = 'Awaiting transmission...';
+                receivedData = [];
+                headerReceived = false;
+                expectedLength = 0;
                 
-                startFrameProcessor(video);
+                document.getElementById('receiveStats').style.display = 'grid';
+                document.getElementById('receiveStatus').textContent = 'Reading header...';
+                
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                
+                let lastColor = -1;
+                let waitingForBlack = false;
+                let consecutiveBlack = 0;
+                let receiveStartTime = Date.now();
+                let detectedExperimental = false;
+                let colorHistory = [];
+                
+                function captureFrame() {
+                    if (!receivingActive) return;
+
+                    if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                        canvas.width = video.videoWidth;
+                        canvas.height = video.videoHeight;
+                        ctx.drawImage(video, 0, 0);
+                        
+                        // Sample from center
+                        const centerX = canvas.width / 2;
+                        const centerY = canvas.height / 2;
+                        const sampleSize = 50;
+                        
+                        const imageData = ctx.getImageData(
+                            centerX - sampleSize, 
+                            centerY - sampleSize, 
+                            sampleSize * 2, 
+                            sampleSize * 2
+                        );
+                        const data = imageData.data;
+                        
+                        let r = 0, g = 0, b = 0;
+                        for (let i = 0; i < data.length; i += 4) {
+                            r += data[i];
+                            g += data[i + 1];
+                            b += data[i + 2];
+                        }
+                        const pixels = data.length / 4;
+                        r /= pixels;
+                        g /= pixels;
+                        b /= pixels;
+
+                        // Detect black (separator)
+                        if (r < 50 && g < 50 && b < 50) {
+                            consecutiveBlack++;
+                            if (consecutiveBlack > 2) {
+                                waitingForBlack = false;
+                            }
+                        } else {
+                            consecutiveBlack = 0;
+                            
+                            if (!waitingForBlack) {
+                                let symbol = -1;
+                                
+                                // Detect color
+                                if (r > 200 && g < 100 && b < 100) {
+                                    symbol = detectedExperimental ? 0 : 0; // Red
+                                } else if (b > 200 && r < 100 && g < 100) {
+                                    symbol = detectedExperimental ? 2 : 1; // Blue
+                                } else if (g > 200 && r < 100 && b < 100) {
+                                    symbol = 1; // Green (experimental only)
+                                    detectedExperimental = true;
+                                } else if (r > 200 && g > 200 && b < 100) {
+                                    symbol = 3; // Yellow (experimental only)
+                                    detectedExperimental = true;
+                                }
+
+                                if (symbol !== -1 && symbol !== lastColor) {
+                                    // Convert symbol to bits
+                                    if (detectedExperimental) {
+                                        receivedData.push((symbol >> 1) & 1);
+                                        receivedData.push(symbol & 1);
+                                    } else {
+                                        receivedData.push(symbol);
+                                    }
+                                    
+                                    lastColor = symbol;
+                                    waitingForBlack = true;
+                                    
+                                    const elapsed = (Date.now() - receiveStartTime) / 1000;
+                                    const bps = Math.round(receivedData.length / elapsed);
+                                    document.getElementById('receiveSpeed').textContent = bps + ' bps';
+                                    document.getElementById('receivedBits').textContent = receivedData.length + ' bits';
+                                    
+                                    updateReceivedPreview();
+                                }
+                            }
+                        }
+                    }
+
+                    requestAnimationFrame(captureFrame);
+                }
+
+                video.addEventListener('loadeddata', () => {
+                    setTimeout(captureFrame, 500);
+                });
+                
             } catch (err) {
-                alert('Could not access camera: ' + err.message);
+                alert('Camera access denied: ' + err.message);
+                receivingActive = false;
+            }
+        }
+
+        function updateReceivedPreview() {
+            if (receivedData.length < 8) return;
+
+            const dataStr = binaryToString(receivedData);
+            
+            // Try to parse header
+            if (!headerReceived) {
+                const headerInfo = parseHeader(dataStr);
+                if (headerInfo) {
+                    headerReceived = true;
+                    expectedLength = headerInfo.length;
+                    document.getElementById('receiveStatus').textContent = 'Receiving...';
+                    
+                    // Calculate expected bits
+                    const totalChars = headerInfo.headerLength + headerInfo.length;
+                    const totalBits = totalChars * 8;
+                    
+                    if (receivedData.length >= totalBits) {
+                        // Transmission complete
+                        processReceivedData(dataStr, headerInfo);
+                    } else {
+                        const progress = ((receivedData.length / totalBits) * 100).toFixed(1);
+                        document.getElementById('receiveProgress').textContent = progress + '%';
+                    }
+                }
+            } else {
+                const headerInfo = parseHeader(dataStr);
+                if (headerInfo) {
+                    const totalChars = headerInfo.headerLength + headerInfo.length;
+                    const totalBits = totalChars * 8;
+                    
+                    if (receivedData.length >= totalBits) {
+                        processReceivedData(dataStr, headerInfo);
+                    } else {
+                        const progress = ((receivedData.length / totalBits) * 100).toFixed(1);
+                        document.getElementById('receiveProgress').textContent = progress + '%';
+                    }
+                }
+            }
+        }
+
+        function processReceivedData(dataStr, headerInfo) {
+            const actualData = dataStr.substring(headerInfo.headerLength);
+            
+            document.getElementById('receiveStatus').textContent = 'Complete!';
+            document.getElementById('receiveProgress').textContent = '100%';
+            
+            if (headerInfo.type === 'TXT') {
+                document.getElementById('receivedText').textContent = actualData;
+                document.getElementById('receivedImage').style.display = 'none';
+                document.getElementById('downloadLink').style.display = 'none';
+            } else if (headerInfo.type === 'IMG') {
+                const parts = actualData.split('|');
+                const base64Data = 'data:image/jpeg;base64,' + parts[1];
+                document.getElementById('receivedImage').src = base64Data;
+                document.getElementById('receivedImage').style.display = 'block';
+                document.getElementById('receivedText').textContent = '';
+                document.getElementById('downloadLink').style.display = 'none';
+            } else if (headerInfo.type === 'FILE') {
+                const parts = actualData.split('|');
+                const filename = parts[0];
+                const base64Data = parts[1];
+                
+                const link = document.getElementById('downloadLink');
+                link.href = 'data:application/octet-stream;base64,' + base64Data;
+                link.download = filename;
+                link.textContent = '📥 Download: ' + filename;
+                link.style.display = 'block';
+                
+                document.getElementById('receivedText').textContent = 'File received: ' + filename;
+                document.getElementById('receivedImage').style.display = 'none';
             }
         }
 
         function stopReceiving() {
             receivingActive = false;
-            if (videoStream) {
-                videoStream.getTracks().forEach(track => track.stop());
+            const flashDisplay = document.getElementById('flashDisplay');
+            
+            // Stop video stream
+            const video = flashDisplay.querySelector('video');
+            if (video && video.srcObject) {
+                video.srcObject.getTracks().forEach(track => track.stop());
             }
-            document.getElementById('receiveBtn').style.display = 'block';
-            document.getElementById('stopReceiveBtn').style.display = 'none';
-            document.getElementById('receive-status').textContent = 'Status: Stopped';
+            
+            flashDisplay.innerHTML = '<div style="color: white; font-size: 18px; text-align: center; padding: 20px;"><div id="idleMessage">Stopped</div></div>';
         }
 
-        function startFrameProcessor(video) {
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d', { willReadFrequently: true });
-
-            let state = 'WAITING_FOR_SYNC'; // WAITING_FOR_SYNC, READING_HEADER, READING_PAYLOAD, DONE
-            let headerInfo = null;
-            let receivedBits = [];
-            let lastColorValue = -1;
-            let lastColorTimestamp = 0;
-            const debounceTime = parseInt(document.getElementById('bitSpeed').value) * 0.75;
-            
-            const statusEl = document.getElementById('receive-status');
-            const progressTextEl = document.getElementById('receive-progress-text');
-            const progressBarEl = document.getElementById('receive-progress-bar');
-            
-            function processBit(bitValue) {
-                if(state === 'WAITING_FOR_SYNC'){
-                    // Simplified sync check: Look for a non-black color
-                     if(bitValue > 0) {
-                        state = 'READING_HEADER';
-                        statusEl.textContent = 'Status: Reading Header';
-                     }
-                     return;
-                }
-
-                const bitsPerFlash = (bitValue > 1) ? 3 : 1; // Inferring experimental mode
-                let bits = [];
-                if (bitsPerFlash === 1) {
-                    bits.push(bitValue);
-                } else {
-                    bits = [
-                        (bitValue >> 2) & 1, 
-                        (bitValue >> 1) & 1, 
-                        bitValue & 1
-                    ];
-                }
-
-                receivedBits.push(...bits);
-
-                if (state === 'READING_HEADER') {
-                    const receivedString = bitsToString(receivedBits);
-                    if (receivedString.includes(HEADER_TERMINATOR)) {
-                        const headerStr = receivedString.split(HEADER_TERMINATOR)[0];
-                        const parts = headerStr.split('|');
-                        if(parts.length === 3){
-                            headerInfo = {
-                                mime: parts[0],
-                                name: parts[1],
-                                totalBits: parseInt(parts[2])
-                            };
-                            // Remove header bits from buffer
-                            const headerBitLength = stringToBits(headerStr + HEADER_TERMINATOR).length;
-                            receivedBits = receivedBits.slice(headerBitLength);
-
-                            state = 'READING_PAYLOAD';
-                            statusEl.textContent = `Status: Receiving file: ${headerInfo.name}`;
-                        } else {
-                            // Invalid header, reset
-                            state = 'WAITING_FOR_SYNC';
-                            receivedBits = [];
-                        }
-                    }
-                }
-
-                if (state === 'READING_PAYLOAD') {
-                    const progress = (receivedBits.length / headerInfo.totalBits) * 100;
-                    progressBarEl.style.width = `${progress}%`;
-                    progressTextEl.textContent = `${receivedBits.length} / ${headerInfo.totalBits} bits`;
-
-                    if (receivedBits.length >= headerInfo.totalBits) {
-                        state = 'DONE';
-                        statusEl.textContent = 'Status: Complete!';
-                        progressBarEl.style.width = '100%';
-                        processFinalData();
-                        stopReceiving();
-                    }
-                }
-            }
-
-            function processFinalData() {
-                const payloadBits = receivedBits.slice(0, headerInfo.totalBits);
-                const payloadStr = bitsToString(payloadBits);
-                const receivedContentEl = document.getElementById('received-content');
-                
-                try {
-                    if (headerInfo.mime.startsWith('image/')) {
-                        const dataUrl = `data:${headerInfo.mime};base64,${btoa(payloadStr)}`;
-                        receivedContentEl.innerHTML = `<img src="${dataUrl}" alt="Received Image">`;
-                    } else if (headerInfo.mime === 'text/plain') {
-                        receivedContentEl.innerHTML = `<pre>${payloadStr}</pre>`;
-                    } else {
-                        const dataUrl = `data:${headerInfo.mime};base64,${btoa(payloadStr)}`;
-                        receivedContentEl.innerHTML = `<p>Received file: <b>${headerInfo.name}</b></p>`;
-                        const downloadLink = document.createElement('a');
-                        downloadLink.href = dataUrl;
-                        downloadLink.download = headerInfo.name;
-                        downloadLink.textContent = 'Download File';
-                        receivedContentEl.appendChild(downloadLink);
-                    }
-                } catch(e) {
-                     receivedContentEl.innerHTML = `<p>Error decoding data. It might be corrupted.</p><pre>${e.message}</pre>`;
-                }
-            }
-
-            function captureFrame() {
-                if (!receivingActive) return;
-
-                canvas.width = video.videoWidth;
-                canvas.height = video.videoHeight;
-                // Capture from the center of the camera view
-                const captureSize = 50;
-                const sx = (canvas.width / 2) - (captureSize / 2);
-                const sy = (canvas.height / 2) - (captureSize / 2);
-                ctx.drawImage(video, sx, sy, captureSize, captureSize, 0, 0, captureSize, captureSize);
-                
-                const imageData = ctx.getImageData(0, 0, captureSize, captureSize);
-                const data = imageData.data;
-                let r = 0, g = 0, b = 0;
-                for (let i = 0; i < data.length; i += 4) {
-                    r += data[i]; g += data[i + 1]; b += data[i + 2];
-                }
-                const pixelCount = data.length / 4;
-                r = Math.round(r / pixelCount);
-                g = Math.round(g / pixelCount);
-                b = Math.round(b / pixelCount);
-
-                const colorThreshold = 80;
-                const isRed = r > colorThreshold && g < colorThreshold && b < colorThreshold;
-                const isGreen = g > colorThreshold && r < colorThreshold && b < colorThreshold;
-                const isBlue = b > colorThreshold && r < colorThreshold && g < colorThreshold;
-
-                let currentValue = -1;
-                // Experimental Mode Detection (3 bits)
-                if (isRed || isGreen || isBlue) {
-                    const bit1 = isRed ? 1 : 0;
-                    const bit2 = isGreen ? 1 : 0;
-                    const bit3 = isBlue ? 1 : 0;
-                    currentValue = (bit3 << 2) | (bit2 << 1) | bit1;
-                }
-                // Standard Mode (1 bit)
-                else if (r > b + colorThreshold) { currentValue = 0; } // Red
-                else if (b > r + colorThreshold) { currentValue = 1; } // Blue
-
-                // Black/White detection for experimental mode sync & colors
-                if(r > 180 && g > 180 && b > 180) currentValue = 7; // White
-                if(r < 50 && g < 50 && b < 50) currentValue = 0; // Black
-                
-                const now = Date.now();
-                if (currentValue !== -1 && currentValue !== lastColorValue && now - lastColorTimestamp > debounceTime) {
-                    lastColorValue = currentValue;
-                    lastColorTimestamp = now;
-                    processBit(currentValue);
-                }
-
-                requestAnimationFrame(captureFrame);
-            }
-
-            captureFrame();
-        }
-
-        // --- Init ---
         window.addEventListener('beforeunload', () => {
-            stopTransmission();
+            transmissionActive = false;
             stopReceiving();
         });
-
     </script>
 </body>
 </html>

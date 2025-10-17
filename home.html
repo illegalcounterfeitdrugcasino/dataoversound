@@ -1,0 +1,1060 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Color Flash Data Transfer</title>
+    <style>
+        /* Essential Styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 24px;
+            box-shadow: 0 25px 70px rgba(0,0,0,0.4);
+            max-width: 900px;
+            width: 100%;
+            overflow: hidden;
+            animation: slideIn 0.5s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 30px;
+            text-align: center;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 8px;
+            font-weight: 700;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+
+        /* Mode Selector */
+        .mode-selector {
+            display: flex;
+            background: #f7f7f7;
+            border-bottom: 2px solid #e0e0e0;
+            padding: 5px;
+            gap: 5px;
+        }
+
+        .mode-btn {
+            flex: 1;
+            padding: 18px;
+            background: transparent;
+            border: none;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            color: #666;
+            border-radius: 12px;
+            position: relative;
+        }
+
+        .mode-btn:hover {
+            background: rgba(102, 126, 234, 0.1);
+            color: #667eea;
+        }
+
+        .mode-btn.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .content {
+            padding: 35px;
+        }
+
+        .section {
+            display: none;
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .section.active {
+            display: block;
+        }
+
+        .input-group {
+            margin-bottom: 25px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: 600;
+            color: #333;
+            font-size: 14px;
+        }
+
+        .method-selector {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .method-btn {
+            flex: 1;
+            padding: 12px 20px;
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            color: #666;
+        }
+
+        .method-btn:hover {
+            border-color: #667eea;
+            color: #667eea;
+            transform: translateY(-2px);
+        }
+
+        .method-btn.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-color: transparent;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+
+        textarea, input[type="file"], input[type="number"] {
+            width: 100%;
+            padding: 14px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 14px;
+            font-family: inherit;
+            transition: all 0.3s;
+        }
+
+        textarea {
+            min-height: 140px;
+            resize: vertical;
+        }
+
+        textarea:focus, input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .options {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+            padding: 20px;
+            background: linear-gradient(135deg, #f7f7f7 0%, #fafafa 100%);
+            border-radius: 12px;
+            border: 1px solid #e8e8e8;
+        }
+
+        .option-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .option-item input[type="number"] {
+            width: 80px;
+            padding: 8px;
+        }
+
+        .option-item input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            accent-color: #667eea;
+        }
+
+        button.primary {
+            padding: 16px 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            width: 100%;
+            margin-bottom: 10px;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        button.primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        button.primary:active {
+            transform: translateY(0);
+        }
+
+        button.secondary {
+            padding: 16px 30px;
+            background: white;
+            color: #e74c3c;
+            border: 2px solid #e74c3c;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+
+        button.secondary:hover {
+            background: #e74c3c;
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+            padding: 25px;
+            background: linear-gradient(135deg, #f7f7f7 0%, #fafafa 100%);
+            border-radius: 12px;
+            border: 1px solid #e8e8e8;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .stat-value {
+            font-size: 26px;
+            font-weight: bold;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* Turbo Mode Badge */
+        .turbo-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-left: 8px;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .info-box {
+            background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            color: #555;
+        }
+
+        .info-box strong {
+            color: #667eea;
+        }
+
+        /* Color Flash Screen - Left Third */
+        #flashScreen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 33.3333%;
+            height: 100%;
+            z-index: 9999;
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            transition: background-color 0.05s linear;
+        }
+
+        #flashScreen.active {
+            display: flex;
+        }
+
+        .flash-info {
+            position: absolute;
+            bottom: 30px;
+            left: 50%; 
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.9);
+            color: white;
+            padding: 18px 35px;
+            border-radius: 12px;
+            font-size: 14px;
+            z-index: 10000;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.5);
+        }
+        
+        /* Receiver Layout */
+        #colorReceive {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        #receivedArea {
+            width: 100%;
+        }
+
+        #receivedPreview {
+            margin-top: 20px; 
+            padding: 25px;
+            background: linear-gradient(135deg, #f7f7f7 0%, #fafafa 100%);
+            border-radius: 12px;
+            min-height: 120px;
+            border: 1px solid #e8e8e8;
+        }
+
+        #receivedImage {
+            max-width: 100%;
+            border-radius: 10px;
+            display: block; 
+            min-height: 50px; 
+            background: #ddd;
+            image-rendering: pixelated;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        #receivedText {
+            font-family: 'Courier New', monospace;
+            white-space: pre-wrap;
+            word-break: break-all;
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #e0e0e0;
+            min-height: 60px;
+        }
+
+        .preview-label {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+        }
+
+        /* Progress Bar */
+        .progress-bar-container {
+            width: 100%;
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        /* Tooltip */
+        .tooltip {
+            position: relative;
+            display: inline-block;
+            cursor: help;
+            color: #667eea;
+            font-weight: 600;
+            border-bottom: 1px dashed #667eea;
+        }
+
+        .tooltip:hover::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: 125%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.9);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            white-space: nowrap;
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🌈 Color Flash Transfer</h1>
+            <p>Transfer data between devices using colored light</p>
+        </div>
+
+        <div class="mode-selector">
+            <button class="mode-btn active" onclick="switchMode('send')">📤 Send</button>
+            <button class="mode-btn" onclick="switchMode('receive')">📥 Receive</button>
+        </div>
+
+        <div class="content">
+            <div id="sendMode" class="section active">
+                <div class="input-group">
+                    <label>📋 Data Type:</label>
+                    <div class="method-selector">
+                        <button class="method-btn active" onclick="switchDataType('text')">✍️ Text</button>
+                        <button class="method-btn" onclick="switchDataType('image')">🖼️ Image</button>
+                    </div>
+                </div>
+
+                <div id="textInput" class="input-group">
+                    <label>Enter Text:</label>
+                    <textarea id="inputText" placeholder="Type your message here..."></textarea>
+                </div>
+
+                <div id="imageInput" class="input-group" style="display: none;">
+                    <label>Select Image:</label>
+                    <input type="file" id="inputImage" accept="image/*">
+                    <div class="options">
+                        <div class="option-item">
+                            <input type="checkbox" id="resizeImage" checked>
+                            <label for="resizeImage">Resize to:</label>
+                            <input type="number" id="resizeWidth" value="64" min="1" max="512" step="1">
+                            <span>px</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="options">
+                    <div class="option-item">
+                        <label>⚡ Speed (ms/bit):</label>
+                        <input type="number" id="bitSpeed" value="100" min="50" max="500" step="50">
+                    </div>
+                    <div class="option-item" style="flex-basis: 100%;">
+                        <input type="checkbox" id="turboMode">
+                        <label for="turboMode" style="flex: 1;">
+                            <span class="tooltip" data-tooltip="2x faster! Uses 4 colors (00=Red, 01=Green, 10=Blue, 11=Yellow). Both devices must use Turbo Mode.">
+                                🚀 Turbo Mode
+                            </span>
+                            <span class="turbo-badge">Experimental</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="info-box" id="turboWarning" style="display: none;">
+                    <strong>⚠️ Turbo Mode Active:</strong> Make sure the receiving device is also set to Turbo Mode! This mode transfers 2 bits per flash using 4 colors.
+                </div>
+
+                <button class="primary" onclick="startTransmission()">🚀 Start Transmission</button>
+
+                <div id="sendStats" class="stats" style="display: none;">
+                    <div class="stat-item">
+                        <div class="stat-label">Data Size</div>
+                        <div class="stat-value" id="dataSize">0 bytes</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Progress</div>
+                        <div class="stat-value" id="progress">0%</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Time Left</div>
+                        <div class="stat-value" id="timeRemaining">--</div>
+                    </div>
+                </div>
+                <div id="progressBarContainer" class="progress-bar-container" style="display: none;">
+                    <div id="progressBar" class="progress-bar"></div>
+                </div>
+            </div>
+
+            <div id="receiveMode" class="section">
+                <div class="info-box">
+                    <strong>📱 Setup Instructions:</strong> Place your device's camera against the left edge of the flashing screen. Ensure good lighting and stable positioning for best results.
+                </div>
+
+                <div class="options">
+                    <div class="option-item" style="flex-basis: 100%;">
+                        <input type="checkbox" id="turboModeReceive">
+                        <label for="turboModeReceive" style="flex: 1;">
+                            🚀 Turbo Mode
+                            <span class="turbo-badge">Experimental</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="info-box" id="turboWarningReceive" style="display: none;">
+                    <strong>⚠️ Turbo Mode Active:</strong> Make sure the sending device is also using Turbo Mode!
+                </div>
+
+                <div id="colorReceive">
+                    <button class="primary" onclick="startColorReceive()">📸 Start Receiving</button>
+                    <button class="secondary" onclick="stopReceiving()">⏹️ Stop</button>
+                    
+                    <div id="receiveLayout" style="display: flex; flex-direction: column; gap: 20px; margin-top: 20px;">
+                        <video id="cameraView" autoplay playsinline style="display: none;"></video>
+                        
+                        <div id="receivedArea">
+                             <div id="receiveStats" class="stats" style="display: none;">
+                                <div class="stat-item">
+                                    <div class="stat-label">Received</div>
+                                    <div class="stat-value" id="receivedBits">0 bits</div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-label">Mode</div>
+                                    <div class="stat-value" id="receiveMode">Standard</div>
+                                </div>
+                            </div>
+                            
+                            <div id="receivedPreview">
+                                <div class="preview-label">📊 Live Received Data:</div>
+                                <div id="receivedText"></div>
+                                <img id="receivedImage" style="display: none;">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="flashScreen">
+        <div class="flash-info" id="flashInfo">Preparing transmission...</div>
+    </div>
+
+    <script>
+        let currentMode = 'send';
+        let currentDataType = 'text';
+        let transmissionActive = false;
+        let receivingActive = false;
+        let bitStream = [];
+        let currentBitIndex = 0;
+        let receivedBits = [];
+        let startTime = 0;
+        
+        // Turbo mode flag
+        let turboMode = false;
+        let turboModeReceive = false;
+
+        // --- Turbo Mode Checkbox Handlers ---
+        document.getElementById('turboMode').addEventListener('change', function() {
+            turboMode = this.checked;
+            document.getElementById('turboWarning').style.display = turboMode ? 'block' : 'none';
+        });
+
+        document.getElementById('turboModeReceive').addEventListener('change', function() {
+            turboModeReceive = this.checked;
+            document.getElementById('turboWarningReceive').style.display = turboModeReceive ? 'block' : 'none';
+            document.getElementById('receiveMode').textContent = turboModeReceive ? 'Turbo 🚀' : 'Standard';
+        });
+
+        // --- DATA UTILITIES (Bytes/Bits/String conversion) ---
+
+        function stringToBytes(str) {
+            const bytes = [];
+            for (let i = 0; i < str.length; i++) {
+                const charCode = str.charCodeAt(i);
+                bytes.push((charCode >> 8) & 0xFF);
+                bytes.push(charCode & 0xFF);
+            }
+            return new Uint8Array(bytes);
+        }
+
+        function bytesToString(bytes) {
+            let str = '';
+            for (let i = 0; i < bytes.length; i += 2) {
+                let charCode = (bytes[i] << 8) | (bytes[i + 1] || 0);
+                str += String.fromCharCode(charCode);
+            }
+            return str;
+        }
+
+        function bytesToBits(bytes) {
+            const bits = [];
+            for (let i = 0; i < bytes.length; i++) {
+                const byte = bytes[i];
+                for (let j = 7; j >= 0; j--) {
+                    bits.push((byte >> j) & 1);
+                }
+            }
+            return bits;
+        }
+
+        function bitsToBytes(bits) {
+            const bytes = [];
+            for (let i = 0; i < bits.length; i += 8) {
+                let byte = 0;
+                for (let j = 0; j < 8 && i + j < bits.length; j++) {
+                    byte = (byte << 1) | bits[i + j];
+                }
+                bytes.push(byte);
+            }
+            return new Uint8Array(bytes);
+        }
+
+        // --- MODE/UI FUNCTIONS ---
+
+        function switchMode(mode) {
+            currentMode = mode;
+            document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            document.getElementById('sendMode').classList.toggle('active', mode === 'send');
+            document.getElementById('receiveMode').classList.toggle('active', mode === 'receive');
+            if (mode === 'receive') {
+                stopReceiving();
+            }
+        }
+
+        function switchDataType(type) {
+            currentDataType = type;
+            const buttons = event.target.parentElement.querySelectorAll('.method-btn');
+            buttons.forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+
+            document.getElementById('textInput').style.display = type === 'text' ? 'block' : 'none';
+            document.getElementById('imageInput').style.display = type === 'image' ? 'block' : 'none';
+        }
+
+        // --- TRANSMISSION FUNCTIONS ---
+
+        async function prepareData() {
+            let payloadBytes;
+            let header;
+
+            if (currentDataType === 'text') {
+                const text = document.getElementById('inputText').value;
+                if (!text) {
+                    alert('Please enter some text');
+                    return null;
+                }
+                header = 'T:';
+                payloadBytes = stringToBytes(text);
+            } else {
+                const file = document.getElementById('inputImage').files[0];
+                if (!file) {
+                    alert('Please select an image');
+                    return null;
+                }
+
+                const img = await loadImage(file);
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                
+                let targetWidth = img.width;
+                let targetHeight = img.height;
+
+                if (document.getElementById('resizeImage').checked) {
+                    const size = parseInt(document.getElementById('resizeWidth').value);
+                    targetWidth = size;
+                    targetHeight = size; 
+                }
+                
+                canvas.width = targetWidth;
+                canvas.height = targetHeight;
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                
+                const imageData = ctx.getImageData(0, 0, targetWidth, targetHeight).data;
+                
+                const rgbArray = [];
+                for (let i = 0; i < imageData.length; i += 4) {
+                    rgbArray.push(imageData[i]);
+                    rgbArray.push(imageData[i + 1]);
+                    rgbArray.push(imageData[i + 2]);
+                }
+
+                const metaString = `${String.fromCharCode(targetWidth)}|${String.fromCharCode(targetHeight)}|`;
+                
+                header = `I:${metaString}`;
+                payloadBytes = new Uint8Array(rgbArray);
+            }
+
+            const headerBytes = stringToBytes(header);
+            const combinedBytes = new Uint8Array(headerBytes.length + payloadBytes.length);
+            combinedBytes.set(headerBytes, 0);
+            combinedBytes.set(payloadBytes, headerBytes.length);
+
+            return combinedBytes;
+        }
+
+        function loadImage(file) {
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.onload = () => resolve(img);
+                img.onerror = reject;
+                img.src = URL.createObjectURL(file);
+            });
+        }
+
+        async function startTransmission() {
+            if (transmissionActive) return;
+
+            const dataBytes = await prepareData();
+            if (!dataBytes) return;
+
+            bitStream = bytesToBits(dataBytes);
+            currentBitIndex = 0;
+            transmissionActive = true;
+            startTime = Date.now();
+            turboMode = document.getElementById('turboMode').checked;
+
+            document.getElementById('sendStats').style.display = 'grid';
+            document.getElementById('progressBarContainer').style.display = 'block';
+            document.getElementById('dataSize').textContent = dataBytes.length + ' bytes';
+
+            startColorTransmission();
+        }
+
+        function startColorTransmission() {
+            const flashScreen = document.getElementById('flashScreen');
+            const flashInfo = document.getElementById('flashInfo');
+            flashScreen.classList.add('active');
+
+            const bitSpeed = parseInt(document.getElementById('bitSpeed').value);
+            
+            function transmitNextBit() {
+                if (!transmissionActive || currentBitIndex >= bitStream.length) {
+                    flashScreen.style.backgroundColor = '#00ff00';
+                    flashInfo.textContent = '✅ Transmission Complete!';
+                    setTimeout(() => {
+                        flashScreen.classList.remove('active');
+                        transmissionActive = false;
+                        document.getElementById('progressBar').style.width = '0%';
+                    }, 2000);
+                    return;
+                }
+
+                if (turboMode && currentBitIndex + 1 < bitStream.length) {
+                    // Turbo mode: send 2 bits at once using 4 colors
+                    const bit1 = bitStream[currentBitIndex];
+                    const bit2 = bitStream[currentBitIndex + 1];
+                    
+                    // 00 = Red, 01 = Green, 10 = Blue, 11 = Yellow
+                    if (bit1 === 0 && bit2 === 0) {
+                        flashScreen.style.backgroundColor = '#ff0000'; // Red
+                    } else if (bit1 === 0 && bit2 === 1) {
+                        flashScreen.style.backgroundColor = '#00ff00'; // Green
+                    } else if (bit1 === 1 && bit2 === 0) {
+                        flashScreen.style.backgroundColor = '#0000ff'; // Blue
+                    } else {
+                        flashScreen.style.backgroundColor = '#ffff00'; // Yellow
+                    }
+                    
+                    const progress = ((currentBitIndex / bitStream.length) * 100).toFixed(1);
+                    document.getElementById('progress').textContent = progress + '%';
+                    document.getElementById('progressBar').style.width = progress + '%';
+                    
+                    const elapsed = Date.now() - startTime;
+                    const bitsPerMs = currentBitIndex / elapsed;
+                    const remaining = bitsPerMs > 0 ? (bitStream.length - currentBitIndex) / bitsPerMs : 0;
+                    document.getElementById('timeRemaining').textContent = Math.ceil(remaining / 1000) + 's';
+                    
+                    flashInfo.textContent = `🚀 Turbo: ${currentBitIndex + 2}/${bitStream.length} - ${progress}%`;
+
+                    currentBitIndex += 2;
+                } else {
+                    // Standard mode: 1 bit per flash
+                    const bit = bitStream[currentBitIndex];
+                    flashScreen.style.backgroundColor = bit === 0 ? '#ff0000' : '#0000ff';
+                    
+                    const progress = ((currentBitIndex / bitStream.length) * 100).toFixed(1);
+                    document.getElementById('progress').textContent = progress + '%';
+                    document.getElementById('progressBar').style.width = progress + '%';
+                    
+                    const elapsed = Date.now() - startTime;
+                    const bitsPerMs = currentBitIndex / elapsed;
+                    const remaining = bitsPerMs > 0 ? (bitStream.length - currentBitIndex) / bitsPerMs : 0;
+                    document.getElementById('timeRemaining').textContent = Math.ceil(remaining / 1000) + 's';
+                    
+                    flashInfo.textContent = `Bit ${currentBitIndex + 1}/${bitStream.length} - ${progress}%`;
+
+                    currentBitIndex++;
+                }
+
+                setTimeout(() => {
+                    flashScreen.style.backgroundColor = '#ffffff';
+                    setTimeout(transmitNextBit, bitSpeed / 2);
+                }, bitSpeed / 2);
+            }
+
+            transmitNextBit();
+        }
+
+        // --- RECEIVE FUNCTIONS ---
+
+        async function startColorReceive() {
+            if (receivingActive) return;
+
+            const video = document.getElementById('cameraView');
+            turboModeReceive = document.getElementById('turboModeReceive').checked;
+            
+            try {
+                if (video.srcObject) {
+                    video.srcObject.getTracks().forEach(track => track.stop());
+                }
+
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: 'environment' } 
+                });
+                video.srcObject = stream;
+                
+                receivingActive = true;
+                receivedBits = []; 
+                document.getElementById('receivedText').textContent = '';
+                document.getElementById('receivedImage').style.display = 'none';
+                document.getElementById('receivedImage').src = '';
+                
+                document.getElementById('receiveStats').style.display = 'grid';
+                document.getElementById('receiveMode').textContent = turboModeReceive ? 'Turbo 🚀' : 'Standard';
+                
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                
+                let waitingForSeparator = false;
+                
+                function captureFrame() {
+                    if (!receivingActive) return;
+
+                    if (video.readyState < video.HAVE_METADATA) {
+                        requestAnimationFrame(captureFrame);
+                        return;
+                    }
+
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    ctx.drawImage(video, 0, 0);
+                    
+                    const sampleSize = 100;
+                    const imageData = ctx.getImageData(
+                        canvas.width / 2 - sampleSize / 2, 
+                        canvas.height / 2 - sampleSize / 2, 
+                        sampleSize, 
+                        sampleSize
+                    ).data;
+                    
+                    let r = 0, g = 0, b = 0;
+                    const pixelCount = imageData.length / 4;
+                    for (let i = 0; i < imageData.length; i += 4) {
+                        r += imageData[i];
+                        g += imageData[i + 1];
+                        b += imageData[i + 2];
+                    }
+                    r /= pixelCount;
+                    g /= pixelCount;
+                    b /= pixelCount;
+
+                    // Detect white (separator)
+                    if (r > 200 && g > 200 && b > 200) {
+                        waitingForSeparator = false;
+                    } else if (!waitingForSeparator) {
+                        if (turboModeReceive) {
+                            // Turbo mode: decode 2 bits from 4 colors
+                            let bits = null;
+                            
+                            // Red (00)
+                            if (r > 150 && g < 100 && b < 100) {
+                                bits = [0, 0];
+                            }
+                            // Green (01)
+                            else if (g > 150 && r < 100 && b < 100) {
+                                bits = [0, 1];
+                            }
+                            // Blue (10)
+                            else if (b > 150 && r < 100 && g < 100) {
+                                bits = [1, 0];
+                            }
+                            // Yellow (11)
+                            else if (r > 150 && g > 150 && b < 100) {
+                                bits = [1, 1];
+                            }
+
+                            if (bits !== null) {
+                                receivedBits.push(bits[0]);
+                                receivedBits.push(bits[1]);
+                                waitingForSeparator = true;
+                                
+                                document.getElementById('receivedBits').textContent = receivedBits.length + ' bits';
+                                
+                                updateReceivedPreview();
+                            }
+                        } else {
+                            // Standard mode: 1 bit per color
+                            let bit = -1;
+                            // Red (0)
+                            if (r > b + 50 && r > g + 50) {
+                                bit = 0;
+                            // Blue (1)
+                            } else if (b > r + 50 && b > g + 50) {
+                                bit = 1;
+                            }
+
+                            if (bit !== -1) {
+                                receivedBits.push(bit);
+                                waitingForSeparator = true;
+                                
+                                document.getElementById('receivedBits').textContent = receivedBits.length + ' bits';
+                                
+                                updateReceivedPreview();
+                            }
+                        }
+                    }
+
+                    requestAnimationFrame(captureFrame);
+                }
+
+                video.onloadedmetadata = () => {
+                    requestAnimationFrame(captureFrame);
+                    video.onloadedmetadata = null;
+                };
+                
+            } catch (err) {
+                alert('Camera access denied: ' + err.message);
+            }
+        }
+
+        function updateReceivedPreview() {
+            if (receivedBits.length < 32) return; 
+
+            const receivedBytes = bitsToBytes(receivedBits);
+            
+            const potentialHeader = bytesToString(receivedBytes.slice(0, 10));
+
+            if (potentialHeader.startsWith('T:')) {
+                const fullText = bytesToString(receivedBytes);
+                const dataText = fullText.substring(2); 
+                
+                document.getElementById('receivedText').textContent = dataText;
+                document.getElementById('receivedImage').style.display = 'none';
+                document.getElementById('receivedImage').src = '';
+            } 
+            else if (potentialHeader.startsWith('I:')) {
+                const fullHeaderString = bytesToString(receivedBytes);
+                
+                const separatorIndex1 = fullHeaderString.indexOf('|');
+                const separatorIndex2 = fullHeaderString.indexOf('|', separatorIndex1 + 1);
+
+                if (separatorIndex1 === -1 || separatorIndex2 === -1 || separatorIndex2 === separatorIndex1 + 1) return; 
+
+                const widthChar = fullHeaderString.substring(2, separatorIndex1);
+                const heightChar = fullHeaderString.substring(separatorIndex1 + 1, separatorIndex2);
+
+                if (!widthChar || !heightChar) return; 
+
+                const width = widthChar.charCodeAt(0); 
+                const height = heightChar.charCodeAt(0);
+
+                const headerEndIndex = separatorIndex2 + 1;
+                const headerBytesLength = headerEndIndex * 2;
+                
+                const expectedPixelDataLength = width * height * 3;
+                const expectedTotalBits = (headerBytesLength + expectedPixelDataLength) * 8;
+                
+                if (receivedBits.length < expectedTotalBits) {
+                    document.getElementById('receivedText').textContent = `Receiving Image: ${width}x${height} - ${((receivedBits.length / expectedTotalBits) * 100).toFixed(1)}% complete...`;
+                    document.getElementById('receivedImage').style.display = 'none';
+                    return;
+                }
+
+                const rawPixelData = receivedBytes.slice(headerBytesLength);
+                
+                const canvas = document.createElement('canvas');
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                const imageData = ctx.createImageData(width, height);
+                const data = imageData.data;
+                
+                for (let i = 0; i < expectedPixelDataLength / 3; i++) {
+                    data[i * 4]     = rawPixelData[i * 3];
+                    data[i * 4 + 1] = rawPixelData[i * 3 + 1];
+                    data[i * 4 + 2] = rawPixelData[i * 3 + 2];
+                    data[i * 4 + 3] = 255;
+                }
+
+                ctx.putImageData(imageData, 0, 0);
+
+                const imgDataUrl = canvas.toDataURL('image/png');
+                
+                document.getElementById('receivedImage').src = imgDataUrl;
+                document.getElementById('receivedImage').style.display = 'block';
+                document.getElementById('receivedText').textContent = '✅ Image Transfer Complete!';
+            }
+        }
+
+        function stopReceiving() {
+            receivingActive = false;
+            const video = document.getElementById('cameraView');
+            if (video.srcObject) {
+                video.srcObject.getTracks().forEach(track => track.stop());
+                video.srcObject = null;
+            }
+            document.getElementById('receivedBits').textContent = '0 bits';
+            document.getElementById('receiveStats').style.display = 'none';
+        }
+
+        window.addEventListener('beforeunload', () => {
+            transmissionActive = false;
+            stopReceiving();
+        });
+    </script>
+</body>
+</html>

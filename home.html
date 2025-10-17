@@ -650,45 +650,61 @@
             if (receivedBits.length < 32) return; 
 
             const receivedBytes = bitsToBytes(receivedBits);
-            const fullHeaderString = bytesToString(receivedBytes);
             
+            // Convert only the *potential* header section to string for checking
+            const potentialHeader = bytesToString(receivedBytes.slice(0, 10)); // Check up to 10 chars (20 bytes/160 bits)
+
             // Check for Text Header
-            if (fullHeaderString.startsWith('T:')) {
-                const dataText = fullHeaderString.substring(2);
+            if (potentialHeader.startsWith('T:')) {
+                // Get the *full* text string
+                const fullText = bytesToString(receivedBytes);
+                // FIX: Only display the content after the header "T:"
+                const dataText = fullText.substring(2); 
+                
                 document.getElementById('receivedText').textContent = dataText;
                 document.getElementById('receivedImage').style.display = 'none';
                 document.getElementById('receivedImage').src = '';
             } 
             // Check for Image Header
-            else if (fullHeaderString.startsWith('I:')) {
+            else if (potentialHeader.startsWith('I:')) {
+                const fullHeaderString = bytesToString(receivedBytes);
+                
                 // Find the end of the metadata section "W|H|"
-                const headerEndIndex = fullHeaderString.indexOf('||') + 2;
+                const separatorIndex1 = fullHeaderString.indexOf('|');
+                const separatorIndex2 = fullHeaderString.indexOf('|', separatorIndex1 + 1);
 
-                // We need at least the header (I: W| H|), which is 6 characters/12 bytes (16-bit encoding)
-                if (headerEndIndex < 6) return; 
+                // We need the full header to proceed
+                if (separatorIndex1 === -1 || separatorIndex2 === -1 || separatorIndex2 === separatorIndex1 + 1) return; 
 
                 // --- Extract Metadata ---
-                // The metadata is between I: and the first '|', and between the two '|'
-                const widthChar = fullHeaderString.substring(2, fullHeaderString.indexOf('|'));
-                const heightChar = fullHeaderString.substring(fullHeaderString.indexOf('|') + 1, headerEndIndex - 1);
+                // The char codes are used for dimensions
+                const widthChar = fullHeaderString.substring(2, separatorIndex1);
+                const heightChar = fullHeaderString.substring(separatorIndex1 + 1, separatorIndex2);
 
-                if (!widthChar || !heightChar) return; // Not enough header info yet
+                if (!widthChar || !heightChar) return; 
 
-                // FIX: Get the charCode for the actual dimensions
                 const width = widthChar.charCodeAt(0); 
                 const height = heightChar.charCodeAt(0);
-                
-                // --- Reconstruct Image Data ---
-                // The raw pixel data starts after the byte length of the header string (which is headerEndIndex * 2 bytes)
+
+                // Calculate where the pixel data starts (2 bytes per character in the header string)
+                const headerEndIndex = separatorIndex2 + 1;
                 const headerBytesLength = headerEndIndex * 2;
+                
+                // Calculate expected total data size
+                const expectedPixelDataLength = width * height * 3; // 3 bytes (RGB) per pixel
+                const expectedTotalBits = (headerBytesLength + expectedPixelDataLength) * 8;
+                
+                // FIX: Do not draw the image until all bits are received
+                if (receivedBits.length < expectedTotalBits) {
+                    // Optionally display a progress message here if desired, otherwise just wait
+                    document.getElementById('receivedText').textContent = `Receiving Image: ${width}x${height} - ${((receivedBits.length / expectedTotalBits) * 100).toFixed(1)}% complete...`;
+                    document.getElementById('receivedImage').style.display = 'none';
+                    return;
+                }
+
+                // --- Reconstruct Image Data (Only runs when complete) ---
                 const rawPixelData = receivedBytes.slice(headerBytesLength);
                 
-                // Calculate expected data size (3 bytes per pixel)
-                const expectedPixelDataLength = width * height * 3;
-                
-                // We must have at least one pixel's worth of data to proceed with image reconstruction
-                if (rawPixelData.length < 3) return;
-
                 const canvas = document.createElement('canvas');
                 canvas.width = width;
                 canvas.height = height;
@@ -697,22 +713,22 @@
                 const data = imageData.data;
                 
                 // Populate image data with received RGB bytes (3 bytes to 4 bytes: R, G, B, 255)
-                for (let i = 0; i < rawPixelData.length / 3; i++) {
+                for (let i = 0; i < expectedPixelDataLength / 3; i++) {
                     data[i * 4]     = rawPixelData[i * 3];     // R
                     data[i * 4 + 1] = rawPixelData[i * 3 + 1]; // G
                     data[i * 4 + 2] = rawPixelData[i * 3 + 2]; // B
                     data[i * 4 + 3] = 255;                     // A (fully opaque)
                 }
 
-                // Put the partial/complete image data onto the canvas
+                // Put the complete image data onto the canvas
                 ctx.putImageData(imageData, 0, 0);
 
-                // Convert the partial canvas to a Base64 PNG for live display
+                // Convert the canvas to a Base64 PNG for display
                 const imgDataUrl = canvas.toDataURL('image/png');
                 
                 document.getElementById('receivedImage').src = imgDataUrl;
                 document.getElementById('receivedImage').style.display = 'block';
-                document.getElementById('receivedText').textContent = '';
+                document.getElementById('receivedText').textContent = 'Image Transfer Complete!';
             }
         }
 

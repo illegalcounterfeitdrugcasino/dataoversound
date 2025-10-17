@@ -322,7 +322,7 @@
                     <div class="mode-toggle">
                         <div class="toggle-container">
                             <input type="checkbox" id="experimentalMode">
-                            <label for="experimentalMode" style="margin: 0; flex: 1;">Experimental Mode (Faster with more colors)</label>
+                            <label for="experimentalMode" style="margin: 0; flex: 1;">Experimental Mode (Faster with 4 colors)</label>
                             <span class="experimental-badge">BETA</span>
                         </div>
                     </div>
@@ -330,11 +330,7 @@
                     <div class="options">
                         <div class="option-item">
                             <label>Speed (ms/symbol):</label>
-                            <input type="number" id="bitSpeed" value="100" min="50" max="500" step="10">
-                        </div>
-                        <div class="option-item">
-                            <label>Error Correction:</label>
-                            <input type="checkbox" id="errorCorrection" checked>
+                            <input type="number" id="bitSpeed" value="150" min="50" max="500" step="10">
                         </div>
                     </div>
 
@@ -346,16 +342,16 @@
                             <div class="stat-value" id="dataSize">0 bytes</div>
                         </div>
                         <div class="stat-item">
+                            <div class="stat-label">Symbols</div>
+                            <div class="stat-value" id="totalSymbols">0</div>
+                        </div>
+                        <div class="stat-item">
                             <div class="stat-label">Progress</div>
                             <div class="stat-value" id="progress">0%</div>
                         </div>
                         <div class="stat-item">
                             <div class="stat-label">Time Remaining</div>
                             <div class="stat-value" id="timeRemaining">--</div>
-                        </div>
-                        <div class="stat-item">
-                            <div class="stat-label">Speed</div>
-                            <div class="stat-value" id="transferSpeed">-- bps</div>
                         </div>
                     </div>
                 </div>
@@ -378,20 +374,20 @@
 
                     <div id="receiveStats" class="stats" style="display: none;">
                         <div class="stat-item">
-                            <div class="stat-label">Status</div>
-                            <div class="stat-value" id="receiveStatus">Ready</div>
+                            <div class="stat-label">Symbols</div>
+                            <div class="stat-value" id="receivedSymbols">0</div>
                         </div>
                         <div class="stat-item">
-                            <div class="stat-label">Received</div>
+                            <div class="stat-label">Bits</div>
                             <div class="stat-value" id="receivedBits">0</div>
                         </div>
                         <div class="stat-item">
-                            <div class="stat-label">Progress</div>
-                            <div class="stat-value" id="receiveProgress">0%</div>
+                            <div class="stat-label">Chars</div>
+                            <div class="stat-value" id="receivedChars">0</div>
                         </div>
                         <div class="stat-item">
-                            <div class="stat-label">Speed</div>
-                            <div class="stat-value" id="receiveSpeed">-- bps</div>
+                            <div class="stat-label">Mode</div>
+                            <div class="stat-value" id="detectedMode" style="font-size: 16px;">Detecting...</div>
                         </div>
                     </div>
                 </div>
@@ -408,8 +404,10 @@
         let currentIndex = 0;
         let receivedData = [];
         let startTime = 0;
-        let expectedLength = 0;
-        let headerReceived = false;
+
+        // Start and end markers
+        const START_MARKER = '<<<START>>>';
+        const END_MARKER = '<<<END>>>';
 
         // Color mappings
         const STANDARD_COLORS = {
@@ -449,7 +447,7 @@
 
         async function prepareData() {
             let data = '';
-            let dataType = '';
+            let prefix = '';
 
             if (currentDataType === 'text') {
                 const text = document.getElementById('inputText').value;
@@ -457,7 +455,7 @@
                     alert('Please enter some text');
                     return null;
                 }
-                dataType = 'TXT';
+                prefix = 'TXT:';
                 data = text;
             } else {
                 const file = document.getElementById('inputFile').files[0];
@@ -473,12 +471,17 @@
                     reader.readAsDataURL(file);
                 });
 
-                dataType = file.type.startsWith('image/') ? 'IMG' : 'FILE';
-                data = base64.split(',')[1]; // Get only base64 part
-                data = file.name + '|' + data; // Include filename
+                if (file.type.startsWith('image/')) {
+                    prefix = 'IMG:';
+                } else {
+                    prefix = 'FILE:';
+                }
+                
+                const base64Data = base64.split(',')[1];
+                data = file.name + '|' + base64Data;
             }
 
-            return { type: dataType, data: data };
+            return START_MARKER + prefix + data + END_MARKER;
         }
 
         function stringToBinary(str) {
@@ -505,40 +508,17 @@
             return str;
         }
 
-        function createHeader(dataType, dataLength) {
-            // Header format: TYPE:LENGTH:
-            const header = `${dataType}:${dataLength}:`;
-            return header;
-        }
-
-        function parseHeader(str) {
-            const match = str.match(/^([A-Z]+):(\d+):/);
-            if (match) {
-                return {
-                    type: match[1],
-                    length: parseInt(match[2]),
-                    headerLength: match[0].length
-                };
-            }
-            return null;
-        }
-
         async function startTransmission() {
             if (transmissionActive) return;
 
-            const prepared = await prepareData();
-            if (!prepared) return;
-
-            const { type, data } = prepared;
-            const fullData = data;
-            const header = createHeader(type, fullData.length);
-            const transmitData = header + fullData;
+            const fullData = await prepareData();
+            if (!fullData) return;
 
             const experimental = document.getElementById('experimentalMode').checked;
 
             if (experimental) {
                 // Convert to 2-bit symbols (4 colors)
-                const bits = stringToBinary(transmitData);
+                const bits = stringToBinary(fullData);
                 dataStream = [];
                 for (let i = 0; i < bits.length; i += 2) {
                     const symbol = (bits[i] << 1) | (bits[i + 1] || 0);
@@ -546,7 +526,7 @@
                 }
             } else {
                 // Standard 1-bit transmission
-                dataStream = stringToBinary(transmitData);
+                dataStream = stringToBinary(fullData);
             }
 
             currentIndex = 0;
@@ -554,7 +534,8 @@
             startTime = Date.now();
 
             document.getElementById('sendStats').style.display = 'grid';
-            document.getElementById('dataSize').textContent = transmitData.length + ' bytes';
+            document.getElementById('dataSize').textContent = fullData.length + ' bytes';
+            document.getElementById('totalSymbols').textContent = dataStream.length;
 
             startColorTransmission(experimental);
         }
@@ -588,10 +569,6 @@
                 document.getElementById('progress').textContent = progress + '%';
                 
                 const elapsed = (Date.now() - startTime) / 1000;
-                const bitsTransmitted = currentIndex * (experimental ? 2 : 1);
-                const bps = Math.round(bitsTransmitted / elapsed);
-                document.getElementById('transferSpeed').textContent = bps + ' bps';
-                
                 const symbolsPerSec = currentIndex / elapsed;
                 const remaining = (dataStream.length - currentIndex) / symbolsPerSec;
                 document.getElementById('timeRemaining').textContent = Math.ceil(remaining) + 's';
@@ -632,11 +609,8 @@
                 
                 receivingActive = true;
                 receivedData = [];
-                headerReceived = false;
-                expectedLength = 0;
                 
                 document.getElementById('receiveStats').style.display = 'grid';
-                document.getElementById('receiveStatus').textContent = 'Reading header...';
                 
                 const canvas = document.createElement('canvas');
                 const ctx = canvas.getContext('2d');
@@ -644,9 +618,8 @@
                 let lastColor = -1;
                 let waitingForBlack = false;
                 let consecutiveBlack = 0;
-                let receiveStartTime = Date.now();
-                let detectedExperimental = false;
-                let colorHistory = [];
+                let detectedExperimental = null;
+                let symbolCount = 0;
                 
                 function captureFrame() {
                     if (!receivingActive) return;
@@ -659,7 +632,7 @@
                         // Sample from center
                         const centerX = canvas.width / 2;
                         const centerY = canvas.height / 2;
-                        const sampleSize = 50;
+                        const sampleSize = 100;
                         
                         const imageData = ctx.getImageData(
                             centerX - sampleSize, 
@@ -681,9 +654,9 @@
                         b /= pixels;
 
                         // Detect black (separator)
-                        if (r < 50 && g < 50 && b < 50) {
+                        if (r < 40 && g < 40 && b < 40) {
                             consecutiveBlack++;
-                            if (consecutiveBlack > 2) {
+                            if (consecutiveBlack > 1) {
                                 waitingForBlack = false;
                             }
                         } else {
@@ -692,20 +665,34 @@
                             if (!waitingForBlack) {
                                 let symbol = -1;
                                 
-                                // Detect color
-                                if (r > 200 && g < 100 && b < 100) {
-                                    symbol = detectedExperimental ? 0 : 0; // Red
-                                } else if (b > 200 && r < 100 && g < 100) {
+                                // Detect color with better thresholds
+                                const threshold = 120;
+                                
+                                if (r > threshold && g < 100 && b < 100) {
+                                    symbol = 0; // Red
+                                } else if (b > threshold && r < 100 && g < 100) {
+                                    if (detectedExperimental === null) {
+                                        detectedExperimental = false;
+                                        document.getElementById('detectedMode').textContent = 'Standard';
+                                    }
                                     symbol = detectedExperimental ? 2 : 1; // Blue
-                                } else if (g > 200 && r < 100 && b < 100) {
+                                } else if (g > threshold && r < 100 && b < 100) {
+                                    if (detectedExperimental === null) {
+                                        detectedExperimental = true;
+                                        document.getElementById('detectedMode').textContent = 'Experimental';
+                                    }
                                     symbol = 1; // Green (experimental only)
-                                    detectedExperimental = true;
-                                } else if (r > 200 && g > 200 && b < 100) {
+                                } else if (r > threshold && g > threshold && b < 100) {
+                                    if (detectedExperimental === null) {
+                                        detectedExperimental = true;
+                                        document.getElementById('detectedMode').textContent = 'Experimental';
+                                    }
                                     symbol = 3; // Yellow (experimental only)
-                                    detectedExperimental = true;
                                 }
 
                                 if (symbol !== -1 && symbol !== lastColor) {
+                                    symbolCount++;
+                                    
                                     // Convert symbol to bits
                                     if (detectedExperimental) {
                                         receivedData.push((symbol >> 1) & 1);
@@ -717,10 +704,11 @@
                                     lastColor = symbol;
                                     waitingForBlack = true;
                                     
-                                    const elapsed = (Date.now() - receiveStartTime) / 1000;
-                                    const bps = Math.round(receivedData.length / elapsed);
-                                    document.getElementById('receiveSpeed').textContent = bps + ' bps';
-                                    document.getElementById('receivedBits').textContent = receivedData.length + ' bits';
+                                    document.getElementById('receivedSymbols').textContent = symbolCount;
+                                    document.getElementById('receivedBits').textContent = receivedData.length;
+                                    
+                                    const chars = Math.floor(receivedData.length / 8);
+                                    document.getElementById('receivedChars').textContent = chars;
                                     
                                     updateReceivedPreview();
                                 }
@@ -746,61 +734,45 @@
 
             const dataStr = binaryToString(receivedData);
             
-            // Try to parse header
-            if (!headerReceived) {
-                const headerInfo = parseHeader(dataStr);
-                if (headerInfo) {
-                    headerReceived = true;
-                    expectedLength = headerInfo.length;
-                    document.getElementById('receiveStatus').textContent = 'Receiving...';
-                    
-                    // Calculate expected bits
-                    const totalChars = headerInfo.headerLength + headerInfo.length;
-                    const totalBits = totalChars * 8;
-                    
-                    if (receivedData.length >= totalBits) {
-                        // Transmission complete
-                        processReceivedData(dataStr, headerInfo);
-                    } else {
-                        const progress = ((receivedData.length / totalBits) * 100).toFixed(1);
-                        document.getElementById('receiveProgress').textContent = progress + '%';
-                    }
+            // Check for end marker
+            if (dataStr.includes(END_MARKER)) {
+                const startIdx = dataStr.indexOf(START_MARKER);
+                const endIdx = dataStr.indexOf(END_MARKER);
+                
+                if (startIdx !== -1 && endIdx !== -1) {
+                    const actualData = dataStr.substring(startIdx + START_MARKER.length, endIdx);
+                    processReceivedData(actualData);
+                    return;
                 }
-            } else {
-                const headerInfo = parseHeader(dataStr);
-                if (headerInfo) {
-                    const totalChars = headerInfo.headerLength + headerInfo.length;
-                    const totalBits = totalChars * 8;
-                    
-                    if (receivedData.length >= totalBits) {
-                        processReceivedData(dataStr, headerInfo);
-                    } else {
-                        const progress = ((receivedData.length / totalBits) * 100).toFixed(1);
-                        document.getElementById('receiveProgress').textContent = progress + '%';
-                    }
+            }
+            
+            // Show partial data if we have the start marker
+            if (dataStr.includes(START_MARKER)) {
+                const startIdx = dataStr.indexOf(START_MARKER);
+                const partial = dataStr.substring(startIdx + START_MARKER.length);
+                
+                if (partial.startsWith('TXT:')) {
+                    document.getElementById('receivedText').textContent = partial.substring(4);
                 }
             }
         }
 
-        function processReceivedData(dataStr, headerInfo) {
-            const actualData = dataStr.substring(headerInfo.headerLength);
-            
-            document.getElementById('receiveStatus').textContent = 'Complete!';
-            document.getElementById('receiveProgress').textContent = '100%';
-            
-            if (headerInfo.type === 'TXT') {
-                document.getElementById('receivedText').textContent = actualData;
+        function processReceivedData(dataStr) {
+            if (dataStr.startsWith('TXT:')) {
+                const text = dataStr.substring(4);
+                document.getElementById('receivedText').textContent = text;
                 document.getElementById('receivedImage').style.display = 'none';
                 document.getElementById('downloadLink').style.display = 'none';
-            } else if (headerInfo.type === 'IMG') {
-                const parts = actualData.split('|');
+            } else if (dataStr.startsWith('IMG:')) {
+                const parts = dataStr.substring(4).split('|');
+                const filename = parts[0];
                 const base64Data = 'data:image/jpeg;base64,' + parts[1];
                 document.getElementById('receivedImage').src = base64Data;
                 document.getElementById('receivedImage').style.display = 'block';
                 document.getElementById('receivedText').textContent = '';
                 document.getElementById('downloadLink').style.display = 'none';
-            } else if (headerInfo.type === 'FILE') {
-                const parts = actualData.split('|');
+            } else if (dataStr.startsWith('FILE:')) {
+                const parts = dataStr.substring(5).split('|');
                 const filename = parts[0];
                 const base64Data = parts[1];
                 

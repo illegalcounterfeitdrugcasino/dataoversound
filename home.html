@@ -367,9 +367,8 @@
 
         /* --- Receive UI --- */
         #cameraContainer {
-            /* display: none; */ /* Handled by JS */
-            margin-top: 0; /* Removed margin */
-            margin-bottom: 20px; /* Added margin bottom */
+            display: none;
+            margin-top: 20px;
             padding: 20px;
             background: var(--light-gray);
             border: 2px solid var(--medium-gray);
@@ -403,7 +402,7 @@
         }
 
         #receivedPreview {
-            margin-top: 0; /* Removed margin */
+            margin-top: 24px; 
             padding: 24px;
             background: var(--light-gray);
             border-radius: 12px;
@@ -420,7 +419,6 @@
             font-weight: 600;
             color: var(--text-muted);
             text-align: center;
-            min-height: 2.5em; /* Give space for 2 lines of text */
         }
         
         #receiveProgress {
@@ -508,34 +506,6 @@
             margin-bottom: 6px;
             font-size: 15px;
         }
-
-        /* --- Receive Mode Layout --- */
-        .receive-layout {
-            display: flex;
-            flex-direction: row; /* Area on left, UI on right */
-            gap: 24px;
-        }
-        .receive-area {
-            flex: 2;
-        }
-        .receive-ui {
-            flex: 1;
-            min-width: 240px;
-        }
-        /* Stack on mobile */
-        @media (max-width: 768px) {
-            .receive-layout {
-                flex-direction: column;
-            }
-            .receive-ui {
-                min-width: 100%;
-            }
-        }
-
-        /* Ensure receive buttons are full width in their container */
-        .receive-ui .btn {
-            width: 100%;
-        }
         
         /* --- Modals --- */
         .modal-overlay {
@@ -599,12 +569,12 @@
         </div>
 
         <div class="mode-selector">
-            <button class="mode-btn" onclick="switchMode('send')">📤 Send</button>
+            <button class="mode-btn active" onclick="switchMode('send')">📤 Send</button>
             <button class="mode-btn" onclick="switchMode('receive')">📥 Receive</button>
         </div>
 
         <div class="content">
-            <div id="sendMode" class="section">
+            <div id="sendMode" class="section active">
                 <div class="input-group">
                     <label>Data Type:</label>
                     <div class="method-selector">
@@ -656,49 +626,42 @@
             </div>
 
             <div id="receiveMode" class="section">
-                <div class="receive-layout">
-                    <!-- Area for camera and previews (Left side) -->
-                    <div class="receive-area">
-                        <div id="cameraContainer" style="display: none;">
-                            <video id="cameraView" autoplay playsinline muted></video>
-                            <div id="receiveStats" class="stats">
-                                <div class="stat-item">
-                                    <div class="stat-label">Received</div>
-                                    <div class="stat-value" id="receivedBits">0 bits</div>
-                                </div>
-                                <div class="stat-item">
-                                    <div class="stat-label">Mode</div>
-                                    <div class="stat-value" id="receiveModeIndicator" style="font-size: 18px;">⚡ Turbo</div>
-                                </div>
-                            </div>
+                <div class="info-box">
+                    <strong>📱 Setup Instructions:</strong>
+                    1. Place your camera against the LEFT edge of the flashing screen.<br>
+                    2. Keep devices stable during transfer.<br>
+                    3. Tap "Start Receiving" to activate the camera.
+                </div>
+
+                <button id="receiveButton" class="btn primary" onclick="startColorReceive()">📹 Start Receiving</button>
+                
+                <div id="cameraContainer">
+                    <video id="cameraView" autoplay playsinline muted></video>
+                    <div id="receiveStats" class="stats">
+                        <div class="stat-item">
+                            <div class="stat-label">Received</div>
+                            <div class="stat-value" id="receivedBits">0 bits</div>
                         </div>
-                        
-                        <div id="receivedPreview">
-                            <div id="receiveStatus">Waiting to receive data...</div>
-                            <progress id="receiveProgress" value="0" max="100" style="width: 100%;"></progress>
-                            <pre id="receivedTextPreview"></pre>
-                            <canvas id="receiveCanvas" width="128" height="128"></canvas>
-                            <div id="downloadContainer">
-                                <div id="downloadInfo">
-                                    <strong>File Received!</strong>
-                                    <span id="downloadFileName"></span> (<span id="downloadFileSize"></span>)
-                                </div>
-                                <a id="downloadButton" href="#" download="received-file" class="btn success">
-                                    ⬇️ Download File
-                                </a>
-                            </div>
+                        <div class="stat-item">
+                            <div class="stat-label">Mode</div>
+                            <div class="stat-value" id="receiveModeIndicator" style="font-size: 18px;">⚡ Turbo</div>
                         </div>
                     </div>
-
-                    <!-- Area for UI controls (Right side) -->
-                    <div class="receive-ui">
-                        <div class="info-box">
-                            <strong>📱 Setup Instructions:</strong>
-                            1. Place your camera against the LEFT edge of the flashing screen.<br>
-                            2. Keep devices stable during transfer.<br>
-                            3. Tap "Start Receiving" to activate the camera.
+                </div>
+                
+                <div id="receivedPreview">
+                    <div id="receiveStatus">Waiting to receive data...</div>
+                    <progress id="receiveProgress" value="0" max="100" style="width: 100%;"></progress>
+                    <pre id="receivedTextPreview"></pre>
+                    <canvas id="receiveCanvas" width="128" height="128"></canvas>
+                    <div id="downloadContainer">
+                        <div id="downloadInfo">
+                            <strong>File Received!</strong>
+                            <span id="downloadFileName"></span> (<span id="downloadFileSize"></span>)
                         </div>
-                        <button id="receiveButton" class="btn primary" onclick="startColorReceive()">📹 Start Receiving</button>
+                        <a id="downloadButton" href="#" download="received-file" class="btn success">
+                            ⬇️ Download File
+                        </a>
                     </div>
                 </div>
             </div>
@@ -811,21 +774,6 @@
             return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
         }
 
-        /** Detects OS to set default mode */
-        function detectOS() {
-            const userAgent = window.navigator.userAgent || window.navigator.platform;
-            const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(userAgent);
-            const isDesktop = /Win|Mac|Linux/i.test(userAgent) && !isMobile;
-            
-            if (isDesktop) {
-                return 'send';
-            } else if (isMobile) {
-                return 'receive';
-            } else {
-                return 'send'; // Default to send
-            }
-        }
-
         // --- UI Functions ---
 
         fileInputEl.addEventListener('change', () => {
@@ -840,19 +788,10 @@
             }
         });
 
-        function switchMode(mode, isInitialization = false) {
+        function switchMode(mode) {
             currentMode = mode;
             document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
-            
-            let activeBtn;
-            if (isInitialization) {
-                activeBtn = document.querySelector(`.mode-btn[onclick*="'${mode}'"]`);
-            } else {
-                activeBtn = event.target;
-            }
-            if (activeBtn) {
-                activeBtn.classList.add('active');
-            }
+            event.target.classList.add('active');
             
             $('#sendMode').classList.toggle('active', mode === 'send');
             $('#receiveMode').classList.toggle('active', mode === 'receive');
@@ -879,11 +818,7 @@
         function showConfirmationModal() {
             const data = (currentDataType === 'text') ? $('#inputText').value : fileInputEl.files[0];
             if (!data) {
-                // Using a custom modal/alert in the future would be better, but alert is simple for now.
-                // Let's just log to console to avoid blocking.
-                console.warn(currentDataType === 'text' ? 'Please enter some text.' : 'Please select a file.');
-                // Or let's use the existing modal structure for an error
-                showErrorModal(currentDataType === 'text' ? 'Please enter some text.' : 'Please select a file.');
+                alert(currentDataType === 'text' ? 'Please enter some text.' : 'Please select a file.');
                 return;
             }
             $('#confirmationModal').classList.add('active');
@@ -891,30 +826,6 @@
         
         function hideConfirmationModal() {
             $('#confirmationModal').classList.remove('active');
-        }
-
-        // Helper function to show an error (using the modal structure)
-        function showErrorModal(message) {
-            // This re-uses the confirmation modal, which isn't ideal, but avoids 'alert'
-            const modal = $('#confirmationModal');
-            modal.querySelector('h2').textContent = 'Error';
-            modal.querySelector('p').textContent = message;
-            modal.querySelector('.modal-buttons .btn.primary').style.display = 'none';
-            modal.querySelector('.modal-buttons .btn.secondary').textContent = 'OK';
-            modal.classList.add('active');
-            
-            // Reset modal after hiding
-            const okBtn = modal.querySelector('.modal-buttons .btn.secondary');
-            const originalClick = okBtn.onclick;
-            okBtn.onclick = () => {
-                hideConfirmationModal();
-                // Restore original state
-                modal.querySelector('h2').textContent = 'Ready to Send?';
-                modal.querySelector('p').textContent = 'Please point the receiving device\'s camera at the **left edge** of this screen. The screen will begin flashing when you press start.';
-                modal.querySelector('.modal-buttons .btn.primary').style.display = 'block';
-                okBtn.textContent = 'Cancel';
-                okBtn.onclick = originalClick;
-            };
         }
 
         // --- Sender Logic ---
@@ -1029,7 +940,7 @@
             const headerBytes = stringToBytes(headerString);
             
             if (headerBytes.length > (2**32 - 1)) {
-                showErrorModal("Error: Header data is too large to send.");
+                alert("Error: Header is too large.");
                 return null;
             }
             
@@ -1055,8 +966,7 @@
 
             const dataBytes = await prepareData();
             if (!dataBytes) {
-                console.error("Failed to prepare data for transmission.");
-                // showErrorModal is likely already called by prepareData if it fails
+                alert("Failed to prepare data for transmission.");
                 return;
             }
 
@@ -1264,110 +1174,107 @@
                 };
                 
             } catch (err) {
-                console.error('Camera access denied:', err);
-                showErrorModal('Camera access denied: ' + err.message + '. Please grant camera permissions.');
+                alert('Camera access denied: ' + err.message);
                 stopReceiving();
             }
         }
 
-        function processReceivedBits() {
-            try {
-                const headerLenBits = HEADER_LEN_BYTES * 8;
+function processReceivedBits() {
+    try {
+        const headerLenBits = HEADER_LEN_BYTES * 8;
+        
+        // State 1: Waiting for Header Length
+        if (receiveState === 'header_len') {
+            const progress = (receivedBits.length / headerLenBits) * 100;
+            $('#receiveStatus').textContent = `Reading Header Length: ${receivedBits.length}/${headerLenBits} bits (${progress.toFixed(1)}%)`;
+            $('#receiveProgress').value = progress;
+
+            if (receivedBits.length >= headerLenBits) {
+                const lenBits = receivedBits.slice(0, headerLenBits);
+                const lenBytes = bitsToBytes(lenBits);
+                const dataView = new DataView(lenBytes.buffer);
+                const headerByteLength = dataView.getUint32(0, false); // Big Endian
                 
-                // State 1: Waiting for Header Length
-                if (receiveState === 'header_len') {
-                    const progress = (receivedBits.length / headerLenBits) * 100;
-                    $('#receiveStatus').textContent = `Reading Header (Step 1/3: Length): ${receivedBits.length}/${headerLenBits} bits (${progress.toFixed(1)}%)`;
-                    $('#receiveProgress').value = progress;
-
-                    if (receivedBits.length >= headerLenBits) {
-                        const lenBits = receivedBits.slice(0, headerLenBits);
-                        const lenBytes = bitsToBytes(lenBits);
-                        const dataView = new DataView(lenBytes.buffer);
-                        const headerByteLength = dataView.getUint32(0, false); // Big Endian
-                        
-                        expectedHeaderBits = headerByteLength * 8;
-                        receiveState = 'header';
-                        $('#receiveStatus').textContent = `Header Length Received! (Step 2/3: Waiting for Metadata...)`;
-                    }
-                }
-                
-                // State 2: Waiting for Header
-                if (receiveState === 'header') {
-                    const totalHeaderBits = headerLenBits + expectedHeaderBits;
-                    const currentHeaderBits = receivedBits.length - headerLenBits;
-                    const progress = Math.min(100, (currentHeaderBits / expectedHeaderBits) * 100);
-                    const headerBytes = Math.floor(currentHeaderBits / 8);
-                    const expectedHeaderBytes = Math.ceil(expectedHeaderBits / 8);
-
-                    $('#receiveStatus').textContent = `Reading Header (Step 2/3: Metadata): ${headerBytes}/${expectedHeaderBytes} bytes (${progress.toFixed(1)}%)`;
-                    $('#receiveProgress').value = progress;
-
-                    if (receivedBits.length >= totalHeaderBits) {
-                        const headerBits = receivedBits.slice(headerLenBits, totalHeaderBits);
-                        const headerBytes = bitsToBytes(headerBits);
-                        const headerString = bytesToString(headerBytes);
-                        
-                        transferHeader = JSON.parse(headerString);
-                        expectedPayloadBits = transferHeader.size * 8;
-                        receiveState = 'payload';
-                        
-                        // Show what we received in the header
-                        $('#receiveStatus').textContent = `Header Received! (Step 3/3: Waiting for ${transferHeader.type} data...)`;
-                        
-                        // Prepare for payload
-                        if (transferHeader.type === 'image') {
-                            setupSpiralCanvas(transferHeader.img_w, transferHeader.img_h);
-                        } else if (transferHeader.type === 'text') {
-                            $('#receivedTextPreview').style.display = 'block';
-                            $('#receiveCanvas').style.display = 'none';
-                        } else {
-                             $('#receivedTextPreview').style.display = 'none';
-                             $('#receiveCanvas').style.display = 'none';
-                        }
-                    }
-                }
-                
-                // State 3: Waiting for Payload
-                if (receiveState === 'payload') {
-                    const headerTotalBits = headerLenBits + expectedHeaderBits;
-                    const payloadBits = receivedBits.slice(headerTotalBits);
-                    const progress = Math.min(100, (payloadBits.length / expectedPayloadBits) * 100);
-                    const payloadBytes = Math.floor(payloadBits.length / 8);
-                    const expectedPayloadBytes = Math.ceil(expectedPayloadBits / 8);
-                    
-                    $('#receiveProgress').value = progress;
-
-                    let dataTypeLabel = 'File';
-                    if (transferHeader.type === 'image') dataTypeLabel = 'Image';
-                    if (transferHeader.type === 'text') dataTypeLabel = 'Text';
-
-                    $('#receiveStatus').textContent = `Receiving Data (Step 3/3: ${dataTypeLabel}): ${payloadBytes}/${expectedPayloadBytes} bytes (${progress.toFixed(1)}%)`;
-                    
-                    if (transferHeader.type === 'image') {
-                        drawSpiralPixels(payloadBits);
-                    } else if (transferHeader.type === 'text') {
-                        // Update live text preview
-                        const currentBytes = bitsToBytes(payloadBits);
-                        const currentText = bytesToString(currentBytes);
-                        $('#receivedTextPreview').textContent = currentText;
-                    }
-                    
-                    if (payloadBits.length >= expectedPayloadBits) {
-                        // --- Transfer Complete ---
-                        const finalPayloadBits = payloadBits.slice(0, expectedPayloadBits);
-                        const payloadBytes = bitsToBytes(finalPayloadBits);
-                        
-                        processCompleteData(transferHeader, payloadBytes);
-                        stopReceiving(); 
-                    }
-                }
-            } catch (e) {
-                console.error("Error processing received data:", e);
-                $('#receiveStatus').textContent = 'Error! Invalid data. Resetting...';
-                stopReceiving();
+                expectedHeaderBits = headerByteLength * 8;
+                receiveState = 'header';
+                $('#receiveStatus').textContent = `Header Length Received: ${headerByteLength} bytes (${expectedHeaderBits} bits)`;
             }
         }
+        
+        // State 2: Waiting for Header
+        if (receiveState === 'header') {
+            const totalHeaderBits = headerLenBits + expectedHeaderBits;
+            const currentHeaderBits = receivedBits.length - headerLenBits;
+            const progress = (currentHeaderBits / expectedHeaderBits) * 100;
+            const headerBytes = Math.floor(currentHeaderBits / 8);
+            const expectedHeaderBytes = Math.ceil(expectedHeaderBits / 8);
+
+            $('#receiveStatus').textContent = `Reading Header: ${headerBytes}/${expectedHeaderBytes} bytes (${progress.toFixed(1)}%)`;
+            $('#receiveProgress').value = progress;
+
+            if (receivedBits.length >= totalHeaderBits) {
+                const headerBits = receivedBits.slice(headerLenBits, totalHeaderBits);
+                const headerBytes = bitsToBytes(headerBits);
+                const headerString = bytesToString(headerBytes);
+                
+                transferHeader = JSON.parse(headerString);
+                expectedPayloadBits = transferHeader.size * 8;
+                receiveState = 'payload';
+                
+                // Show what we received in the header
+                $('#receiveStatus').textContent = `Header Received: Type=${transferHeader.type}, Name=${transferHeader.name}, Size=${formatBytes(transferHeader.size)}`;
+                
+                // Prepare for payload
+                if (transferHeader.type === 'image') {
+                    setupSpiralCanvas(transferHeader.img_w, transferHeader.img_h);
+                } else if (transferHeader.type === 'text') {
+                    $('#receivedTextPreview').style.display = 'block';
+                    $('#receiveCanvas').style.display = 'none';
+                } else {
+                     $('#receivedTextPreview').style.display = 'none';
+                     $('#receiveCanvas').style.display = 'none';
+                }
+            }
+        }
+        
+        // State 3: Waiting for Payload
+        if (receiveState === 'payload') {
+            const headerTotalBits = headerLenBits + expectedHeaderBits;
+            const payloadBits = receivedBits.slice(headerTotalBits);
+            const progress = (payloadBits.length / expectedPayloadBits) * 100;
+            const payloadBytes = Math.floor(payloadBits.length / 8);
+            const expectedPayloadBytes = Math.ceil(expectedPayloadBits / 8);
+            
+            $('#receiveProgress').value = progress;
+
+            if (transferHeader.type === 'image') {
+                $('#receiveStatus').textContent = `Receiving Image (${transferHeader.img_w}x${transferHeader.img_h}): ${payloadBytes}/${expectedPayloadBytes} bytes (${progress.toFixed(1)}%)`;
+                drawSpiralPixels(payloadBits);
+            } else if (transferHeader.type === 'text') {
+                $('#receiveStatus').textContent = `Receiving Text: ${payloadBytes}/${expectedPayloadBytes} bytes (${progress.toFixed(1)}%)`;
+                // Update live text preview
+                const currentBytes = bitsToBytes(payloadBits);
+                const currentText = bytesToString(currentBytes);
+                $('#receivedTextPreview').textContent = currentText;
+            } else {
+                $('#receiveStatus').textContent = `Receiving File (${transferHeader.name}): ${payloadBytes}/${expectedPayloadBytes} bytes (${progress.toFixed(1)}%)`;
+            }
+            
+            if (payloadBits.length >= expectedPayloadBits) {
+                // --- Transfer Complete ---
+                const finalPayloadBits = payloadBits.slice(0, expectedPayloadBits);
+                const payloadBytes = bitsToBytes(finalPayloadBits);
+                
+                processCompleteData(transferHeader, payloadBytes);
+                stopReceiving(); 
+            }
+        }
+    } catch (e) {
+        console.error("Error processing received data:", e);
+        $('#receiveStatus').textContent = 'Error! Invalid data. Resetting...';
+        stopReceiving();
+    }
+}
         
         function setupSpiralCanvas(w, h) {
             const canvas = $('#receiveCanvas');
@@ -1495,13 +1402,6 @@
         }
 
         // --- Init & Cleanup ---
-        function initialize() {
-            const defaultMode = detectOS();
-            switchMode(defaultMode, true);
-        }
-
-        window.onload = initialize;
-        
         window.addEventListener('beforeunload', () => {
             transmissionActive = false;
             stopReceiving();

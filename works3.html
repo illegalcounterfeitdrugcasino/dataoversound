@@ -1,0 +1,1303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChromaSync - Light-Speed Data</title>
+    <style>
+        :root {
+            --primary-start: #667eea;
+            --primary-end: #764ba2;
+            --primary-gradient: linear-gradient(135deg, var(--primary-start) 0%, var(--primary-end) 100%);
+            --danger: #ef4444;
+            --danger-hover: #dc2626;
+            --success: #10b981;
+            --light-gray: #f9fafb;
+            --medium-gray: #e5e7eb;
+            --dark-gray: #374151;
+            --text-color: #333;
+            --text-muted: #6b7280;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #f0f2f5;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 24px;
+            box-shadow: 0 25px 80px rgba(0,0,0,0.15);
+            max-width: 800px;
+            width: 100%;
+            overflow: hidden;
+            animation: slideIn 0.5s ease-out;
+            border: 1px solid #e5e7eb;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .header {
+            background: var(--primary-gradient);
+            padding: 30px;
+            text-align: center;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+
+        .mode-selector {
+            display: flex;
+            background: #f7f7f7;
+            padding: 8px;
+            gap: 8px;
+            border-bottom: 1px solid var(--medium-gray);
+        }
+
+        .mode-btn {
+            flex: 1;
+            padding: 16px;
+            background: white;
+            border: 2px solid transparent;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: var(--text-muted);
+        }
+
+        .mode-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            color: var(--primary-start);
+        }
+
+        .mode-btn.active {
+            background: var(--primary-gradient);
+            color: white;
+            box-shadow: 0 4px 16px rgba(102, 126, 234, 0.3);
+        }
+        
+        .content {
+            padding: 30px;
+        }
+
+        .section {
+            display: none;
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .section.active {
+            display: block;
+        }
+
+        .input-group {
+            margin-bottom: 24px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: 600;
+            color: var(--dark-gray);
+            font-size: 14px;
+        }
+
+        textarea, input[type="file"] {
+            width: 100%;
+            padding: 14px;
+            border: 2px solid var(--medium-gray);
+            border-radius: 12px;
+            font-size: 14px;
+            font-family: inherit;
+            transition: all 0.3s ease;
+            background: var(--light-gray);
+        }
+
+        textarea {
+            min-height: 140px;
+            resize: vertical;
+        }
+
+        textarea:focus, input:focus {
+            outline: none;
+            border-color: var(--primary-start);
+            background: white;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        input[type="file"] {
+            padding: 0;
+            line-height: 1.5;
+        }
+        
+        input[type="file"]::file-selector-button {
+            background: var(--primary-gradient);
+            color: white;
+            border: none;
+            padding: 14px 20px;
+            border-radius: 10px 0 0 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-right: 14px;
+            font-weight: 600;
+        }
+
+        input[type="file"]::file-selector-button:hover {
+            opacity: 0.9;
+        }
+        
+        .file-info {
+            background: var(--light-gray);
+            border: 2px solid var(--medium-gray);
+            padding: 14px;
+            border-radius: 12px;
+            margin-top: 12px;
+            font-size: 14px;
+            color: var(--text-muted);
+            display: none;
+        }
+        .file-info strong {
+            color: var(--dark-gray);
+        }
+
+        .method-selector {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .method-btn {
+            flex: 1;
+            padding: 12px;
+            background: #f3f4f6;
+            border: 2px solid transparent;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            color: var(--text-muted);
+        }
+
+        .method-btn:hover {
+            background: #e5e7eb;
+        }
+
+        .method-btn.active {
+            background: white;
+            color: var(--primary-start);
+            border-color: var(--primary-start);
+        }
+
+        .btn {
+            padding: 16px 32px;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+            margin-bottom: 12px;
+        }
+
+        .btn.primary {
+            background: var(--primary-gradient);
+            color: white;
+            box-shadow: 0 4px 16px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn.primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 24px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn.secondary {
+            background: white;
+            color: var(--primary-start);
+            border: 2px solid var(--primary-start);
+        }
+        
+        .btn.secondary:hover {
+            background: #f0f4ff;
+        }
+
+        .btn.danger {
+            background: var(--danger);
+            color: white;
+            box-shadow: 0 4px 16px rgba(239, 68, 68, 0.3);
+        }
+
+        .btn.danger:hover {
+            background: var(--danger-hover);
+            transform: translateY(-2px);
+        }
+
+        .btn.success {
+            background: var(--success);
+            color: white;
+            font-size: 18px;
+            box-shadow: 0 4px 16px rgba(16, 185, 129, 0.3);
+        }
+        
+        .btn.success:hover {
+             transform: translateY(-2px);
+        }
+        
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 16px;
+            margin-top: 24px;
+            padding: 24px;
+            background: linear-gradient(135deg, var(--light-gray) 0%, #f3f4f6 100%);
+            border-radius: 12px;
+            border: 2px solid var(--medium-gray);
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 12px;
+            background: white;
+            border-radius: 10px;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            background: var(--primary-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* --- Fullscreen Flash --- */
+        #flashScreen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 33.3333%;
+            height: 100%;
+            z-index: 1000;
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #flashScreen.active {
+            display: flex;
+        }
+
+        .flash-info-container {
+            position: absolute;
+            bottom: 30px;
+            left: 50%; 
+            transform: translateX(-50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+            z-index: 1001;
+            width: 90%;
+        }
+
+        .flash-info {
+            background: rgba(0,0,0,0.85);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            color: white;
+            padding: 18px 32px;
+            border-radius: 16px;
+            font-size: 16px;
+            font-weight: 500;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            text-align: center;
+        }
+        
+        #cancelTransmissionBtn {
+            padding: 12px 24px;
+            width: auto;
+            font-size: 14px;
+            margin: 0;
+        }
+
+        /* --- Receive UI --- */
+        #receivedPreview {
+            margin-top: 24px; 
+            padding: 24px;
+            background: var(--light-gray);
+            border-radius: 12px;
+            min-height: 150px;
+            border: 2px solid var(--medium-gray);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+        }
+
+        #receiveStatus {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-align: center;
+        }
+        
+        #receiveCanvas {
+            max-width: 100%;
+            border-radius: 12px;
+            display: none; 
+            background: #eee;
+            image-rendering: pixelated;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            border: 2px solid var(--medium-gray);
+        }
+        
+        #downloadContainer {
+            display: none;
+            width: 100%;
+            text-align: center;
+        }
+        
+        #downloadInfo {
+            font-size: 14px;
+            color: var(--text-muted);
+            margin-bottom: 16px;
+        }
+        #downloadInfo strong {
+            color: var(--dark-gray);
+            display: block;
+            font-size: 16px;
+        }
+        
+        #downloadButton {
+            text-decoration: none;
+            display: block;
+        }
+
+        .info-box {
+            background: #eff6ff;
+            border: 2px solid #bfdbfe;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 20px;
+            color: #1e40af;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .info-box strong {
+            display: block;
+            margin-bottom: 6px;
+            font-size: 15px;
+        }
+        
+        /* --- Modals --- */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 500;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .modal-overlay.active {
+            display: flex;
+            opacity: 1;
+        }
+        
+        .modal-content {
+            background: white;
+            border-radius: 20px;
+            padding: 30px 40px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            text-align: center;
+            max-width: 90%;
+            width: 500px;
+            animation: slideIn 0.3s ease-out;
+        }
+        
+        .modal-content h2 {
+            font-size: 22px;
+            color: var(--dark-gray);
+            margin-bottom: 12px;
+        }
+        
+        .modal-content p {
+            font-size: 15px;
+            color: var(--text-muted);
+            margin-bottom: 24px;
+            line-height: 1.6;
+        }
+        
+        .modal-buttons {
+            display: flex;
+            gap: 12px;
+        }
+        
+        #cameraView {
+            width: 100%;
+            max-width: 400px;
+            border-radius: 12px;
+            border: 2px solid var(--medium-gray);
+            background: #000;
+            margin-top: 16px;
+            display: none;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>ChromaSync</h1>
+            <p>Transfer data using high-speed colored light</p>
+        </div>
+
+        <div class="mode-selector">
+            <button class="mode-btn active" onclick="switchMode('send')">📤 Send</button>
+            <button class="mode-btn" onclick="switchMode('receive')">📥 Receive</button>
+        </div>
+
+        <div class="content">
+            <div id="sendMode" class="section active">
+                <div class="input-group">
+                    <label>Data Type:</label>
+                    <div class="method-selector">
+                        <button class="method-btn active" onclick="switchDataType('text')">📝 Text</button>
+                        <button class="method-btn" onclick="switchDataType('file')">📦 File</button>
+                    </div>
+                </div>
+
+                <div id="textInput" class="input-group">
+                    <label>Enter Text:</label>
+                    <textarea id="inputText" placeholder="Type your message here..."></textarea>
+                </div>
+
+                <div id="fileInput" class="input-group" style="display: none;">
+                    <label>Select File:</label>
+                    <input type="file" id="inputFile">
+                    <div id="fileInfo" class="file-info">
+                        <strong>File:</strong> <span id="fileName"></span><br>
+                        <strong>Size:</strong> <span id="fileSize"></span><br>
+                        <strong>Type:</strong> <span id="fileType"></span>
+                    </div>
+                </div>
+
+                <div class="info-box">
+                    <strong>⚡ Turbo Mode Always On</strong>
+                    This app transmits at a fixed speed (200ms) using 4 colors. Please ensure the receiving device is also a ChromaSync app.
+                </div>
+
+                <button class="btn primary" onclick="showConfirmationModal()">🚀 Start Transmission</button>
+
+                <div id="sendStats" class="stats" style="display: none;">
+                    <div class="stat-item">
+                        <div class="stat-label">Total Size</div>
+                        <div class="stat-value" id="dataSize">0 bytes</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Progress</div>
+                        <div class="stat-value" id="progress">0%</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Time Left</div>
+                        <div class="stat-value" id="timeRemaining">--</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Mode</div>
+                        <div class="stat-value" id="modeIndicator" style="font-size: 18px;">⚡ Turbo</div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="receiveMode" class="section">
+                <div class="info-box">
+                    <strong>📱 Setup Instructions:</strong>
+                    1. Place your camera against the LEFT edge of the flashing screen.<br>
+                    2. Keep devices stable during transfer.<br>
+                    3. Tap "Start Receiving" to open the camera modal.
+                </div>
+
+                <button class="btn primary" onclick="startColorReceive()">📹 Start Receiving</button>
+                
+                <div id="receivedPreview">
+                    <div id="receiveStatus">Waiting to receive data...</div>
+                    <canvas id="receiveCanvas" width="128" height="128"></canvas>
+                    <div id="downloadContainer">
+                        <div id="downloadInfo">
+                            <strong>File Received!</strong>
+                            <span id="downloadFileName"></span> (<span id="downloadFileSize"></span>)
+                        </div>
+                        <a id="downloadButton" href="#" download="received-file" class="btn success">
+                            ⬇️ Download File
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="confirmationModal" class="modal-overlay">
+        <div class="modal-content">
+            <h2>Ready to Send?</h2>
+            <p>Please point the receiving device's camera at the **left edge** of this screen. The screen will begin flashing when you press start.</p>
+            <div class="modal-buttons">
+                <button class="btn secondary" onclick="hideConfirmationModal()">Cancel</button>
+                <button class="btn primary" onclick="startTransmission()">Start Now</button>
+            </div>
+        </div>
+    </div>
+    
+    <div id="receiveModal" class="modal-overlay">
+        <div class="modal-content">
+            <h2>📹 Receiving...</h2>
+            <p>Point your camera at the sender's flashing screen. Keep it steady.</p>
+            <video id="cameraView" autoplay playsinline muted></video>
+            <div id="receiveStats" class="stats" style="margin-top: 16px;">
+                <div class="stat-item">
+                    <div class="stat-label">Received</div>
+                    <div class="stat-value" id="receivedBits">0 bits</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Mode</div>
+                    <div class="stat-value" id="receiveModeIndicator" style="font-size: 18px;">⚡ Turbo</div>
+                </div>
+            </div>
+            <button class="btn danger" onclick="stopReceiving()" style="margin-top: 16px;">⏹️ Stop Receiving</button>
+        </div>
+    </div>
+
+    <div id="flashScreen">
+        <div class="flash-info-container">
+            <div class="flash-info" id="flashInfo">Preparing transmission...</div>
+            <button id="cancelTransmissionBtn" class="btn danger" onclick="cancelTransmission()">Cancel</button>
+        </div>
+    </div>
+
+    <script>
+        // --- Constants ---
+        const BIT_SPEED_MS = 200; // Hard-coded speed
+        const IS_TURBO = true;    // Hard-coded turbo
+        const IMAGE_RESIZE_PX = 128; // Fixed resize for images
+        const HEADER_LEN_BYTES = 4; // Use 4 bytes (32 bits) to store header length
+
+        // --- App State ---
+        let currentMode = 'send';
+        let currentDataType = 'text';
+        let transmissionActive = false;
+        let receivingActive = false;
+        
+        // --- Sender State ---
+        let bitStream = [];
+        let currentBitIndex = 0;
+        let startTime = 0;
+        
+        // --- Receiver State ---
+        let videoStream = null;
+        let receiveState = 'idle'; // 'idle', 'header_len', 'header', 'payload'
+        let receivedBits = [];
+        let expectedHeaderBits = 0;
+        let expectedPayloadBits = 0;
+        let transferHeader = null;
+        let receiveRafId = null;
+        let lastProcessedPixelIndex = 0;
+        let spiralDrawState = {};
+        let whiteDebounce = false;
+
+        // --- DOM Elements ---
+        const $ = (selector) => document.querySelector(selector);
+        const fileInputEl = $('#inputFile');
+        const fileInfoEl = $('#fileInfo');
+
+        // --- Utility Functions ---
+
+        /** Encodes a string to a Uint8Array using UTF-8 */
+        const textEncoder = new TextEncoder();
+        function stringToBytes(str) {
+            return textEncoder.encode(str);
+        }
+
+        /** Decodes a Uint8Array to a string using UTF-8 */
+        const textDecoder = new TextDecoder();
+        function bytesToString(bytes) {
+            return textDecoder.decode(bytes);
+        }
+
+        /** Converts an array of bytes (Uint8Array) to an array of bits */
+        function bytesToBits(bytes) {
+            const bits = [];
+            for (let i = 0; i < bytes.length; i++) {
+                const byte = bytes[i];
+                for (let j = 7; j >= 0; j--) {
+                    bits.push((byte >> j) & 1);
+                }
+            }
+            return bits;
+        }
+
+        /** Converts an array of bits to a Uint8Array */
+        function bitsToBytes(bits) {
+            const byteCount = Math.ceil(bits.length / 8);
+            const bytes = new Uint8Array(byteCount);
+            for (let i = 0; i < byteCount; i++) {
+                let byte = 0;
+                for (let j = 0; j < 8; j++) {
+                    const bitIndex = i * 8 + j;
+                    if (bitIndex < bits.length) {
+                        byte = (byte << 1) | bits[bitIndex];
+                    }
+                }
+                bytes[i] = byte;
+            }
+            return bytes;
+        }
+
+        /** Formats bytes into a human-readable string */
+        function formatBytes(bytes, decimals = 2) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const dm = decimals < 0 ? 0 : decimals;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+        }
+
+        // --- UI Functions ---
+
+        fileInputEl.addEventListener('change', () => {
+            const file = fileInputEl.files[0];
+            if (file) {
+                $('#fileName').textContent = file.name;
+                $('#fileSize').textContent = formatBytes(file.size);
+                $('#fileType').textContent = file.type || 'unknown';
+                fileInfoEl.style.display = 'block';
+            } else {
+                fileInfoEl.style.display = 'none';
+            }
+        });
+
+        function switchMode(mode) {
+            currentMode = mode;
+            document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            $('#sendMode').classList.toggle('active', mode === 'send');
+            $('#receiveMode').classList.toggle('active', mode === 'receive');
+            
+            if (mode === 'receive' && receivingActive) {
+                stopReceiving();
+            }
+            if (mode === 'send' && transmissionActive) {
+                cancelTransmission();
+            }
+        }
+
+        function switchDataType(type) {
+            currentDataType = type;
+            const buttons = event.target.parentElement.querySelectorAll('.method-btn');
+            buttons.forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+
+            $('#textInput').style.display = type === 'text' ? 'block' : 'none';
+            $('#fileInput').style.display = type === 'file' ? 'block' : 'none';
+            fileInfoEl.style.display = (type === 'file' && fileInputEl.files[0]) ? 'block' : 'none';
+        }
+
+        function showConfirmationModal() {
+            const data = (currentDataType === 'text') ? $('#inputText').value : fileInputEl.files[0];
+            if (!data) {
+                alert(currentDataType === 'text' ? 'Please enter some text.' : 'Please select a file.');
+                return;
+            }
+            $('#confirmationModal').classList.add('active');
+        }
+        
+        function hideConfirmationModal() {
+            $('#confirmationModal').classList.remove('active');
+        }
+
+        // --- Sender Logic ---
+
+        /** Loads an image file and returns an Image element */
+        function loadImage(file) {
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.onload = () => resolve(img);
+                img.onerror = reject;
+                img.src = URL.createObjectURL(file);
+            });
+        }
+        
+        /**
+         * Re-orders pixel data from an ImageData object into a center-out spiral.
+         * Returns a Uint8Array of [R,G,B, R,G,B, ...] in spiral order.
+         */
+        function spiralize(imageData) {
+            const { width, height, data } = imageData;
+            const pixelCount = width * height;
+            const spiralData = new Uint8Array(pixelCount * 3); // RGB only
+            
+            let x = Math.floor(width / 2);
+            let y = Math.floor(height / 2);
+            let dx = 0;
+            let dy = -1;
+            let segmentLength = 1;
+            let segmentPassed = 0;
+            let k = 0; // spiralData index
+            
+            for (let i = 0; i < pixelCount; i++) {
+                // Ensure x, y are within bounds (especially for even dimensions)
+                const clampedX = Math.max(0, Math.min(width - 1, x));
+                const clampedY = Math.max(0, Math.min(height - 1, y));
+                
+                const pixelIndex = (clampedY * width + clampedX) * 4; // RGBA index
+                
+                spiralData[k++] = data[pixelIndex];     // R
+                spiralData[k++] = data[pixelIndex + 1]; // G
+                spiralData[k++] = data[pixelIndex + 2]; // B
+                
+                x += dx;
+                y += dy;
+                segmentPassed++;
+                
+                if (segmentPassed === segmentLength) {
+                    segmentPassed = 0;
+                    // Rotate direction: [dx, dy] = [-dy, dx]
+                    const temp = dx;
+                    dx = -dy;
+                    dy = temp;
+                    // If we turned and are moving horizontally, increase segment length
+                    if (dy === 0) {
+                        segmentLength++;
+                    }
+                }
+            }
+            return spiralData;
+        }
+
+        /** Prepares the final bitstream including header and payload */
+        async function prepareData() {
+            let header = { type: 'text', name: 'message.txt', mime: 'text/plain' };
+            let payloadBytes;
+
+            if (currentDataType === 'text') {
+                const text = $('#inputText').value;
+                payloadBytes = stringToBytes(text);
+                header.size = payloadBytes.length;
+            } else {
+                const file = fileInputEl.files[0];
+                header.name = file.name;
+                header.mime = file.type || 'application/octet-stream';
+                
+                const fileBuffer = await file.arrayBuffer();
+                
+                if (file.type.startsWith('image/')) {
+                    // It's an image, process it for spiral transfer
+                    try {
+                        const img = await loadImage(file);
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+                        
+                        canvas.width = IMAGE_RESIZE_PX;
+                        canvas.height = IMAGE_RESIZE_PX;
+                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                        
+                        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                        payloadBytes = spiralize(imageData);
+                        
+                        header.type = 'image';
+                        header.img_w = canvas.width;
+                        header.img_h = canvas.height;
+                        header.size = payloadBytes.length;
+
+                    } catch (e) {
+                        console.error("Image processing failed, sending as raw file.", e);
+                        header.type = 'file'; // Fallback to raw file
+                        payloadBytes = new Uint8Array(fileBuffer);
+                        header.size = payloadBytes.length;
+                    }
+                } else {
+                    // It's a generic file
+                    header.type = 'file';
+                    payloadBytes = new Uint8Array(fileBuffer);
+                    header.size = payloadBytes.length;
+                }
+            }
+
+            const headerString = JSON.stringify(header);
+            const headerBytes = stringToBytes(headerString);
+            
+            if (headerBytes.length > (2**32 - 1)) {
+                alert("Error: Header is too large.");
+                return null;
+            }
+            
+            // Create a 4-byte buffer for the header length
+            const headerLenBuffer = new ArrayBuffer(HEADER_LEN_BYTES);
+            const dataView = new DataView(headerLenBuffer);
+            dataView.setUint32(0, headerBytes.length, false); // false for Big Endian
+            const headerLenBytes = new Uint8Array(headerLenBuffer);
+
+            // Combine all parts: [Header Length] + [Header] + [Payload]
+            const combinedBytes = new Uint8Array(headerLenBytes.length + headerBytes.length + payloadBytes.length);
+            combinedBytes.set(headerLenBytes, 0);
+            combinedBytes.set(headerBytes, headerLenBytes.length);
+            combinedBytes.set(payloadBytes, headerLenBytes.length + headerBytes.length);
+
+            return combinedBytes;
+        }
+
+        async function startTransmission() {
+            if (transmissionActive) return;
+            
+            hideConfirmationModal();
+
+            const dataBytes = await prepareData();
+            if (!dataBytes) {
+                alert("Failed to prepare data for transmission.");
+                return;
+            }
+
+            bitStream = bytesToBits(dataBytes);
+            currentBitIndex = 0;
+            transmissionActive = true;
+            startTime = Date.now();
+
+            $('#sendStats').style.display = 'grid';
+            $('#dataSize').textContent = formatBytes(dataBytes.length);
+            $('#progress').textContent = '0%';
+            $('#timeRemaining').textContent = '--';
+            
+            runColorTransmission();
+        }
+
+        function runColorTransmission() {
+            const flashScreen = $('#flashScreen');
+            const flashInfo = $('#flashInfo');
+            flashScreen.classList.add('active');
+
+            function transmitNextBit() {
+                if (!transmissionActive) {
+                    flashScreen.classList.remove('active');
+                    return;
+                }
+                
+                if (currentBitIndex >= bitStream.length) {
+                    // --- Transmission Complete ---
+                    flashScreen.style.backgroundColor = 'var(--success)';
+                    flashInfo.textContent = '✅ Transmission Complete!';
+                    $('#cancelTransmissionBtn').style.display = 'none';
+                    transmissionActive = false;
+                    setTimeout(() => {
+                        flashScreen.classList.remove('active');
+                        $('#cancelTransmissionBtn').style.display = 'block';
+                    }, 2000);
+                    return;
+                }
+
+                let color;
+                let bitsToSend = 1;
+
+                // Turbo mode: 2 bits per symbol
+                if (currentBitIndex + 1 < bitStream.length) {
+                    const bit1 = bitStream[currentBitIndex];
+                    const bit2 = bitStream[currentBitIndex + 1];
+                    bitsToSend = 2;
+                    
+                    if (bit1 === 0 && bit2 === 0) color = '#ff0000'; // Red = 00
+                    else if (bit1 === 0 && bit2 === 1) color = '#00ff00'; // Green = 01
+                    else if (bit1 === 1 && bit2 === 0) color = '#0000ff'; // Blue = 10
+                    else color = '#ffff00'; // Yellow = 11
+                } else {
+                    // Last bit, pad with 0 (send as Red or Blue)
+                    const bit1 = bitStream[currentBitIndex];
+                    bitsToSend = 2; // Still consumes a 2-bit symbol time
+                    color = bit1 === 0 ? '#ff0000' : '#0000ff'; // 00 or 10
+                }
+
+                flashScreen.style.backgroundColor = color;
+                
+                const progress = ((currentBitIndex / bitStream.length) * 100).toFixed(1);
+                $('#progress').textContent = progress + '%';
+                
+                const elapsed = Date.now() - startTime;
+                const symbolsPerMs = (currentBitIndex / 2) / elapsed;
+                const remainingSymbols = (bitStream.length - currentBitIndex) / 2;
+                const remainingMs = symbolsPerMs > 0 ? remainingSymbols / symbolsPerMs : 0;
+                $('#timeRemaining').textContent = Math.ceil(remainingMs / 1000) + 's';
+                
+                const symbolNum = Math.floor(currentBitIndex / 2) + 1;
+                flashInfo.textContent = `Symbol ${symbolNum} / ${Math.ceil(bitStream.length / 2)} - ${progress}%`;
+
+                currentBitIndex += bitsToSend;
+
+                // Flash color for half the speed, then white for the other half
+                setTimeout(() => {
+                    flashScreen.style.backgroundColor = '#ffffff'; // Separator
+                    setTimeout(transmitNextBit, BIT_SPEED_MS / 2);
+                }, BIT_SPEED_MS / 2);
+            }
+
+            transmitNextBit();
+        }
+        
+        function cancelTransmission() {
+            transmissionActive = false;
+            $('#flashScreen').classList.remove('active');
+            $('#sendStats').style.display = 'none';
+        }
+
+
+        // --- Receiver Logic ---
+        
+        function resetReceiveState() {
+            receiveState = 'header_len';
+            receivedBits = [];
+            expectedHeaderBits = 0;
+            expectedPayloadBits = 0;
+            transferHeader = null;
+            lastProcessedPixelIndex = 0;
+            spiralDrawState = {};
+            whiteDebounce = false;
+
+            $('#receivedBits').textContent = '0 bits';
+            $('#receiveStatus').textContent = 'Waiting to receive data...';
+            $('#receiveCanvas').style.display = 'none';
+            $('#downloadContainer').style.display = 'none';
+        }
+
+        async function startColorReceive() {
+            if (receivingActive) return;
+
+            const video = $('#cameraView');
+            $('#receiveModal').classList.add('active');
+            resetReceiveState();
+            
+            try {
+                if (videoStream) {
+                    videoStream.getTracks().forEach(track => track.stop());
+                }
+
+                videoStream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: 'environment' } 
+                });
+                video.srcObject = videoStream;
+                video.style.display = 'block';
+                receivingActive = true;
+                
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                
+                function captureFrame() {
+                    if (!receivingActive) return;
+
+                    if (video.readyState < video.HAVE_METADATA) {
+                        receiveRafId = requestAnimationFrame(captureFrame);
+                        return;
+                    }
+
+                    if (canvas.width !== video.videoWidth) {
+                        canvas.width = video.videoWidth;
+                        canvas.height = video.videoHeight;
+                    }
+                    
+                    ctx.drawImage(video, 0, 0);
+                    
+                    // Sample a 50x50 square from the center
+                    const sampleSize = 50;
+                    const sx = Math.max(0, canvas.width / 2 - sampleSize / 2);
+                    const sy = Math.max(0, canvas.height / 2 - sampleSize / 2);
+                    
+                    const imageData = ctx.getImageData(sx, sy, sampleSize, sampleSize).data;
+                    
+                    let r = 0, g = 0, b = 0;
+                    const pixelCount = imageData.length / 4;
+                    for (let i = 0; i < imageData.length; i += 4) {
+                        r += imageData[i];
+                        g += imageData[i + 1];
+                        b += imageData[i + 2];
+                    }
+                    r /= pixelCount;
+                    g /= pixelCount;
+                    b /= pixelCount;
+
+                    // Detect white (separator)
+                    if (r > 180 && g > 180 && b > 180) {
+                        whiteDebounce = false;
+                    } else if (!whiteDebounce) {
+                        // Not white, try to detect a color
+                        
+                        // Turbo mode: detect 4 colors
+                        let bits = null;
+                        
+                        if (r > 150 && g < 100 && b < 100) bits = [0, 0]; // Red = 00
+                        else if (g > 150 && r < 100 && b < 100) bits = [0, 1]; // Green = 01
+                        else if (b > 150 && r < 100 && g < 100) bits = [1, 0]; // Blue = 10
+                        else if (r > 150 && g > 150 && b < 100) bits = [1, 1]; // Yellow = 11
+
+                        if (bits) {
+                            receivedBits.push(...bits);
+                            whiteDebounce = true; // Wait for next white
+                            $('#receivedBits').textContent = receivedBits.length + ' bits';
+                            processReceivedBits();
+                        }
+                    }
+
+                    receiveRafId = requestAnimationFrame(captureFrame);
+                }
+                
+                video.onloadedmetadata = () => {
+                    captureFrame();
+                    video.onloadedmetadata = null; 
+                };
+                
+            } catch (err) {
+                alert('Camera access denied: ' + err.message);
+                stopReceiving();
+            }
+        }
+
+        function processReceivedBits() {
+            try {
+                // State 1: Waiting for Header Length
+                if (receiveState === 'header_len') {
+                    $('#receiveStatus').textContent = 'Detecting header...';
+                    if (receivedBits.length >= (HEADER_LEN_BYTES * 8)) {
+                        const lenBits = receivedBits.slice(0, HEADER_LEN_BYTES * 8);
+                        const lenBytes = bitsToBytes(lenBits);
+                        const dataView = new DataView(lenBytes.buffer);
+                        const headerByteLength = dataView.getUint32(0, false); // Big Endian
+                        
+                        expectedHeaderBits = headerByteLength * 8;
+                        receiveState = 'header';
+                        $('#receiveStatus').textContent = 'Receiving header (0%)...';
+                    }
+                }
+                
+                // State 2: Waiting for Header
+                if (receiveState === 'header') {
+                    const totalHeaderBits = (HEADER_LEN_BYTES * 8) + expectedHeaderBits;
+                    if (receivedBits.length >= totalHeaderBits) {
+                        const headerBits = receivedBits.slice(HEADER_LEN_BYTES * 8, totalHeaderBits);
+                        const headerBytes = bitsToBytes(headerBits);
+                        const headerString = bytesToString(headerBytes);
+                        
+                        transferHeader = JSON.parse(headerString);
+                        expectedPayloadBits = transferHeader.size * 8;
+                        receiveState = 'payload';
+                        
+                        // Prepare for image payload
+                        if (transferHeader.type === 'image') {
+                            setupSpiralCanvas(transferHeader.img_w, transferHeader.img_h);
+                        }
+                    } else {
+                         const progress = (receivedBits.length - (HEADER_LEN_BYTES * 8)) / expectedHeaderBits * 100;
+                        $('#receiveStatus').textContent = `Receiving header (${progress.toFixed(1)}%)...`;
+                    }
+                }
+                
+                // State 3: Waiting for Payload
+                if (receiveState === 'payload') {
+                    const headerTotalBits = (HEADER_LEN_BYTES * 8) + expectedHeaderBits;
+                    const payloadBits = receivedBits.slice(headerTotalBits);
+                    const progress = (payloadBits.length / expectedPayloadBits) * 100;
+
+                    if (transferHeader.type === 'image') {
+                        $('#receiveStatus').textContent = `Receiving image... (${progress.toFixed(1)}%)`;
+                        drawSpiralPixels(payloadBits);
+                    } else {
+                        $('#receiveStatus').textContent = `Receiving file... (${progress.toFixed(1)}%)`;
+                    }
+                    
+                    if (payloadBits.length >= expectedPayloadBits) {
+                        // --- Transfer Complete ---
+                        const finalPayloadBits = payloadBits.slice(0, expectedPayloadBits);
+                        const payloadBytes = bitsToBytes(finalPayloadBits);
+                        
+                        processCompleteData(transferHeader, payloadBytes);
+                        stopReceiving(); 
+                    }
+                }
+            } catch (e) {
+                console.error("Error processing received data:", e);
+                $('#receiveStatus').textContent = 'Error! Invalid data. Resetting...';
+                stopReceiving();
+            }
+        }
+        
+        function setupSpiralCanvas(w, h) {
+            const canvas = $('#receiveCanvas');
+            canvas.width = w;
+            canvas.height = h;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#eee';
+            ctx.fillRect(0, 0, w, h);
+            canvas.style.display = 'block';
+            
+            // Init spiral state
+            spiralDrawState = {
+                ctx, w, h,
+                x: Math.floor(w / 2),
+                y: Math.floor(h / 2),
+                dx: 0,
+                dy: -1,
+                segmentLength: 1,
+                segmentPassed: 0,
+                pixelIndex: 0
+            };
+            lastProcessedPixelIndex = 0;
+        }
+        
+        /** Draws new pixels from the payload in a spiral */
+        function drawSpiralPixels(payloadBits) {
+            const { ctx, w, h } = spiralDrawState;
+            if (!ctx) return;
+            
+            // Check for new *bytes* (R,G,B = 3 bytes = 24 bits)
+            const newBits = payloadBits.slice(lastProcessedPixelIndex);
+            if (newBits.length < 24) return;
+            
+            const newBytes = bitsToBytes(newBits);
+            
+            for (let i = 0; i <= newBytes.length - 3; i += 3) {
+                const r = newBytes[i];
+                const g = newBytes[i + 1];
+                const b = newBytes[i + 2];
+                
+                ctx.fillStyle = `rgb(${r},${g},${b})`;
+                
+                const drawX = Math.max(0, Math.min(w - 1, spiralDrawState.x));
+                const drawY = Math.max(0, Math.min(h - 1, spiralDrawState.y));
+                ctx.fillRect(drawX, drawY, 1, 1);
+                
+                // Advance spiral
+                spiralDrawState.x += spiralDrawState.dx;
+                spiralDrawState.y += spiralDrawState.dy;
+                spiralDrawState.segmentPassed++;
+                
+                if (spiralDrawState.segmentPassed === spiralDrawState.segmentLength) {
+                    spiralDrawState.segmentPassed = 0;
+                    const temp = spiralDrawState.dx;
+                    spiralDrawState.dx = -spiralDrawState.dy;
+                    spiralDrawState.dy = temp;
+                    if (spiralDrawState.dy === 0) {
+                        spiralDrawState.segmentLength++;
+                    }
+                }
+                spiralDrawState.pixelIndex++;
+            }
+            
+            // Update index based on bytes processed (align to 3-byte boundary)
+            const bytesProcessed = Math.floor(newBytes.length / 3) * 3;
+            lastProcessedPixelIndex += (bytesProcessed * 8);
+        }
+
+        /** Called when all payload data is received */
+        function processCompleteData(header, payloadBytes) {
+            $('#receiveStatus').textContent = '✅ Transfer Complete!';
+            
+            const blob = new Blob([payloadBytes], { type: header.mime });
+            const url = URL.createObjectURL(blob);
+            
+            $('#downloadFileName').textContent = header.name;
+            $('#downloadFileSize').textContent = formatBytes(header.size);
+            
+            const downloadLink = $('#downloadButton');
+            downloadLink.href = url;
+            downloadLink.download = header.name;
+            
+            $('#downloadContainer').style.display = 'block';
+            
+            // If it was a non-spiral image, show it.
+            if (header.type === 'file' && header.mime.startsWith('image/')) {
+                 const canvas = $('#receiveCanvas');
+                 const ctx = canvas.getContext('2d');
+                 const img = new Image();
+                 img.onload = () => {
+                     canvas.width = img.width;
+                     canvas.height = img.height;
+                     ctx.drawImage(img, 0, 0);
+                     canvas.style.display = 'block';
+                 }
+                 img.src = url;
+            }
+        }
+
+        function stopReceiving() {
+            receivingActive = false;
+            if (receiveRafId) {
+                cancelAnimationFrame(receiveRafId);
+                receiveRafId = null;
+            }
+            
+            if (videoStream) {
+                videoStream.getTracks().forEach(track => track.stop());
+                videoStream = null;
+            }
+            
+            $('#cameraView').srcObject = null;
+            $('#cameraView').style.display = 'none';
+            $('#receiveModal').classList.remove('active');
+        }
+
+        // --- Init & Cleanup ---
+        window.addEventListener('beforeunload', () => {
+            transmissionActive = false;
+            stopReceiving();
+        });
+    </script>
+</body>
+</html>

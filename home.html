@@ -3,22 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LightSync Transfer</title>
+    <title>PhotonSend - Epic Data Transfer</title>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
+    
     <style>
-        :root {
-            --bg-color: #121212;
-            --surface-color: #1e1e1e;
-            --primary-color: #007aff;
-            --primary-light: #58a6ff;
-            --text-color: #e0e0e0;
-            --text-muted: #888888;
-            --red: #ff453a;
-            --green: #32d74b;
-            --blue: #0a84ff;
-            --yellow: #ffd60a;
-            --border-color: #333333;
-        }
-
         * {
             margin: 0;
             padding: 0;
@@ -26,9 +15,8 @@
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            background: var(--bg-color);
-            color: var(--text-color);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #f0f2f5;
             min-height: 100vh;
             display: flex;
             justify-content: center;
@@ -37,50 +25,42 @@
         }
 
         .container {
-            background: var(--surface-color);
+            background: white;
             border-radius: 24px;
-            box-shadow: 0 25px 80px rgba(0,0,0,0.3);
-            max-width: 600px;
+            box-shadow: 0 25px 80px rgba(0,0,0,0.1);
+            max-width: 700px;
             width: 100%;
             overflow: hidden;
-            border: 1px solid var(--border-color);
             animation: slideIn 0.5s ease-out;
+            position: relative;
         }
 
         @keyframes slideIn {
-            from {
-                opacity: 0;
-                transform: translateY(30px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
         .header {
+            background: linear-gradient(135deg, #007aff 0%, #00c6ff 100%);
             padding: 30px;
             text-align: center;
-            border-bottom: 1px solid var(--border-color);
+            color: white;
         }
 
         .header h1 {
             font-size: 28px;
             font-weight: 700;
             margin-bottom: 8px;
-            background: linear-gradient(135deg, var(--primary-light) 0%, var(--primary-color) 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
         }
 
         .header p {
-            color: var(--text-muted);
+            opacity: 0.9;
             font-size: 14px;
         }
 
         .mode-selector {
             display: flex;
-            background: #111;
+            background: #e9ecef;
             padding: 8px;
             gap: 8px;
         }
@@ -88,25 +68,24 @@
         .mode-btn {
             flex: 1;
             padding: 16px;
-            background: var(--surface-color);
+            background: transparent;
             border: 2px solid transparent;
             border-radius: 12px;
             font-size: 16px;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s ease;
-            color: var(--text-muted);
+            color: #495057;
         }
 
         .mode-btn:hover {
-            background: #2a2a2a;
-            color: var(--text-color);
+            background: #dee2e6;
         }
 
         .mode-btn.active {
-            background: var(--primary-color);
-            color: white;
-            box-shadow: 0 4px 16px rgba(0, 122, 255, 0.3);
+            background: white;
+            color: #007aff;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
         }
 
         .content {
@@ -135,107 +114,70 @@
             display: block;
             margin-bottom: 10px;
             font-weight: 600;
-            color: var(--text-muted);
+            color: #333;
             font-size: 14px;
-            text-transform: uppercase;
         }
 
-        textarea {
+        textarea, input[type="file"] {
             width: 100%;
             padding: 14px;
-            border: 2px solid var(--border-color);
+            border: 2px solid #e5e7eb;
             border-radius: 12px;
             font-size: 14px;
             font-family: inherit;
             transition: all 0.3s ease;
-            background: var(--bg-color);
-            color: var(--text-color);
-            min-height: 120px;
+            background: #fafafa;
+        }
+
+        textarea {
+            min-height: 140px;
             resize: vertical;
         }
 
-        textarea:focus {
+        textarea:focus, input[type="file"]:focus {
             outline: none;
-            border-color: var(--primary-color);
-            background: var(--surface-color);
-            box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.2);
-        }
-        
-        .file-input-wrapper {
-            position: relative;
-            width: 100%;
-            height: 120px;
-            border: 2px dashed var(--border-color);
-            border-radius: 12px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            flex-direction: column;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            background: var(--bg-color);
-        }
-        .file-input-wrapper:hover {
-            border-color: var(--primary-color);
-            background: var(--surface-color);
-        }
-        .file-input-wrapper span {
-            color: var(--text-muted);
-            font-weight: 500;
-        }
-        .file-input-wrapper #fileName {
-            font-weight: 600;
-            color: var(--text-color);
-            margin-top: 8px;
-            font-size: 14px;
-        }
-        input[type="file"] {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            opacity: 0;
-            cursor: pointer;
+            border-color: #007aff;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.1);
         }
 
-        .data-type-selector {
+        .method-selector {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
             gap: 10px;
             margin-bottom: 20px;
         }
 
-        .data-type-btn {
+        .method-btn {
             padding: 12px;
-            background: var(--bg-color);
-            border: 2px solid var(--border-color);
+            background: #f3f4f6;
+            border: 2px solid #f3f4f6;
             border-radius: 10px;
             font-size: 14px;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.2s ease;
-            color: var(--text-muted);
+            color: #6b7280;
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 8px;
         }
 
-        .data-type-btn:hover {
-            border-color: var(--primary-color);
-            color: var(--primary-color);
+        .method-btn:hover {
+            background: #e5e7eb;
+            border-color: #e5e7eb;
         }
 
-        .data-type-btn.active {
-            background: var(--surface-color);
-            color: var(--primary-color);
-            border-color: var(--primary-color);
+        .method-btn.active {
+            background: white;
+            color: #007aff;
+            border-color: #007aff;
         }
 
         button.primary {
             padding: 16px 32px;
-            background: var(--primary-color);
+            background: linear-gradient(135deg, #007aff 0%, #00c6ff 100%);
             color: white;
             border: none;
             border-radius: 12px;
@@ -250,17 +192,19 @@
 
         button.primary:hover {
             transform: translateY(-2px);
-            background: var(--primary-light);
             box-shadow: 0 6px 24px rgba(0, 122, 255, 0.4);
         }
-
-        button.primary:active {
-            transform: translateY(0);
+        
+        button.primary:disabled {
+            background: #adb5bd;
+            box-shadow: none;
+            cursor: not-allowed;
+            transform: none;
         }
 
         button.danger {
             padding: 16px 32px;
-            background: var(--red);
+            background: #ef4444;
             color: white;
             border: none;
             border-radius: 12px;
@@ -269,256 +213,77 @@
             cursor: pointer;
             transition: all 0.3s ease;
             width: 100%;
-            box-shadow: 0 4px 16px rgba(255, 69, 58, 0.3);
+            box-shadow: 0 4px 16px rgba(239, 68, 68, 0.3);
         }
 
         button.danger:hover {
-            background: #ff6b62;
+            background: #dc2626;
             transform: translateY(-2px);
         }
-        
-        button:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            transform: none !important;
-            box-shadow: none !important;
-        }
 
-        .info-box {
-            background: rgba(0, 122, 255, 0.1);
-            border: 1px solid var(--primary-color);
-            border-radius: 12px;
-            padding: 16px;
-            margin-bottom: 20px;
-            color: var(--primary-light);
-            font-size: 14px;
-            line-height: 1.6;
-        }
-
-        .info-box strong {
-            display: block;
-            margin-bottom: 6px;
-            font-size: 15px;
-            color: white;
-        }
-
-        #cameraFeed {
-            width: 100%;
-            aspect-ratio: 1 / 1;
-            background: #000;
-            border-radius: 12px;
-            overflow: hidden;
-            position: relative;
-            border: 2px solid var(--border-color);
-            margin-bottom: 20px;
-            display: none;
-        }
-        
-        #cameraView {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            transform: scaleX(-1);
-        }
-        
-        #scanOverlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            flex-direction: column;
-        }
-        
-        #scanOverlay::before {
-            content: '';
-            position: absolute;
-            width: 100%;
-            height: 3px;
-            background: linear-gradient(90deg, transparent, var(--primary-light), transparent);
-            box-shadow: 0 0 15px var(--primary-light);
-            animation: scan 3s infinite ease-in-out;
-        }
-        
-        @keyframes scan {
-            0% { top: 0; }
-            50% { top: calc(100% - 3px); }
-            100% { top: 0; }
-        }
-        
-        #scanOverlay .status-text {
-            color: white;
-            font-weight: 600;
-            font-size: 16px;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
-            background: rgba(0,0,0,0.5);
-            padding: 8px 16px;
-            border-radius: 8px;
-            z-index: 2;
-        }
-        
-        #receiveStatus {
-            margin-top: 20px;
-            text-align: center;
-        }
-        
-        #receiveStatus .status-label {
-            font-size: 14px;
-            font-weight: 600;
-            color: var(--text-muted);
-            margin-bottom: 12px;
-        }
-        
-        #receiveProgress {
-            width: 100%;
-            height: 12px;
-            -webkit-appearance: none;
-            appearance: none;
-            border: none;
-            border-radius: 6px;
-            overflow: hidden;
-            background: var(--border-color);
-        }
-        
-        #receiveProgress::-webkit-progress-bar {
-            background: var(--border-color);
-        }
-        
-        #receiveProgress::-webkit-progress-value {
-            background: var(--primary-color);
-            transition: width 0.1s linear;
-        }
-        
-        #receiveProgress::-moz-progress-bar {
-            background: var(--primary-color);
-            transition: width 0.1s linear;
-        }
-        
-        #receiveResult {
-            margin-top: 24px; 
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+            margin-top: 24px;
             padding: 24px;
-            background: var(--bg-color);
+            background: #f9fafb;
             border-radius: 12px;
-            min-height: 120px;
-            border: 2px solid var(--border-color);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            flex-direction: column;
-            gap: 12px;
-        }
-        
-        #receivedText {
-            font-family: 'Courier New', monospace;
-            white-space: pre-wrap;
-            word-break: break-all;
-            line-height: 1.6;
-            color: var(--text-color);
-            width: 100%;
+            border: 2px solid #e5e7eb;
         }
 
-        #receivedImageCanvas {
-            max-width: 100%;
-            border-radius: 12px;
-            background: #000;
-            image-rendering: pixelated;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-        }
-
-        #overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.9);
-            z-index: 9998;
-            display: none;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-            backdrop-filter: blur(10px);
-        }
-        
-        #overlay.active {
-            display: block;
-            opacity: 1;
-        }
-        
-        #confirmModal {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%) scale(0.9);
-            background: var(--surface-color);
-            border-radius: 20px;
-            padding: 30px;
-            z-index: 9999;
-            width: 90%;
-            max-width: 400px;
+        .stat-item {
             text-align: center;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
-            border: 1px solid var(--border-color);
-            display: none;
-            opacity: 0;
-            transition: all 0.3s ease;
+            padding: 12px;
+            background: white;
+            border-radius: 10px;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #6b7280;
+            margin-bottom: 8px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            background: linear-gradient(135deg, #007aff 0%, #00c6ff 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
         
-        #confirmModal.active {
-            display: block;
-            opacity: 1;
-            transform: translate(-50%, -50%) scale(1);
+        .stat-value.ok {
+             background: linear-gradient(135deg, #10b981 0%, #14b8a6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
         
-        #confirmModal h2 {
-            font-size: 22px;
-            margin-bottom: 12px;
-        }
-        
-        #confirmModal p {
-            color: var(--text-muted);
-            margin-bottom: 24px;
-            line-height: 1.5;
-        }
-        
-        #confirmModal .modal-buttons {
-            display: flex;
-            gap: 12px;
-        }
-        
-        #confirmModal .modal-buttons button {
-            flex: 1;
-            margin: 0;
-        }
-        
-        button.secondary {
-            background: var(--border-color);
-            color: var(--text-color);
-            box-shadow: none;
-        }
-        
-        button.secondary:hover {
-            background: #444;
-            transform: translateY(-2px);
+        .stat-value.fail {
+             background: linear-gradient(135deg, #ef4444 0%, #f87171 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
 
         #flashScreen {
             position: fixed;
             top: 0;
             left: 0;
-            /* Original had 33.33%, which is specific for left-edge placement */
-            width: 33.3333%; 
+            width: 100%;
             height: 100%;
-            z-index: 10000;
+            z-index: 9999;
             display: none;
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            background: #fff;
         }
-
+        
         #flashScreen.active {
             display: flex;
         }
@@ -535,32 +300,185 @@
             border-radius: 16px;
             font-size: 14px;
             font-weight: 500;
-            z-index: 10001;
+            z-index: 10000;
             box-shadow: 0 8px 32px rgba(0,0,0,0.3);
-            white-space: nowrap;
+            text-align: center;
         }
+        
+        #receivedPreview {
+            margin-top: 24px; 
+            padding: 24px;
+            background: #f9fafb;
+            border-radius: 12px;
+            min-height: 120px;
+            border: 2px solid #e5e7eb;
+        }
+
+        #receivedImageCanvas {
+            max-width: 100%;
+            border-radius: 12px;
+            display: none; 
+            min-height: 50px; 
+            background: #e5e7eb;
+            image-rendering: pixelated;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        #receivedText {
+            font-family: 'Courier New', monospace;
+            white-space: pre-wrap;
+            word-break: break-all;
+            line-height: 1.6;
+            color: #374151;
+        }
+        
+        #downloadButton {
+            display: none;
+            margin-top: 20px;
+            text-decoration: none;
+            text-align: center;
+        }
+
+        .info-box {
+            background: #e6f7ff;
+            border: 2px solid #b3e0ff;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 20px;
+            color: #0056b3;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .info-box strong {
+            display: block;
+            margin-bottom: 6px;
+            font-size: 15px;
+        }
+
+        #cameraView {
+            width: 100%;
+            max-width: 400px;
+            margin: 0 auto;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            display: block;
+            background: #333;
+        }
+        
+        .loader {
+            width: 48px;
+            height: 48px;
+            border: 5px solid #FFF;
+            border-bottom-color: transparent;
+            border-radius: 50%;
+            display: inline-block;
+            box-sizing: border-box;
+            animation: rotation 1s linear infinite;
+            margin-bottom: 12px;
+        }
+        
+        .loader-small {
+            width: 20px;
+            height: 20px;
+            border: 3px solid #FFF;
+            border-bottom-color: transparent;
+            border-radius: 50%;
+            display: none;
+            box-sizing: border-box;
+            animation: rotation 1s linear infinite;
+        }
+        
+        button.primary:disabled .loader-small {
+            display: inline-block;
+        }
+
+        @keyframes rotation {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        #confirmationOverlay {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9);
+            z-index: 9998;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            text-align: center;
+            color: white;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        #confirmationOverlay.active {
+            display: flex;
+        }
+        
+        #confirmationOverlay h2 {
+            font-size: 28px;
+            margin-bottom: 20px;
+        }
+        
+        #confirmationOverlay button {
+            width: 200px;
+            margin: 10px;
+        }
+        
+        .file-input-wrapper {
+            border: 2px dashed #007aff;
+            border-radius: 12px;
+            padding: 30px;
+            text-align: center;
+            background: #f8faff;
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+        
+        .file-input-wrapper:hover {
+            background: #e6f2ff;
+        }
+        
+        .file-input-wrapper span {
+            font-size: 16px;
+            color: #007aff;
+            font-weight: 500;
+        }
+        
+        #fileName {
+            font-weight: 600;
+            color: #333;
+            margin-top: 16px;
+        }
+        
+        #inputFile, #inputImage {
+            display: none;
+        }
+
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>LightSync Transfer</h1>
-            <p>Transfer data using flashes of colored light</p>
+            <h1>PhotonSend</h1>
+            <p>Transfer data using ⚡ Turbo light speed</p>
         </div>
 
         <div class="mode-selector">
-            <button class="mode-btn active" onclick="switchMode('send')">📤 Send</button>
-            <button class="mode-btn" onclick="switchMode('receive')">📥 Receive</button>
+            <button class="mode-btn active" onclick="switchMode(event, 'send')">📤 Send</button>
+            <button class="mode-btn" onclick="switchMode(event, 'receive')">📥 Receive</button>
         </div>
 
         <div class="content">
             <div id="sendMode" class="section active">
                 <div class="input-group">
-                    <label>Data Type</label>
-                    <div class="data-type-selector">
-                        <button class="data-type-btn active" onclick="switchDataType(event, 'text')">📝 Text</button>
-                        <button class="data-type-btn" onclick="switchDataType(event, 'image')">🖼️ Image</button>
-                        <button class="data-type-btn" onclick="switchDataType(event, 'file')">📁 File</button>
+                    <label>Data Type:</label>
+                    <div class="method-selector">
+                        <button class="method-btn active" onclick="switchDataType(event, 'text')">📝 Text</button>
+                        <button class="method-btn" onclick="switchDataType(event, 'image')">🖼️ Image</button>
+                        <button class="method-btn" onclick="switchDataType(event, 'file')">📁 File</button>
                     </div>
                 </div>
 
@@ -570,180 +488,184 @@
                 </div>
 
                 <div id="imageInput" class="input-group" style="display: none;">
-                    <label>Select Image:</label>
-                    <div class="file-input-wrapper">
-                        <span>🖼️ Drag & Drop or Click</span>
-                        <input type="file" id="inputImage" accept="image/*" onchange="updateFileName('inputImage', 'fileNameImage')">
-                        <div id="fileNameImage" class="file-name"></div>
-                    </div>
+                    <label>Select Image (custom spiral transfer):</label>
+                    <label for="inputImage" class="file-input-wrapper">
+                        <span>Click to select an image</span>
+                        <div id="imageFileName"></div>
+                    </label>
+                    <input type="file" id="inputImage" accept="image/*" onchange="updateFileName('inputImage', 'imageFileName')">
                 </div>
                 
                 <div id="fileInput" class="input-group" style="display: none;">
                     <label>Select File:</label>
-                    <div class="file-input-wrapper">
-                        <span>📁 Drag & Drop or Click</span>
-                        <input type="file" id="inputFile" onchange="updateFileName('inputFile', 'fileNameFile')">
-                        <div id="fileNameFile" class="file-name"></div>
-                    </div>
+                    <label for="inputFile" class="file-input-wrapper">
+                        <span>Click to select any file</span>
+                        <div id="fileName"></div>
+                    </label>
+                    <input type="file" id="inputFile" onchange="updateFileName('inputFile', 'fileName')">
                 </div>
 
-                <button class="primary" id="startSendButton" onclick="showConfirmation()">🚀 Start Transmission</button>
+                <button id="startSendButton" class="primary" onclick="confirmTransmission()">
+                    🚀 Start Transmission
+                    <span class="loader-small"></span>
+                </button>
+
+                <div id="sendStats" class="stats" style="display: none;">
+                    <div class="stat-item">
+                        <div class="stat-label">Size</div>
+                        <div class="stat-value" id="dataSize">0 bytes</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Progress</div>
+                        <div class="stat-value" id="progress">0%</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Packets</div>
+                        <div class="stat-value" id="packetProgress">0 / 0</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Time Left</div>
+                        <div class="stat-value" id="timeRemaining">--</div>
+                    </div>
+                </div>
             </div>
 
             <div id="receiveMode" class="section">
                 <div class="info-box">
                     <strong>📱 Setup Instructions:</strong>
-                    1. Place your camera against the LEFT edge of the flashing screen<br>
-                    2. Keep devices stable during transfer<br>
-                    3. Press "Start Receiving"
+                    1. Aim your camera at the center of the flashing screen.<br>
+                    2. Press "Start Receiving" and wait for the "SYNC" signal.<br>
+                    3. Keep devices stable during transfer.
                 </div>
 
-                <button class="primary" id="startReceiveBtn" onclick="startColorReceive()">📹 Start Receiving</button>
-                <button class="danger" id="stopReceiveBtn" onclick="stopReceiving()" style="display: none;">⏹️ Stop</button>
-                
-                <div id="cameraFeed">
-                    <video id="cameraView" autoplay playsinline muted></video>
-                    <div id="scanOverlay">
-                        <span id="scanStatusText" class="status-text">Scanning for signal...</span>
+                <div id="colorReceive">
+                    <button class="primary" id="startReceiveBtn" onclick="startColorReceive()">📹 Start Receiving</button>
+                    <button class="danger" id="stopReceiveBtn" onclick="stopReceiving()" style="display: none;">⏹️ Stop</button>
+                    
+                    <div id="receiveLayout" style="display: none; flex-direction: column; gap: 20px; margin-top: 20px;">
+                        <video id="cameraView" autoplay playsinline muted></video>
+                        
+                        <div id="receivedArea" style="width: 100%;">
+                             <div id="receiveStats" class="stats">
+                                <div class="stat-item">
+                                    <div class="stat-label">Status</div>
+                                    <div class="stat-value" id="receiveStatus" style="font-size: 18px;">Idle</div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-label">Packets</div>
+                                    <div class="stat-value" id="receivedPackets">0 / 0</div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-label">Received</div>
+                                    <div class="stat-value" id="receivedBits">0 bits</div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-label">Checksum</div>
+                                    <div class="stat-value" id="checksumStatus" style="font-size: 18px;">--</div>
+                                </div>
+                            </div>
+                            
+                            <div id="receivedPreview">
+                                <div class="stat-label">📊 Live Received Data:</div>
+                                <div id="receivedText">Awaiting transmission...</div>
+                                <canvas id="receivedImageCanvas"></canvas>
+                                <a id="downloadButton" href="#" download class="primary">📥 Download File</a>
+                            </div>
+                        </div>
                     </div>
-                </div>
-                
-                <div id="receiveStatus" style="display: none;">
-                    <div id="statusLabel" class="status-label">Receiving data...</div>
-                    <progress id="receiveProgress" value="0" max="100"></progress>
-                </div>
-                
-                <div id="receiveResult">
-                    <span style="color: var(--text-muted)">Waiting for data...</span>
-                    <div id="receivedText"></div>
-                    <canvas id="receivedImageCanvas"></canvas>
                 </div>
             </div>
         </div>
     </div>
 
-    <div id="overlay"></div>
-    
-    <div id="confirmModal">
-        <h2>🚀 Ready to Send?</h2>
-        <p>This will black out your screen and begin the transfer. Please point the receiver's camera at the **left edge** of this screen.</p>
-        <div class="modal-buttons">
-            <button class="secondary" onclick="hideConfirmation()">Cancel</button>
-            <button class="primary" onclick="startTransmission()">Confirm & Send</button>
+    <div id="confirmationOverlay">
+        <div style="animation: slideIn 0.5s ease-out;">
+            <h2>Ready to Send?</h2>
+            <p style="margin-bottom: 30px; font-size: 16px; opacity: 0.8;">The screen will flash colors.<br>Ensure the receiver is ready.</p>
+            <button class="primary" onclick="startTransmission()">✅ Yes, Start Now</button>
+            <button class="danger" onclick="cancelTransmission()">❌ Cancel</button>
         </div>
     </div>
 
     <div id="flashScreen">
-        <div class="flash-info" id="flashInfo">Preparing...</div>
+        <div class="flash-info" id="flashInfo">
+            <div id="flashLoader" class="loader"></div>
+            <span id="flashInfoText">Preparing transmission...</span>
+        </div>
     </div>
 
     <script>
-        // --- Constants ---
-        const TRANSFER_SPEED_MS = 200;
-        const IS_TURBO = true; // Hardcoded
-        
-        // Turbo colors: 2 bits per symbol
-        const COLORS = {
-            '00': '#ff0000', // Red
-            '01': '#00ff00', // Green
-            '10': '#0000ff', // Blue
-            '11': '#ffff00', // Yellow
-        };
-        const COLOR_WHITE = '#ffffff';
-
-        // Protocol sequences (must be 2-bit aligned for turbo)
-        const HANDSHAKE_START = [0,1, 0,1, 0,1, 1,0, 1,0, 1,0]; // Green x3, Blue x3
-        const HANDSHAKE_END =   [1,1, 0,0, 1,1, 0,0, 1,1, 0,0]; // Yellow x3, Red x3
-
-        // --- Global State ---
+        // ===================================================================
+        // G L O B A L S
+        // ===================================================================
         let currentMode = 'send';
         let currentDataType = 'text';
         let transmissionActive = false;
         let receivingActive = false;
+        
         let bitStream = [];
         let currentBitIndex = 0;
         let receivedBits = [];
         let startTime = 0;
         
         let videoStream = null;
-        let receiveState = 'IDLE'; // IDLE, RECEIVING, COMPLETE
-        let liveDataBuffer = {
-            type: null,
-            headerParsed: false,
-            headerString: '',
-            payloadBytes: new Uint8Array(),
-            meta: {},
-            pixelsDrawn: 0,
-            spiralGen: null,
-        };
-
-        // --- UI Functions ---
-
-        function switchMode(mode) {
-            currentMode = mode;
-            document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
-            document.querySelector(`.mode-btn[onclick="switchMode('${mode}')"]`).classList.add('active');
-            
-            document.getElementById('sendMode').classList.toggle('active', mode === 'send');
-            document.getElementById('receiveMode').classList.toggle('active', mode === 'receive');
-            
-            if (mode === 'receive' && receivingActive) {
-                stopReceiving();
-            }
-            if (mode === 'send' && transmissionActive) {
-                // Should not happen, but as a fallback
-                transmissionActive = false;
-                document.getElementById('flashScreen').classList.remove('active');
-            }
-        }
-
-        function switchDataType(event, type) {
-            currentDataType = type;
-            document.querySelectorAll('.data-type-btn').forEach(btn => btn.classList.remove('active'));
-            event.currentTarget.classList.add('active');
-
-            document.getElementById('textInput').style.display = type === 'text' ? 'block' : 'none';
-            document.getElementById('imageInput').style.display = type === 'image' ? 'block' : 'none';
-            document.getElementById('fileInput').style.display = type === 'file' ? 'block' : 'none';
-        }
+        let captureFrameId = null;
+        let receiverState = 'IDLE'; // IDLE, WAITING_FOR_SYNC, RECEIVING, PROCESSING
+        let receivedColors = [];
+        let lastColorChangeTime = 0;
+        let lastDetectedColor = 'white';
+        let fullDataPayload = null;
         
-        function updateFileName(inputId, labelId) {
-            const file = document.getElementById(inputId).files[0];
-            if (file) {
-                document.getElementById(labelId).textContent = file.name;
-            }
-        }
-
-        function showConfirmation() {
-            document.getElementById('overlay').classList.add('active');
-            document.getElementById('confirmModal').classList.add('active');
-        }
+        // ===================================================================
+        // C O N S T A N T S
+        // ===================================================================
+        const SYMBOL_MS = 200; // Hard-coded speed: 200ms
+        const PACKET_SIZE = 512; // 512 bytes per packet
         
-        function hideConfirmation() {
-            document.getElementById('overlay').classList.remove('active');
-            document.getElementById('confirmModal').classList.remove('active');
+        // Turbo Mode Colors (Hard-coded)
+        const COLOR_00 = '#ff0000'; // Red
+        const COLOR_01 = '#00ff00'; // Green
+        const COLOR_10 = '#0000ff'; // Blue
+        const COLOR_11 = '#ffff00'; // Yellow
+        const COLOR_WHITE = '#ffffff';
+        
+        const START_SEQ = [COLOR_00, COLOR_01, COLOR_10, COLOR_11]; // R, G, B, Y
+        const END_SEQ = [COLOR_11, COLOR_10, COLOR_01, COLOR_00]; // Y, B, G, R
+        
+        // ===================================================================
+        // C R C 3 2   C H E C K S U M
+        // ===================================================================
+        const crc32Table = (function() {
+            let table = new Uint32Array(256);
+            for(let i = 0; i < 256; i++) {
+                let c = i;
+                for(let k = 0; k < 8; k++) {
+                    c = ((c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1));
+                }
+                table[i] = c;
+            }
+            return table;
+        })();
+        
+        function crc32(bytes) {
+            let crc = 0xFFFFFFFF;
+            for(let i = 0; i < bytes.length; i++) {
+                crc = (crc >>> 8) ^ crc32Table[(crc ^ bytes[i]) & 0xFF];
+            }
+            return (crc ^ 0xFFFFFFFF) >>> 0;
         }
 
-        // --- Data Conversion Utilities ---
-
+        // ===================================================================
+        // D A T A   H A N D L I N G   ( B Y T E S / B I T S )
+        // ===================================================================
         function stringToBytes(str) {
-            // Use 2 bytes per char to support Unicode
-            const bytes = [];
-            for (let i = 0; i < str.length; i++) {
-                const charCode = str.charCodeAt(i);
-                bytes.push((charCode >> 8) & 0xFF);
-                bytes.push(charCode & 0xFF);
-            }
-            return new Uint8Array(bytes);
+            // Use TextEncoder for UTF-8 support
+            return new TextEncoder().encode(str);
         }
 
         function bytesToString(bytes) {
-            let str = '';
-            for (let i = 0; i < bytes.length; i += 2) {
-                let charCode = (bytes[i] << 8) | (bytes[i + 1] || 0);
-                str += String.fromCharCode(charCode);
-            }
-            return str;
+            // Use TextDecoder for UTF-8 support
+            return new TextDecoder().decode(bytes);
         }
 
         function bytesToBits(bytes) {
@@ -758,65 +680,77 @@
         }
 
         function bitsToBytes(bits) {
-            const bytes = [];
+            const bytes = new Uint8Array(Math.ceil(bits.length / 8));
+            let byteIndex = 0;
             for (let i = 0; i < bits.length; i += 8) {
-                if(i + 7 > bits.length) break; // Only process full bytes
                 let byte = 0;
                 for (let j = 0; j < 8; j++) {
-                    byte = (byte << 1) | bits[i + j];
-                }
-                bytes.push(byte);
-            }
-            return new Uint8Array(bytes);
-        }
-        
-        // --- Spiral Image Utilities ---
-
-        function* spiralGenerator(width, height) {
-            let x = Math.floor(width / 2);
-            let y = Math.floor(height / 2);
-            let dx = 0;
-            let dy = -1;
-            let segmentLength = 1;
-            let segmentPassed = 0;
-            
-            for (let i = 0; i < width * height; i++) {
-                if (x >= 0 && x < width && y >= 0 && y < height) {
-                    yield { x, y };
-                }
-                
-                x += dx;
-                y += dy;
-                segmentPassed++;
-                
-                if (segmentPassed === segmentLength) {
-                    segmentPassed = 0;
-                    [dx, dy] = [-dy, dx]; // Turn 90 degrees
-                    if (dy === 0) {
-                        segmentLength++;
+                    if (i + j < bits.length) {
+                        byte = (byte << 1) | bits[i + j];
+                    } else {
+                        byte = byte << 1; // Pad with 0 if not enough bits
                     }
                 }
+                bytes[byteIndex++] = byte;
+            }
+            return bytes;
+        }
+        
+        // Helper to convert number to a 4-byte array (for headers)
+        function numToBytes(num) {
+            return [
+                (num >> 24) & 0xFF,
+                (num >> 16) & 0xFF,
+                (num >> 8) & 0xFF,
+                num & 0xFF
+            ];
+        }
+        
+        // Helper to convert 4-byte array to number
+        function bytesToNum(bytes) {
+            return (bytes[0] << 24) | (bytes[1] << 16) | (bytes[2] << 8) | bytes[3];
+        }
+        
+        // Helper to convert 2-byte array to number
+        function bytesToNum16(bytes) {
+            return (bytes[0] << 8) | bytes[1];
+        }
+
+        // ===================================================================
+        // S E N D E R   L O G I C
+        // ===================================================================
+
+        function switchMode(event, mode) {
+            currentMode = mode;
+            document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+            
+            document.getElementById('sendMode').classList.toggle('active', mode === 'send');
+            document.getElementById('receiveMode').classList.toggle('active', mode === 'receive');
+            if (mode === 'receive') {
+                stopReceiving(); // Stop any active receiving
+            } else {
+                stopReceiving(); // Also stop if switching away from receive
+            }
+        }
+
+        function switchDataType(event, type) {
+            currentDataType = type;
+            document.querySelectorAll('.method-btn').forEach(btn => btn.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+
+            document.getElementById('textInput').style.display = type === 'text' ? 'block' : 'none';
+            document.getElementById('imageInput').style.display = type === 'image' ? 'block' : 'none';
+            document.getElementById('fileInput').style.display = type === 'file' ? 'block' : 'none';
+        }
+        
+        function updateFileName(inputId, elemId) {
+            const file = document.getElementById(inputId).files[0];
+            if (file) {
+                document.getElementById(elemId).textContent = file.name;
             }
         }
         
-        function getSpiralPixelData(imgData) {
-            const { width, height, data } = imgData;
-            const spiralPixels = new Uint8Array(width * height * 3);
-            const spiralGen = spiralGenerator(width, height);
-            
-            for (let i = 0; i < width * height; i++) {
-                const { x, y } = spiralGen.next().value;
-                const dataIndex = (y * width + x) * 4;
-                
-                spiralPixels[i * 3]     = data[dataIndex];
-                spiralPixels[i * 3 + 1] = data[dataIndex + 1];
-                spiralPixels[i * 3 + 2] = data[dataIndex + 2];
-            }
-            return spiralPixels;
-        }
-
-        // --- Send Logic ---
-
         function loadImage(file) {
             return new Promise((resolve, reject) => {
                 const img = new Image();
@@ -826,222 +760,313 @@
             });
         }
         
-        function readFileAsArrayBuffer(file) {
-            return new Promise((resolve, reject) => {
+        async function fileToBytes(file) {
+             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
-                reader.onload = () => resolve(reader.result);
+                reader.onload = () => resolve(new Uint8Array(reader.result));
                 reader.onerror = reject;
                 reader.readAsArrayBuffer(file);
-            });
+             });
         }
 
         async function prepareData() {
-            let header = '';
-            let payloadBytes = new Uint8Array();
-            let dataDescription = '';
+            let header, payloadBytes;
 
-            if (currentDataType === 'text') {
-                const text = document.getElementById('inputText').value;
-                if (!text) {
-                    alert('Please enter some text');
-                    return null;
-                }
-                header = `T::`; // Type::
-                payloadBytes = stringToBytes(text);
-                dataDescription = `${payloadBytes.length} bytes of text`;
-                
-            } else if (currentDataType === 'image') {
-                const file = document.getElementById('inputImage').files[0];
-                if (!file) {
-                    alert('Please select an image');
-                    return null;
-                }
-
-                const img = await loadImage(file);
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
-                
-                // Resize image to a max dimension for faster transfer
-                const MAX_DIM = 128;
-                let targetWidth = img.width;
-                let targetHeight = img.height;
-                if (targetWidth > MAX_DIM || targetHeight > MAX_DIM) {
-                    if (targetWidth > targetHeight) {
-                        targetHeight = Math.round(targetHeight * (MAX_DIM / targetWidth));
-                        targetWidth = MAX_DIM;
-                    } else {
-                        targetWidth = Math.round(targetWidth * (MAX_DIM / targetHeight));
-                        targetHeight = MAX_DIM;
+            try {
+                if (currentDataType === 'text') {
+                    const text = document.getElementById('inputText').value;
+                    if (!text) throw new Error('Please enter some text');
+                    header = { type: 'text' };
+                    payloadBytes = stringToBytes(text);
+                } 
+                else if (currentDataType === 'image') {
+                    const file = document.getElementById('inputImage').files[0];
+                    if (!file) throw new Error('Please select an image');
+                    
+                    const img = await loadImage(file);
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    
+                    // For spiral, send raw pixels. Let's use a fixed reasonable size for demo.
+                    // Or, let's just use its natural size, up to a limit.
+                    let targetWidth = img.width;
+                    let targetHeight = img.height;
+                    const maxSize = 128; // Limit size for faster transfer
+                    
+                    if (targetWidth > maxSize || targetHeight > maxSize) {
+                        if (targetWidth > targetHeight) {
+                            targetHeight = Math.round(maxSize * (targetHeight / targetWidth));
+                            targetWidth = maxSize;
+                        } else {
+                            targetWidth = Math.round(maxSize * (targetWidth / targetHeight));
+                            targetHeight = maxSize;
+                        }
                     }
-                }
-                
-                canvas.width = targetWidth;
-                canvas.height = targetHeight;
-                ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
-                
-                const imgData = ctx.getImageData(0, 0, targetWidth, targetHeight);
-                
-                // Re-order pixels into a spiral
-                payloadBytes = getSpiralPixelData(imgData);
 
-                header = `I:${targetWidth}:${targetHeight}:${file.name || 'image.png'}::`; // Type:Width:Height:Filename::
-                dataDescription = `${targetWidth}x${targetHeight} image`;
-
-            } else if (currentDataType === 'file') {
-                const file = document.getElementById('inputFile').files[0];
-                if (!file) {
-                    alert('Please select a file');
-                    return null;
+                    canvas.width = targetWidth;
+                    canvas.height = targetHeight;
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    
+                    const imageData = ctx.getImageData(0, 0, targetWidth, targetHeight).data;
+                    const rgbArray = [];
+                    for (let i = 0; i < imageData.length; i += 4) {
+                        rgbArray.push(imageData[i]);   // R
+                        rgbArray.push(imageData[i + 1]); // G
+                        rgbArray.push(imageData[i + 2]); // B
+                    }
+                    
+                    header = { type: 'image', width: targetWidth, height: targetHeight };
+                    payloadBytes = new Uint8Array(rgbArray);
                 }
-                const arrayBuffer = await readFileAsArrayBuffer(file);
-                payloadBytes = new Uint8Array(arrayBuffer);
-                header = `F:${file.name}:${payloadBytes.length}::`; // Type:Filename:Size::
-                dataDescription = `${file.name} (${payloadBytes.length} bytes)`;
+                else { // 'file'
+                    const file = document.getElementById('inputFile').files[0];
+                    if (!file) throw new Error('Please select a file');
+                    header = { type: 'file', name: file.name, mime: file.type || 'application/octet-stream' };
+                    payloadBytes = await fileToBytes(file);
+                }
+            } catch (err) {
+                alert(err.message);
+                return null;
             }
 
-            const headerBytes = stringToBytes(header);
-            const combinedBytes = new Uint8Array(headerBytes.length + payloadBytes.length);
-            combinedBytes.set(headerBytes, 0);
-            combinedBytes.set(payloadBytes, headerBytes.length);
+            // --- New Production Pipeline ---
+            
+            // 1. Create header string
+            const headerString = JSON.stringify(header);
+            const headerBytes = stringToBytes(headerString);
+            
+            // 2. Compress payload
+            const compressedPayload = pako.deflate(payloadBytes);
+            
+            // 3. Combine: [header_length (2 bytes)] + [header_data] + [compressed_payload]
+            const fullData = new Uint8Array(2 + headerBytes.length + compressedPayload.length);
+            fullData[0] = (headerBytes.length >> 8) & 0xFF; // Header length high byte
+            fullData[1] = headerBytes.length & 0xFF;        // Header length low byte
+            fullData.set(headerBytes, 2);
+            fullData.set(compressedPayload, 2 + headerBytes.length);
+            
+            // 4. Calculate Checksum
+            const checksum = crc32(fullData);
+            
+            // 5. Packetize
+            const totalPackets = Math.ceil(fullData.length / PACKET_SIZE);
+            const allPackets = [];
+            
+            // 5a. Main Header Packet
+            const mainHeader = {
+                totalBytes: fullData.length,
+                totalPackets: totalPackets,
+                checksum: checksum
+            };
+            const mainHeaderString = JSON.stringify(mainHeader);
+            const mainHeaderBytes = stringToBytes(mainHeaderString);
+            // Add a "packet header" to the main header packet itself
+            // [Packet Index (2 bytes, 0=main)] + [Data Length (2 bytes)] + [Data]
+            const mainHeaderPacket = new Uint8Array(4 + mainHeaderBytes.length);
+            mainHeaderPacket[0] = 0; // Packet 0
+            mainHeaderPacket[1] = 0; // Packet 0
+            mainHeaderPacket[2] = (mainHeaderBytes.length >> 8) & 0xFF; // Length
+            mainHeaderPacket[3] = mainHeaderBytes.length & 0xFF;        // Length
+            mainHeaderPacket.set(mainHeaderBytes, 4);
+            allPackets.push(mainHeaderPacket);
 
-            const dataBits = bytesToBits(combinedBytes);
-            bitStream = [...HANDSHAKE_START, ...dataBits, ...HANDSHAKE_END];
-            return dataDescription;
+            // 5b. Data Packets
+            for (let i = 0; i < totalPackets; i++) {
+                const chunk = fullData.slice(i * PACKET_SIZE, (i + 1) * PACKET_SIZE);
+                const packetIndex = i + 1; // 1-based index for data packets
+                
+                // [Packet Index (2 bytes)] + [Data Length (2 bytes)] + [Data]
+                const packet = new Uint8Array(4 + chunk.length);
+                packet[0] = (packetIndex >> 8) & 0xFF;
+                packet[1] = packetIndex & 0xFF;
+                packet[2] = (chunk.length >> 8) & 0xFF;
+                packet[3] = chunk.length & 0xFF;
+                packet.set(chunk, 4);
+                allPackets.push(packet);
+            }
+            
+            // 6. Concatenate all packets into one giant byte array
+            const totalLength = allPackets.reduce((sum, p) => sum + p.length, 0);
+            const finalByteArray = new Uint8Array(totalLength);
+            let offset = 0;
+            for (const packet of allPackets) {
+                finalByteArray.set(packet, offset);
+                offset += packet.length;
+            }
+            
+            // 7. Convert to bitstream
+            bitStream = bytesToBits(finalByteArray);
+            
+            document.getElementById('dataSize').textContent = `${fullData.length} bytes`;
+            document.getElementById('packetProgress').textContent = `0 / ${totalPackets}`;
+            
+            return { totalPackets, fullDataLength: fullData.length };
         }
 
-        async function startTransmission() {
+        async function confirmTransmission() {
+            document.getElementById('startSendButton').disabled = true;
+            document.getElementById('startSendButton').querySelector('.loader-small').style.display = 'inline-block';
+            
+            const prepResult = await prepareData();
+            
+            document.getElementById('startSendButton').disabled = false;
+            document.getElementById('startSendButton').querySelector('.loader-small').style.display = 'none';
+
+            if (!prepResult) return; // Error handled in prepareData
+            
+            document.getElementById('confirmationOverlay').classList.add('active');
+        }
+        
+        function cancelTransmission() {
+            document.getElementById('confirmationOverlay').classList.remove('active');
+        }
+
+        function startTransmission() {
             if (transmissionActive) return;
             
-            hideConfirmation();
-            const dataDescription = await prepareData();
-            if (!dataDescription) return;
-
+            document.getElementById('confirmationOverlay').classList.remove('active');
+            
             transmissionActive = true;
             currentBitIndex = 0;
             startTime = Date.now();
             
-            document.getElementById('startSendButton').disabled = true;
-
-            startColorTransmission(dataDescription);
-        }
-
-        function startColorTransmission(dataDescription) {
             const flashScreen = document.getElementById('flashScreen');
-            const flashInfo = document.getElementById('flashInfo');
+            const flashInfoText = document.getElementById('flashInfoText');
+            const flashLoader = document.getElementById('flashLoader');
             flashScreen.classList.add('active');
-            
-            const totalBits = bitStream.length;
-            const handshakeBits = HANDSHAKE_START.length;
-            const endBits = HANDSHAKE_END.length;
-            const dataBits = totalBits - handshakeBits - endBits;
+            flashLoader.style.display = 'block';
+            flashInfoText.textContent = 'Starting handshake...';
 
-            function transmitNextSymbol() {
-                if (!transmissionActive || currentBitIndex >= totalBits) {
-                    flashScreen.style.backgroundColor = COLORS['01']; // Green for success
-                    flashInfo.textContent = '✅ Transmission Complete!';
+            document.getElementById('sendStats').style.display = 'grid';
+
+            // --- TRANSMISSION LOOP ---
+            let symbolIndex = 0;
+            
+            function transmitNext() {
+                if (!transmissionActive) {
+                    flashScreen.style.backgroundColor = COLOR_WHITE;
+                    flashScreen.classList.remove('active');
+                    return;
+                }
+                
+                let color;
+                let isData = false;
+                
+                // 1. Start Sequence
+                if (symbolIndex < START_SEQ.length) {
+                    color = START_SEQ[symbolIndex];
+                    flashInfoText.textContent = `Sending SYNC (${symbolIndex + 1}/${START_SEQ.length})`;
+                }
+                // 2. Data
+                else if (currentBitIndex < bitStream.length) {
+                    flashLoader.style.display = 'none';
+                    isData = true;
+                    
+                    const bit1 = bitStream[currentBitIndex];
+                    const bit2 = (currentBitIndex + 1 < bitStream.length) ? bitStream[currentBitIndex + 1] : 0; // Pad last bit
+                    
+                    if (bit1 === 0 && bit2 === 0) color = COLOR_00;
+                    else if (bit1 === 0 && bit2 === 1) color = COLOR_01;
+                    else if (bit1 === 1 && bit2 === 0) color = COLOR_10;
+                    else color = COLOR_11;
+                    
+                    currentBitIndex += 2; // Always advance by 2 (turbo mode)
+                }
+                // 3. End Sequence
+                else if (symbolIndex < START_SEQ.length + 1 + END_SEQ.length) { // +1 for the extra "data" symbol
+                    const endSeqIndex = symbolIndex - START_SEQ.length - 1;
+                    color = END_SEQ[endSeqIndex];
+                    flashInfoText.textContent = `Sending END (${endSeqIndex + 1}/${END_SEQ.length})`;
+                }
+                // 4. Done
+                else {
+                    flashScreen.style.backgroundColor = COLOR_01; // Green for success
+                    flashInfoText.textContent = '✅ Transmission Complete!';
                     setTimeout(() => {
                         flashScreen.classList.remove('active');
                         transmissionActive = false;
-                        document.getElementById('startSendButton').disabled = false;
                     }, 2000);
                     return;
                 }
-
-                let color;
-                let bitsToSend = 2; // Hardcoded for Turbo
-                const bit1 = bitStream[currentBitIndex];
-                const bit2 = bitStream[currentBitIndex + 1];
                 
-                if (bit1 === 0 && bit2 === 0) color = COLORS['00'];
-                else if (bit1 === 0 && bit2 === 1) color = COLORS['01'];
-                else if (bit1 === 1 && bit2 === 0) color = COLORS['10'];
-                else color = COLORS['11'];
-
+                // Flash the color
                 flashScreen.style.backgroundColor = color;
                 
-                // Update Progress
-                let progress = 0;
-                let statusText = '';
-
-                if (currentBitIndex < handshakeBits) {
-                    statusText = 'Sending Handshake...';
-                    progress = 0;
-                } else if (currentBitIndex >= totalBits - endBits) {
-                    statusText = 'Finalizing...';
-                    progress = 100;
-                } else {
-                    const currentDataBit = currentBitIndex - handshakeBits;
-                    progress = ((currentDataBit / dataBits) * 100).toFixed(1);
-                    statusText = `Sending: ${progress}%`;
+                // Update stats if in data phase
+                if (isData) {
+                    const progress = ((currentBitIndex / bitStream.length) * 100);
+                    document.getElementById('progress').textContent = progress.toFixed(1) + '%';
+                    
+                    const elapsed = Date.now() - startTime;
+                    const bitsPerMs = currentBitIndex / elapsed;
+                    const remaining = bitsPerMs > 0 ? (bitStream.length - currentBitIndex) / bitsPerMs : 0;
+                    document.getElementById('timeRemaining').textContent = Math.ceil(remaining / 1000) + 's';
+                    
+                    flashInfoText.textContent = `Symbol ${symbolIndex - START_SEQ.length} - ${progress.toFixed(1)}%`;
                 }
                 
-                flashInfo.textContent = statusText;
+                symbolIndex++;
 
-                currentBitIndex += bitsToSend;
-
-                // White separator flash
+                // Schedule the "white" separator flash
                 setTimeout(() => {
-                    if (!transmissionActive) return;
                     flashScreen.style.backgroundColor = COLOR_WHITE;
-                    setTimeout(transmitNextSymbol, TRANSFER_SPEED_MS / 2);
-                }, TRANSFER_SPEED_MS / 2);
+                    // Schedule the next color
+                    setTimeout(transmitNext, SYMBOL_MS / 2);
+                }, SYMBOL_MS / 2);
             }
 
-            flashInfo.textContent = `Starting: ${dataDescription}`;
-            setTimeout(transmitNextSymbol, 1000); // Initial delay
+            transmitNext();
         }
 
-        // --- Receive Logic ---
+        // ===================================================================
+        // R E C E I V E R   L O G I C
+        // ===================================================================
 
         async function startColorReceive() {
             if (receivingActive) return;
 
             const video = document.getElementById('cameraView');
-            const cameraFeed = document.getElementById('cameraFeed');
-            const startBtn = document.getElementById('startReceiveBtn');
-            const stopBtn = document.getElementById('stopReceiveBtn');
+            document.getElementById('startReceiveBtn').style.display = 'none';
+            document.getElementById('stopReceiveBtn').style.display = 'block';
+            document.getElementById('receiveLayout').style.display = 'flex';
             
             try {
+                if (videoStream) {
+                    videoStream.getTracks().forEach(track => track.stop());
+                }
+
                 videoStream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { facingMode: 'environment', width: 640, height: 480 } 
+                    video: { facingMode: 'environment' } 
                 });
                 video.srcObject = videoStream;
                 video.onloadedmetadata = () => video.play();
                 
-                cameraFeed.style.display = 'block';
-                startBtn.style.display = 'none';
-                stopBtn.style.display = 'block';
-                document.getElementById('receiveStatus').style.display = 'none';
-                document.getElementById('receiveResult').innerHTML = '<span style="color: var(--text-muted)">Waiting for data...</span><div id="receivedText"></div><canvas id="receivedImageCanvas"></canvas>';
-                
                 receivingActive = true;
-                receivedBits = [];
-                receiveState = 'IDLE';
-                resetLiveDataBuffer();
+                resetReceiverState();
                 
                 const canvas = document.createElement('canvas');
                 const ctx = canvas.getContext('2d', { willReadFrequently: true });
-                let waitingForSeparator = false;
                 
                 function captureFrame() {
                     if (!receivingActive) return;
 
                     if (video.readyState < video.HAVE_METADATA) {
-                        requestAnimationFrame(captureFrame);
+                        captureFrameId = requestAnimationFrame(captureFrame);
                         return;
                     }
 
-                    canvas.width = video.videoWidth;
-                    canvas.height = video.videoHeight;
-                    // Sample from the *left edge* of the camera feed
-                    const sampleWidth = Math.min(100, canvas.width / 3);
-                    const sampleHeight = 100;
-                    const sampleX = 10; // Small offset from the very edge
-                    const sampleY = canvas.height / 2 - sampleHeight / 2;
-
-                    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                    if (canvas.width !== video.videoWidth) {
+                        canvas.width = video.videoWidth;
+                        canvas.height = video.videoHeight;
+                    }
                     
-                    const imageData = ctx.getImageData(sampleX, sampleY, sampleWidth, sampleHeight).data;
+                    // Sample a 50x50 area from the center
+                    const sampleSize = 50;
+                    const sx = (canvas.width / 2) - (sampleSize / 2);
+                    const sy = (canvas.height / 2) - (sampleSize / 2);
+                    
+                    ctx.drawImage(video, sx, sy, sampleSize, sampleSize, 0, 0, sampleSize, sampleSize);
+                    const imageData = ctx.getImageData(0, 0, sampleSize, sampleSize).data;
                     
                     let r = 0, g = 0, b = 0;
                     const pixelCount = imageData.length / 4;
@@ -1054,32 +1079,30 @@
                     g /= pixelCount;
                     b /= pixelCount;
 
-                    // Detect white (separator)
-                    if (r > 180 && g > 180 && b > 180) {
-                        waitingForSeparator = false;
-                    } else if (!waitingForSeparator) {
-                        // Not white, try to detect a color
-                        let bits = null;
-                        
-                        // Red = 00
-                        if (r > 120 && g < 100 && b < 100) bits = [0, 0];
-                        // Green = 01
-                        else if (g > 120 && r < 100 && b < 100) bits = [0, 1];
-                        // Blue = 10
-                        else if (b > 120 && r < 100 && g < 100) bits = [1, 0];
-                        // Yellow = 11
-                        else if (r > 120 && g > 120 && b < 100) bits = [1, 1];
-
-                        if (bits) {
-                            waitingForSeparator = true;
-                            processReceivedBits(bits);
+                    // --- Color Detection ---
+                    let detectedColor = 'unknown';
+                    
+                    if (r > 180 && g > 180 && b > 180) detectedColor = COLOR_WHITE;
+                    else if (r > 150 && g > 150 && b < 100) detectedColor = COLOR_11; // Yellow
+                    else if (g > 150 && r < 100 && b < 100) detectedColor = COLOR_01; // Green
+                    else if (r > 150 && g < 100 && b < 100) detectedColor = COLOR_00; // Red
+                    else if (b > 150 && r < 100 && g < 100) detectedColor = COLOR_10; // Blue
+                    
+                    // --- State Machine ---
+                    const now = Date.now();
+                    if (detectedColor !== lastDetectedColor && detectedColor !== 'unknown') {
+                        // Only register a new color if it's not white and it's different
+                        if (detectedColor !== COLOR_WHITE) {
+                            processDetectedColor(detectedColor);
                         }
+                        lastDetectedColor = detectedColor;
+                        lastColorChangeTime = now;
                     }
 
-                    requestAnimationFrame(captureFrame);
+                    captureFrameId = requestAnimationFrame(captureFrame);
                 }
 
-                requestAnimationFrame(captureFrame);
+                captureFrame();
                 
             } catch (err) {
                 alert('Camera access denied: ' + err.message);
@@ -1087,244 +1110,264 @@
             }
         }
         
-        function stopReceiving() {
+        function processDetectedColor(color) {
+            receivedColors.push(color);
+            if (receivedColors.length > 4) receivedColors.shift(); // Keep only last 4
+            
+            if (receiverState === 'WAITING_FOR_SYNC') {
+                if (arrayEquals(receivedColors, START_SEQ)) {
+                    console.log('START SYNC DETECTED!');
+                    receiverState = 'RECEIVING';
+                    receivedBits = [];
+                    document.getElementById('receiveStatus').textContent = 'Receiving...';
+                    document.getElementById('receivedText').textContent = '';
+                }
+            }
+            else if (receiverState === 'RECEIVING') {
+                if (arrayEquals(receivedColors, END_SEQ)) {
+                    console.log('END SYNC DETECTED!');
+                    receiverState = 'PROCESSING';
+                    document.getElementById('receiveStatus').textContent = 'Processing...';
+                    stopReceiving(true); // Stop camera, but keep processing
+                    processReceivedData();
+                    return; // Don't add data bits
+                }
+                
+                // Add data bits
+                if (color === COLOR_00) receivedBits.push(0, 0);
+                else if (color === COLOR_01) receivedBits.push(0, 1);
+                else if (color === COLOR_10) receivedBits.push(1, 0);
+                else if (color === COLOR_11) receivedBits.push(1, 1);
+                
+                document.getElementById('receivedBits').textContent = `${receivedBits.length} bits`;
+            }
+        }
+        
+        async function processReceivedData() {
+            try {
+                const receivedBytes = bitsToBytes(receivedBits);
+                
+                // --- Depacketize ---
+                let offset = 0;
+                
+                // 1. Read Main Header Packet
+                const mainHeaderIndex = bytesToNum16([receivedBytes[offset], receivedBytes[offset+1]]);
+                const mainHeaderLength = bytesToNum16([receivedBytes[offset+2], receivedBytes[offset+3]]);
+                offset += 4;
+                
+                if (mainHeaderIndex !== 0) throw new Error('Invalid header packet');
+                
+                const mainHeaderBytes = receivedBytes.slice(offset, offset + mainHeaderLength);
+                const mainHeader = JSON.parse(bytesToString(mainHeaderBytes));
+                offset += mainHeaderLength;
+                
+                const { totalBytes, totalPackets, checksum: expectedChecksum } = mainHeader;
+                
+                document.getElementById('receivedPackets').textContent = `0 / ${totalPackets}`;
+                document.getElementById('checksumStatus').textContent = 'Verifying...';
+                
+                // 2. Reassemble Data
+                fullDataPayload = new Uint8Array(totalBytes);
+                let receivedPacketCount = 0;
+                
+                while (offset < receivedBytes.length && receivedPacketCount < totalPackets) {
+                    if (offset + 4 > receivedBytes.length) break; // Not enough data for packet header
+                    
+                    const packetIndex = bytesToNum16([receivedBytes[offset], receivedBytes[offset+1]]);
+                    const packetLength = bytesToNum16([receivedBytes[offset+2], receivedBytes[offset+3]]);
+                    offset += 4;
+                    
+                    if (offset + packetLength > receivedBytes.length) break; // Incomplete packet
+                    
+                    const chunk = receivedBytes.slice(offset, offset + packetLength);
+                    offset += packetLength;
+                    
+                    const dataOffset = (packetIndex - 1) * PACKET_SIZE;
+                    fullDataPayload.set(chunk, dataOffset);
+                    
+                    receivedPacketCount++;
+                    document.getElementById('receivedPackets').textContent = `${receivedPacketCount} / ${totalPackets}`;
+                }
+                
+                if (receivedPacketCount !== totalPackets) {
+                    throw new Error(`Packet loss! Got ${receivedPacketCount}/${totalPackets}`);
+                }
+                
+                // 3. Verify Checksum
+                const calculatedChecksum = crc32(fullDataPayload);
+                
+                if (calculatedChecksum !== expectedChecksum) {
+                    document.getElementById('checksumStatus').classList.add('fail');
+                    document.getElementById('checksumStatus').textContent = 'FAIL!';
+                    throw new Error(`Checksum mismatch! Data is corrupt. Expected ${expectedChecksum}, got ${calculatedChecksum}`);
+                }
+                
+                document.getElementById('checksumStatus').classList.remove('fail');
+                document.getElementById('checksumStatus').classList.add('ok');
+                document.getElementById('checksumStatus').textContent = 'OK!';
+                
+                // 4. Decompress and Handle
+                handleData(fullDataPayload);
+                
+            } catch (err) {
+                document.getElementById('receivedText').textContent = `Error: ${err.message}`;
+                document.getElementById('checksumStatus').classList.add('fail');
+                document.getElementById('checksumStatus').textContent = 'Error';
+                console.error(err);
+            }
+        }
+        
+        function handleData(fullData) {
+            try {
+                // 1. Parse header
+                const headerLength = bytesToNum16([fullData[0], fullData[1]]);
+                const headerBytes = fullData.slice(2, 2 + headerLength);
+                const header = JSON.parse(bytesToString(headerBytes));
+                
+                // 2. Decompress payload
+                const compressedPayload = fullData.slice(2 + headerLength);
+                const payloadBytes = pako.inflate(compressedPayload);
+                
+                document.getElementById('receiveStatus').textContent = 'Complete!';
+
+                // 3. Handle based on type
+                if (header.type === 'text') {
+                    const text = bytesToString(payloadBytes);
+                    document.getElementById('receivedText').textContent = text;
+                }
+                else if (header.type === 'file') {
+                    const blob = new Blob([payloadBytes], { type: header.mime });
+                    const url = URL.createObjectURL(blob);
+                    
+                    const a = document.getElementById('downloadButton');
+                    a.href = url;
+                    a.download = header.name;
+                    a.style.display = 'block';
+                    
+                    document.getElementById('receivedText').textContent = `✅ File Received: ${header.name}`;
+                }
+                else if (header.type === 'image') {
+                    document.getElementById('receivedText').textContent = `✅ Image Received: ${header.width}x${header.height}. Rendering...`;
+                    renderImageSpiral(payloadBytes, header.width, header.height);
+                }
+                
+            } catch (err) {
+                document.getElementById('receivedText').textContent = `Error processing data: ${err.message}`;
+                console.error(err);
+            }
+        }
+        
+        async function renderImageSpiral(pixelData, width, height) {
+            const canvas = document.getElementById('receivedImageCanvas');
+            canvas.width = width;
+            canvas.height = height;
+            canvas.style.display = 'block';
+            const ctx = canvas.getContext('2d');
+            const imageData = ctx.createImageData(width, height);
+            const data = imageData.data;
+            
+            let x = Math.floor(width / 2);
+            let y = Math.floor(height / 2);
+            let dx = 1;
+            let dy = 0;
+            let segmentLength = 1;
+            let segmentPassed = 0;
+            let pixelIndex = 0;
+
+            document.getElementById('receivedText').textContent = 'Rendering image...';
+            
+            function drawNextPixel() {
+                if (pixelIndex >= (width * height)) {
+                    document.getElementById('receivedText').textContent = '✅ Image Render Complete!';
+                    return;
+                }
+                
+                // Check bounds
+                if (x >= 0 && x < width && y >= 0 && y < height) {
+                    const dataIndex = (y * width + x) * 4;
+                    const pixelDataIndex = pixelIndex * 3;
+                    
+                    data[dataIndex]     = pixelData[pixelDataIndex];
+                    data[dataIndex + 1] = pixelData[pixelDataIndex + 1];
+                    data[dataIndex + 2] = pixelData[pixelDataIndex + 2];
+                    data[dataIndex + 3] = 255;
+                    
+                    pixelIndex++;
+                }
+
+                x += dx;
+                y += dy;
+                segmentPassed++;
+
+                if (segmentPassed === segmentLength) {
+                    segmentPassed = 0;
+                    // Rotate 90 degrees
+                    let temp = dx;
+                    dx = -dy;
+                    dy = temp;
+                    // Increase segment length every 2 turns
+                    if (dy === 0) {
+                        segmentLength++;
+                    }
+                }
+                
+                // Batch update canvas
+                if (pixelIndex % 100 === 0) {
+                    ctx.putImageData(imageData, 0, 0);
+                    requestAnimationFrame(drawNextPixel);
+                } else {
+                    drawNextPixel(); // Continue sync
+                }
+            }
+            
+            // Start drawing
+            ctx.fillStyle = '#333';
+            ctx.fillRect(0, 0, width, height);
+            drawNextPixel();
+        }
+
+        function stopReceiving(isProcessing = false) {
             receivingActive = false;
+            if (captureFrameId) {
+                cancelAnimationFrame(captureFrameId);
+                captureFrameId = null;
+            }
+            
             if (videoStream) {
                 videoStream.getTracks().forEach(track => track.stop());
                 videoStream = null;
             }
-            document.getElementById('cameraView').srcObject = null;
-            document.getElementById('cameraFeed').style.display = 'none';
-            document.getElementById('startReceiveBtn').style.display = 'block';
-            document.getElementById('stopReceiveBtn').style.display = 'none';
-        }
-        
-        function arraysEqual(a1, a2) {
-            if (a1.length !== a2.length) return false;
-            for (let i = 0; i < a1.length; i++) {
-                if (a1[i] !== a2[i]) return false;
-            }
-            return true;
-        }
-
-        function processReceivedBits(bits) {
-            receivedBits.push(...bits);
-
-            if (receiveState === 'IDLE') {
-                document.getElementById('scanStatusText').textContent = 'Scanning for signal...';
-                // Check if last bits match handshake
-                if (receivedBits.length >= HANDSHAKE_START.length) {
-                    const tail = receivedBits.slice(-HANDSHAKE_START.length);
-                    if (arraysEqual(tail, HANDSHAKE_START)) {
-                        receiveState = 'RECEIVING';
-                        receivedBits = []; // Clear handshake from buffer
-                        document.getElementById('scanStatusText').textContent = '✅ Handshake OK!';
-                        document.getElementById('receiveStatus').style.display = 'block';
-                        document.getElementById('statusLabel').textContent = 'Receiving header...';
-                    }
-                }
-                // Keep buffer from growing indefinitely
-                if (receivedBits.length > 200) {
-                    receivedBits = receivedBits.slice(-200);
-                }
-            } 
-            else if (receiveState === 'RECEIVING') {
-                // Check for end sequence
-                if (receivedBits.length >= HANDSHAKE_END.length) {
-                    const tail = receivedBits.slice(-HANDSHAKE_END.length);
-                    if (arraysEqual(tail, HANDSHAKE_END)) {
-                        receiveState = 'COMPLETE';
-                        const finalDataBits = receivedBits.slice(0, -HANDSHAKE_END.length);
-                        stopReceiving();
-                        processFinalData(finalDataBits);
-                        return;
-                    }
-                }
-                
-                // Live preview
-                updateReceivedPreview();
-            }
-        }
-        
-        function resetLiveDataBuffer() {
-            liveDataBuffer = {
-                type: null,
-                headerParsed: false,
-                headerString: '',
-                payloadBytes: new Uint8Array(),
-                meta: {},
-                pixelsDrawn: 0,
-                spiralGen: null,
-            };
-        }
-
-        function updateReceivedPreview() {
-            if (!liveDataBuffer.headerParsed) {
-                // Try to parse header
-                const bytes = bitsToBytes(receivedBits);
-                const headerTestString = bytesToString(bytes);
-                const headerEndMarker = '::';
-                const headerEndIndex = headerTestString.indexOf(headerEndMarker);
-                
-                if (headerEndIndex !== -1) {
-                    // Header found!
-                    liveDataBuffer.headerParsed = true;
-                    liveDataBuffer.headerString = headerTestString.substring(0, headerEndIndex);
-                    const parts = liveDataBuffer.headerString.split(':');
-                    liveDataBuffer.type = parts[0];
-                    
-                    const headerBytesLength = stringToBytes(liveDataBuffer.headerString + headerEndMarker).length;
-                    const headerBitsLength = headerBytesLength * 8;
-                    
-                    // Remove header bits from main buffer
-                    receivedBits = receivedBits.slice(headerBitsLength);
-                    
-                    if (liveDataBuffer.type === 'T') {
-                        document.getElementById('statusLabel').textContent = 'Receiving Text...';
-                        document.getElementById('receiveResult').innerHTML = '<div id="receivedText" style="width: 100%"></div>'; // Clear
-                    }
-                    else if (liveDataBuffer.type === 'F') {
-                        liveDataBuffer.meta.fileName = parts[1];
-                        liveDataBuffer.meta.fileSize = parseInt(parts[2]);
-                        document.getElementById('statusLabel').textContent = `Receiving File: ${liveDataBuffer.meta.fileName}`;
-                        document.getElementById('receiveResult').innerHTML = ''; // Clear
-                    }
-                    else if (liveDataBuffer.type === 'I') {
-                        liveDataBuffer.meta.width = parseInt(parts[1]);
-                        liveDataBuffer.meta.height = parseInt(parts[2]);
-                        liveDataBuffer.meta.fileName = parts[3];
-                        liveDataBuffer.meta.totalPixels = liveDataBuffer.meta.width * liveDataBuffer.meta.height;
-                        liveDataBuffer.meta.totalBytes = liveDataBuffer.meta.totalPixels * 3;
-                        liveDataBuffer.spiralGen = spiralGenerator(liveDataBuffer.meta.width, liveDataBuffer.meta.height);
-
-                        document.getElementById('statusLabel').textContent = `Receiving Image: ${liveDataBuffer.meta.width}x${liveDataBuffer.meta.height}`;
-                        
-                        const canvas = document.getElementById('receivedImageCanvas');
-                        canvas.width = liveDataBuffer.meta.width;
-                        canvas.height = liveDataBuffer.meta.height;
-                        canvas.style.display = 'block';
-                        document.getElementById('receiveResult').innerHTML = '';
-                        document.getElementById('receiveResult').appendChild(canvas);
-                    }
-                }
-            } 
-            else {
-                // Header is parsed, process payload
-                const bytes = bitsToBytes(receivedBits);
-                
-                if (liveDataBuffer.type === 'T') {
-                    document.getElementById('receivedText').textContent = bytesToString(bytes);
-                    // No progress for text, it's usually short
-                }
-                else if (liveDataBuffer.type === 'F') {
-                    const progress = (bytes.length / liveDataBuffer.meta.fileSize) * 100;
-                    document.getElementById('receiveProgress').value = progress;
-                }
-                else if (liveDataBuffer.type === 'I') {
-                    const canvas = document.getElementById('receivedImageCanvas');
-                    const ctx = canvas.getContext('2d');
-                    
-                    const pixelsToDraw = Math.floor(bytes.length / 3);
-                    const newPixels = pixelsToDraw - liveDataBuffer.pixelsDrawn;
-                    
-                    for (let i = 0; i < newPixels; i++) {
-                        const pixelIndex = liveDataBuffer.pixelsDrawn + i;
-                        if (pixelIndex >= liveDataBuffer.meta.totalPixels) break;
-                        
-                        const byteIndex = pixelIndex * 3;
-                        if (byteIndex + 2 >= bytes.length) break;
-                        
-                        const r = bytes[byteIndex];
-                        const g = bytes[byteIndex + 1];
-                        const b = bytes[byteIndex + 2];
-                        
-                        const { x, y } = liveDataBuffer.spiralGen.next().value;
-                        
-                        ctx.fillStyle = `rgb(${r},${g},${b})`;
-                        ctx.fillRect(x, y, 1, 1);
-                    }
-                    
-                    liveDataBuffer.pixelsDrawn = pixelsToDraw;
-                    const progress = (liveDataBuffer.pixelsDrawn / liveDataBuffer.meta.totalPixels) * 100;
-                    document.getElementById('receiveProgress').value = progress;
-                }
-            }
-        }
-        
-        function processFinalData(finalBits) {
-            const finalBytes = bitsToBytes(finalBits);
-            const { type, meta } = liveDataBuffer;
             
-            document.getElementById('receiveStatus').style.display = 'none';
-            const resultDiv = document.getElementById('receiveResult');
-            resultDiv.innerHTML = '';
-            
-            let dataBytes;
-            
-            if (!liveDataBuffer.headerParsed) {
-                // Fallback: If header was never parsed (e.g., text-only transfer)
-                dataBytes = finalBytes;
-            } else {
-                // Get payload from final bits (live preview might have missed some)
-                const headerBytesLength = stringToBytes(liveDataBuffer.headerString + '::').length;
-                const headerBitsLength = headerBytesLength * 8;
-                // This is a re-parse, but liveDataBuffer should have been used
-                dataBytes = bitsToBytes(finalBits.slice(headerBitsLength));
-            }
-
-            if (type === 'T') {
-                resultDiv.innerHTML = '<h3>✅ Text Received:</h3>';
-                const p = document.createElement('p');
-                p.id = 'receivedText';
-                p.textContent = bytesToString(dataBytes);
-                resultDiv.appendChild(p);
-            }
-            else if (type === 'F') {
-                resultDiv.innerHTML = `<h3>✅ File Received: ${meta.fileName}</h3>`;
-                const blob = new Blob([dataBytes], { type: 'application/octet-stream' });
-                createDownloadLink(blob, meta.fileName);
-            }
-            else if (type === 'I') {
-                resultDiv.innerHTML = `<h3>✅ Image Received: ${meta.fileName}</h3>`;
-                const canvas = document.getElementById('receivedImageCanvas');
-                if (!canvas.style.display) {
-                    // If canvas wasn't created, do a final draw
-                    canvas.width = meta.width;
-                    canvas.height = meta.height;
-                    canvas.style.display = 'block';
-                    const ctx = canvas.getContext('2d');
-                    const spiralGen = spiralGenerator(meta.width, meta.height);
-                    for (let i = 0; i < meta.totalPixels; i++) {
-                        const byteIndex = i * 3;
-                        const r = dataBytes[byteIndex];
-                        const g = dataBytes[byteIndex + 1];
-                        const b = dataBytes[byteIndex + 2];
-                        const { x, y } = spiralGen.next().value;
-                        ctx.fillStyle = `rgb(${r},${g},${b})`;
-                        ctx.fillRect(x, y, 1, 1);
-                    }
-                }
-                resultDiv.appendChild(canvas);
-                
-                canvas.toBlob(blob => {
-                    createDownloadLink(blob, meta.fileName);
-                }, 'image/png');
+            if (!isProcessing) {
+                resetReceiverState();
+                document.getElementById('startReceiveBtn').style.display = 'block';
+                document.getElementById('stopReceiveBtn').style.display = 'none';
+                document.getElementById('receiveLayout').style.display = 'none';
             }
         }
         
-        function createDownloadLink(blob, fileName) {
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = fileName;
-            a.textContent = `Download ${fileName}`;
-            a.className = 'primary';
-            a.style.width = 'auto';
-            a.style.padding = '12px 24px';
-            document.getElementById('receiveResult').appendChild(a);
+        function resetReceiverState() {
+            receiverState = 'WAITING_FOR_SYNC';
+            receivedBits = [];
+            receivedColors = [];
+            fullDataPayload = null;
+            document.getElementById('receiveStatus').textContent = 'Waiting for SYNC...';
+            document.getElementById('receivedBits').textContent = '0 bits';
+            document.getElementById('receivedPackets').textContent = '0 / 0';
+            document.getElementById('checksumStatus').textContent = '--';
+            document.getElementById('checksumStatus').classList.remove('ok', 'fail');
+            document.getElementById('receivedText').textContent = 'Awaiting transmission...';
+            document.getElementById('receivedImageCanvas').style.display = 'none';
+            document.getElementById('downloadButton').style.display = 'none';
+        }
+        
+        function arrayEquals(a, b) {
+            return a.length === b.length && a.every((val, index) => val === b[index]);
         }
 
-        // --- Lifecycle ---
+        // ===================================================================
+        // E V E N T   L I S T E N E R S
+        // ===================================================================
         window.addEventListener('beforeunload', () => {
             transmissionActive = false;
             stopReceiving();

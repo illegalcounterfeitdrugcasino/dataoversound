@@ -140,6 +140,12 @@
             color: #991b1b;
         }
 
+        .info-badge.ultra {
+            background: #e0e7ff;
+            color: #312e81;
+        }
+
+
         textarea, input[type="file"], input[type="number"] {
             width: 100%;
             padding: 14px;
@@ -180,13 +186,6 @@
             cursor: pointer;
             transition: all 0.2s ease;
             color: #6b7280;
-        }
-        
-        .method-btn .info-badge {
-            font-size: 9px;
-            padding: 2px 6px;
-            margin-left: 4px;
-            vertical-align: middle;
         }
 
         .method-btn:hover {
@@ -232,6 +231,11 @@
         .option-item label {
             margin: 0;
             font-size: 13px;
+        }
+        
+        .option-item.column {
+            flex-direction: column;
+            align-items: flex-start;
         }
 
         button.primary {
@@ -347,6 +351,7 @@
             flex-direction: column;
             justify-content: center;
             align-items: center;
+            background: #000000; /* Default to black */
         }
 
         #flashScreen.active {
@@ -423,10 +428,10 @@
             color: #92400e;
         }
         
-        .info-box.danger {
-            background: #fee2e2;
-            border-color: #fecaca;
-            color: #991b1b;
+        .info-box.ultra {
+            background: #eef2ff;
+            border-color: #c7d2fe;
+            color: #4338ca;
         }
 
         .info-box strong {
@@ -437,7 +442,7 @@
 
         .speed-presets {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
+            grid-template-columns: repeat(4, 1fr);
             gap: 10px;
             margin-top: 10px;
         }
@@ -491,16 +496,12 @@
 
         .color-legend {
             display: grid;
-            grid-template-columns: repeat(2, 1fr);
+            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
             gap: 12px;
             margin-top: 16px;
             padding: 16px;
             background: white;
             border-radius: 10px;
-        }
-        
-        #ultraColorLegend {
-             grid-template-columns: repeat(4, 1fr);
         }
 
         .color-item {
@@ -558,35 +559,34 @@
                     </div>
                 </div>
 
-                <div class="input-group">
-                    <label>Transfer Mode:</label>
-                    <div class="method-selector" id="sendModeSelector">
-                        <button class="method-btn active" onclick="setSendMode('standard')">Standard (1-bit)</button>
-                        <button class="method-btn" onclick="setSendMode('turbo')">⚡ Turbo (2-bit)</button>
-                        <button class="method-btn" onclick="setSendMode('ultra')">🚀 Ultra (4-bit) <span class="info-badge experimental">New</span></button>
-                    </div>
-                </div>
-                
                 <div class="options">
-                    <div class="option-item" style="flex-direction: column; align-items: flex-start;">
+                    <div class="option-item column">
                         <label>Transfer Speed (ms/symbol):</label>
-                        <input type="number" id="bitSpeed" value="150" min="50" max="1000" step="10" style="width: 100%;">
+                        <input type="number" id="bitSpeed" value="100" min="50" max="1000" step="10" style="width: 100%;">
                         <div class="speed-presets">
-                            <button class="speed-preset-btn" onclick="setSpeed(200)">Slow</button>
+                            <button class="speed-preset-btn" onclick="setSpeed(150)">Slow</button>
                             <button class="speed-preset-btn" onclick="setSpeed(100)">Normal</button>
                             <button class="speed-preset-btn" onclick="setSpeed(75)">Fast</button>
+                            <button class="speed-preset-btn" onclick="setSpeed(200)">Ultra</button>
                         </div>
+                    </div>
+                    <div class="option-item column">
+                        <label><input type="checkbox" id="turboMode" onchange="updateTurboInfo()"> Turbo Mode <span class="info-badge experimental">Experimental</span></label>
+                        <small style="color: #6b7280; margin-top: 4px;">2 bits/color (4 colors)</small>
+                        
+                        <label style="margin-top: 10px;"><input type="checkbox" id="ultraMode" onchange="updateUltraInfo()"> Ultra Mode <span class="info-badge ultra">NEW</span></label>
+                        <small style="color: #6b7280; margin-top: 4px;">4 bits/color (16 colors)</small>
                     </div>
                 </div>
 
                 <div id="turboWarning" class="info-box warning" style="display: none;">
                     <strong>⚡ Turbo Mode Active</strong>
-                    Make sure BOTH devices have Turbo Mode enabled. Standard mode devices cannot decode Turbo transmissions.
+                    Make sure BOTH devices have Turbo Mode enabled.
                 </div>
                 
-                <div id="ultraWarning" class="info-box danger" style="display: none;">
+                <div id="ultraWarning" class="info-box ultra" style="display: none;">
                     <strong>🚀 Ultra Mode Active</strong>
-                    This mode is highly experimental. It requires 16 distinct colors and is sensitive to lighting. Make sure BOTH devices have Ultra Mode enabled.
+                    Make sure BOTH devices have Ultra Mode enabled. This mode uses 16 colors.
                 </div>
 
                 <div id="colorLegend" style="display: none;">
@@ -611,8 +611,24 @@
                 </div>
                 
                 <div id="ultraColorLegend" style="display: none;">
-                    <div class="color-legend" id="ultraColorLegendGrid" style="grid-template-columns: repeat(4, 1fr);">
-                        </div>
+                    <div class="color-legend" style="grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));">
+                        <div class="color-item"><div class="color-swatch" style="background: #ff0000;"></div><span><b>Red</b> = 0000</span></div>
+                        <div class="color-item"><div class="color-swatch" style="background: #00ff00;"></div><span><b>Green</b> = 0001</span></div>
+                        <div class="color-item"><div class="color-swatch" style="background: #0000ff;"></div><span><b>Blue</b> = 0010</span></div>
+                        <div class="color-item"><div class="color-swatch" style="background: #ffff00;"></div><span><b>Yellow</b> = 0011</span></div>
+                        <div class="color-item"><div class="color-swatch" style="background: #00ffff;"></div><span><b>Cyan</b> = 0100</span></div>
+                        <div class="color-item"><div class="color-swatch" style="background: #ff00ff;"></div><span><b>Magenta</b> = 0101</span></div>
+                        <div class="color-item"><div class="color-swatch" style="background: #ffffff; border: 1px solid #ccc;"></div><span><b>White</b> = 0110</span></div>
+                        <div class="color-item"><div class="color-swatch" style="background: #ff8000;"></div><span><b>Orange</b> = 0111</span></div>
+                        <div class="color-item"><div class="color-swatch" style="background: #80ff00;"></div><span><b>Lime</b> = 1000</span></div>
+                        <div class="color-item"><div class="color-swatch" style="background: #0080ff;"></div><span><b>Sky Blue</b> = 1001</span></div>
+                        <div class="color-item"><div class="color-swatch" style="background: #ff0080;"></div><span><b>Pink</b> = 1010</span></div>
+                        <div class="color-item"><div class="color-swatch" style="background: #00ff80;"></div><span><b>Spring</b> = 1011</span></div>
+                        <div class="color-item"><div class="color-swatch" style="background: #8000ff;"></div><span><b>Violet</b> = 1100</span></div>
+                        <div class="color-item"><div class="color-swatch" style="background: #ffbf00;"></div><span><b>Gold</b> = 1101</span></div>
+                        <div class="color-item"><div class="color-swatch" style="background: #008080;"></div><span><b>Teal</b> = 1110</span></div>
+                        <div class="color-item"><div class="color-swatch" style="background: #800080;"></div><span><b>Purple</b> = 1111</span></div>
+                    </div>
                 </div>
 
                 <button class="primary" onclick="startTransmission()">🚀 Start Transmission</button>
@@ -641,28 +657,29 @@
                 <div class="info-box">
                     <strong>📱 Setup Instructions:</strong>
                     1. Place your camera against the LEFT edge of the flashing screen<br>
-                    2. Aim the camera at the center of the flashing area<br>
-                    3. Ensure both devices use the same mode (Standard, Turbo, or Ultra)<br>
-                    4. Keep devices stable during transfer
+                    2. Ensure both devices use the same mode (Standard, Turbo, or Ultra)<br>
+                    3. Keep devices stable during transfer
                 </div>
-                
-                <div class="input-group">
-                    <label>Transfer Mode:</label>
-                    <div class="method-selector" id="receiveModeSelector">
-                        <button class="method-btn active" onclick="setReceiveMode('standard')">Standard (1-bit)</button>
-                        <button class="method-btn" onclick="setReceiveMode('turbo')">⚡ Turbo (2-bit)</button>
-                        <button class="method-btn" onclick="setReceiveMode('ultra')">🚀 Ultra (4-bit) <span class="info-badge experimental">New</span></button>
+
+                <div class="options">
+                    <div class="option-item column">
+                        <label><input type="checkbox" id="turboModeReceive" onchange="updateTurboInfoReceive()"> Turbo Mode <span class="info-badge experimental">Experimental</span></label>
+                        <small style="color: #6b7280; margin-top: 4px;">Enable if sender is using Turbo Mode</small>
+                    </div>
+                    <div class="option-item column">
+                        <label><input type="checkbox" id="ultraModeReceive" onchange="updateUltraInfoReceive()"> Ultra Mode <span class="info-badge ultra">NEW</span></label>
+                        <small style="color: #6b7280; margin-top: 4px;">Enable if sender is using Ultra Mode</small>
                     </div>
                 </div>
-                
+
                 <div id="turboWarningReceive" class="info-box warning" style="display: none;">
                     <strong>⚡ Turbo Mode Active</strong>
                     Ensure the sending device also has Turbo Mode enabled.
                 </div>
                 
-                <div id="ultraWarningReceive" class="info-box danger" style="display: none;">
+                <div id="ultraWarningReceive" class="info-box ultra" style="display: none;">
                     <strong>🚀 Ultra Mode Active</strong>
-                    Ensure the sending device also has Ultra Mode enabled. This mode samples the center pixel and is very sensitive.
+                    Ensure the sending device also has Ultra Mode enabled.
                 </div>
 
                 <div id="colorReceive">
@@ -703,9 +720,6 @@
     <script>
         let currentMode = 'send';
         let currentDataType = 'text';
-        let currentSendMode = 'standard';
-        let currentReceiveMode = 'standard';
-        
         let transmissionActive = false;
         let receivingActive = false;
         let bitStream = [];
@@ -713,42 +727,50 @@
         let receivedBits = [];
         let startTime = 0;
         
-        // --- 16-Color Map for Ultra Mode ---
-        const ULTRA_COLOR_MAP = [
-            { bits: [0,0,0,0], hex: '#FF0000', rgb: [255, 0, 0],   name: 'Red' },
-            { bits: [0,0,0,1], hex: '#00FF00', rgb: [0, 255, 0],   name: 'Green' },
-            { bits: [0,0,1,0], hex: '#0000FF', rgb: [0, 0, 255],   name: 'Blue' },
-            { bits: [0,0,1,1], hex: '#FFFF00', rgb: [255, 255, 0], name: 'Yellow' },
-            { bits: [0,1,0,0], hex: '#00FFFF', rgb: [0, 255, 255], name: 'Cyan' },
-            { bits: [0,1,0,1], hex: '#FF00FF', rgb: [255, 0, 255], name: 'Magenta' },
-            { bits: [0,1,1,0], hex: '#FFA500', rgb: [255, 165, 0], name: 'Orange' },
-            { bits: [0,1,1,1], hex: '#800080', rgb: [128, 0, 128], name: 'Purple' },
-            { bits: [1,0,0,0], hex: '#ADFF2F', rgb: [173, 255, 47],name: 'Lime' },
-            { bits: [1,0,0,1], hex: '#FFC0CB', rgb: [255, 192, 203],name: 'Pink' },
-            { bits: [1,0,1,0], hex: '#008080', rgb: [0, 128, 128], name: 'Teal' },
-            { bits: [1,0,1,1], hex: '#A52A2A', rgb: [165, 42, 42], name: 'Brown' },
-            { bits: [1,1,0,0], hex: '#000080', rgb: [0, 0, 128],   name: 'Navy' },
-            { bits: [1,1,0,1], hex: '#808000', rgb: [128, 128, 0], name: 'Olive' },
-            { bits: [1,1,1,0], hex: '#800000', rgb: [128, 0, 0],   name: 'Maroon' },
-            { bits: [1,1,1,1], hex: '#808080', rgb: [128, 128, 128],name: 'Gray' }
+        // --- 16-Color Ultra Mode Palette ---
+        // Maps 4-bit number (0-15) to a hex color
+        const ULTRA_COLORS = {
+            0: '#ff0000',  // 0000: Red
+            1: '#00ff00',  // 0001: Green
+            2: '#0000ff',  // 0010: Blue
+            3: '#ffff00',  // 0011: Yellow
+            4: '#00ffff',  // 0100: Cyan
+            5: '#ff00ff',  // 0101: Magenta
+            6: '#ffffff',  // 0110: White
+            7: '#ff8000',  // 0111: Orange
+            8: '#80ff00',  // 1000: Lime
+            9: '#0080ff',  // 1001: Sky Blue
+            10: '#ff0080', // 1010: Pink
+            11: '#00ff80', // 1011: Spring Green
+            12: '#8000ff', // 1100: Violet
+            13: '#ffbf00', // 1101: Gold
+            14: '#008080', // 1110: Teal
+            15: '#800080'  // 1111: Purple
+        };
+
+        // For receiver: maps color name to its RGB values and bit array
+        const ULTRA_PALETTE_RGB = [
+            { bits: [0,0,0,0], rgb: [255, 0, 0] },   // Red
+            { bits: [0,0,0,1], rgb: [0, 255, 0] },   // Green
+            { bits: [0,0,1,0], rgb: [0, 0, 255] },   // Blue
+            { bits: [0,0,1,1], rgb: [255, 255, 0] }, // Yellow
+            { bits: [0,1,0,0], rgb: [0, 255, 255] }, // Cyan
+            { bits: [0,1,0,1], rgb: [255, 0, 255] }, // Magenta
+            { bits: [0,1,1,0], rgb: [255, 255, 255] },// White
+            { bits: [0,1,1,1], rgb: [255, 128, 0] }, // Orange
+            { bits: [1,0,0,0], rgb: [128, 255, 0] }, // Lime
+            { bits: [1,0,0,1], rgb: [0, 128, 255] }, // Sky Blue
+            { bits: [1,0,1,0], rgb: [255, 0, 128] }, // Pink
+            { bits: [1,0,1,1], rgb: [0, 255, 128] }, // Spring Green
+            { bits: [1,1,0,0], rgb: [128, 0, 255] }, // Violet
+            { bits: [1,1,0,1], rgb: [255, 191, 0] }, // Gold
+            { bits: [1,1,1,0], rgb: [0, 128, 128] }, // Teal
+            { bits: [1,1,1,1], rgb: [128, 0, 128] }  // Purple
         ];
 
-        function populateUltraLegend() {
-            const grid = document.getElementById('ultraColorLegendGrid');
-            grid.innerHTML = '';
-            ULTRA_COLOR_MAP.forEach(color => {
-                const item = document.createElement('div');
-                item.className = 'color-item';
-                item.innerHTML = `
-                    <div class="color-swatch" style="background: ${color.hex};"></div>
-                    <span><strong>${color.name}</strong> = ${color.bits.join('')}</span>
-                `;
-                grid.appendChild(item);
-            });
-        }
-        populateUltraLegend();
+        // --- End Ultra Mode ---
         
-        // --- Core Data Functions ---
+
         function stringToBytes(str) {
             const bytes = [];
             for (let i = 0; i < str.length; i++) {
@@ -791,41 +813,47 @@
             return new Uint8Array(bytes);
         }
 
-        // --- UI Functions ---
         function setSpeed(ms) {
             document.getElementById('bitSpeed').value = ms;
         }
 
-        function setSendMode(mode) {
-            currentSendMode = mode;
-            document.querySelectorAll('#sendModeSelector .method-btn').forEach(btn => {
-                btn.classList.remove('active');
-            });
-            event.target.classList.add('active');
-            
-            document.getElementById('turboWarning').style.display = (mode === 'turbo') ? 'block' : 'none';
-            document.getElementById('colorLegend').style.display = (mode === 'turbo') ? 'block' : 'none';
-            document.getElementById('ultraWarning').style.display = (mode === 'ultra') ? 'block' : 'none';
-            document.getElementById('ultraColorLegend').style.display = (mode === 'ultra') ? 'block' : 'none';
-            
-            if (mode === 'ultra') {
-                document.getElementById('bitSpeed').value = 200;
-            } else if (mode === 'turbo') {
-                document.getElementById('bitSpeed').value = 100;
-            } else {
-                document.getElementById('bitSpeed').value = 150;
+        function updateTurboInfo() {
+            const turboEnabled = document.getElementById('turboMode').checked;
+            document.getElementById('turboWarning').style.display = turboEnabled ? 'block' : 'none';
+            document.getElementById('colorLegend').style.display = turboEnabled ? 'block' : 'none';
+            if (turboEnabled) {
+                document.getElementById('ultraMode').checked = false;
+                updateUltraInfo();
             }
         }
         
-        function setReceiveMode(mode) {
-            currentReceiveMode = mode;
-            document.querySelectorAll('#receiveModeSelector .method-btn').forEach(btn => {
-                btn.classList.remove('active');
-            });
-            event.target.classList.add('active');
-            
-            document.getElementById('turboWarningReceive').style.display = (mode === 'turbo') ? 'block' : 'none';
-            document.getElementById('ultraWarningReceive').style.display = (mode === 'ultra') ? 'block' : 'none';
+        function updateUltraInfo() {
+            const ultraEnabled = document.getElementById('ultraMode').checked;
+            document.getElementById('ultraWarning').style.display = ultraEnabled ? 'block' : 'none';
+            document.getElementById('ultraColorLegend').style.display = ultraEnabled ? 'block' : 'none';
+            if (ultraEnabled) {
+                document.getElementById('turboMode').checked = false;
+                updateTurboInfo();
+                document.getElementById('bitSpeed').value = 200; // Set default speed for Ultra
+            }
+        }
+
+        function updateTurboInfoReceive() {
+            const turboEnabled = document.getElementById('turboModeReceive').checked;
+            document.getElementById('turboWarningReceive').style.display = turboEnabled ? 'block' : 'none';
+            if (turboEnabled) {
+                document.getElementById('ultraModeReceive').checked = false;
+                updateUltraInfoReceive();
+            }
+        }
+        
+        function updateUltraInfoReceive() {
+            const ultraEnabled = document.getElementById('ultraModeReceive').checked;
+            document.getElementById('ultraWarningReceive').style.display = ultraEnabled ? 'block' : 'none';
+            if (ultraEnabled) {
+                document.getElementById('turboModeReceive').checked = false;
+                updateTurboInfoReceive();
+            }
         }
 
         function switchMode(mode) {
@@ -918,7 +946,6 @@
             });
         }
 
-        // --- Sender Logic ---
         async function startTransmission() {
             if (transmissionActive) return;
 
@@ -930,70 +957,87 @@
             transmissionActive = true;
             startTime = Date.now();
 
-            const transferMode = currentSendMode;
-            let modeText = 'Standard';
-            if (transferMode === 'turbo') modeText = '⚡ Turbo';
-            if (transferMode === 'ultra') modeText = '🚀 Ultra';
+            const isTurbo = document.getElementById('turboMode').checked;
+            const isUltra = document.getElementById('ultraMode').checked;
 
             document.getElementById('sendStats').style.display = 'grid';
             document.getElementById('dataSize').textContent = dataBytes.length + ' bytes';
+            
+            let modeText = 'Standard';
+            if (isTurbo) modeText = '⚡ Turbo';
+            if (isUltra) modeText = '🚀 Ultra';
             document.getElementById('modeIndicator').textContent = modeText;
 
-            startColorTransmission();
+            startColorTransmission(isTurbo, isUltra);
         }
 
-        function startColorTransmission() {
+        function startColorTransmission(isTurbo, isUltra) {
             const flashScreen = document.getElementById('flashScreen');
             const flashInfo = document.getElementById('flashInfo');
             flashScreen.classList.add('active');
 
             const bitSpeed = parseInt(document.getElementById('bitSpeed').value);
-            const transferMode = currentSendMode;
             
             function transmitNextBit() {
                 if (!transmissionActive || currentBitIndex >= bitStream.length) {
-                    flashScreen.style.backgroundColor = '#00ff00';
+                    flashScreen.style.backgroundColor = '#00ff00'; // Green for complete
                     flashInfo.textContent = '✅ Transmission Complete!';
                     setTimeout(() => {
                         flashScreen.classList.remove('active');
+                        flashScreen.style.backgroundColor = '#000000'; // Back to black
                         transmissionActive = false;
                     }, 2000);
                     return;
                 }
 
-                let color = '#ffffff'; // Default to white (separator)
+                let color = '#000000'; // Default to black
                 let bitsToSend = 1;
-                let symbolText = 'Bit';
+                let symbolIndex = 0;
 
-                if (transferMode === 'ultra') {
-                    symbolText = 'Symbol';
+                if (isUltra) {
+                    // Ultra mode: 4 bits per symbol
                     bitsToSend = 4;
-                    let bitStr = "";
-                    for (let i = 0; i < 4; i++) {
-                        bitStr += (currentBitIndex + i < bitStream.length) ? bitStream[currentBitIndex + i] : '0';
+                    symbolIndex = Math.floor(currentBitIndex / 4) + 1;
+                    
+                    let bitVal = 0;
+                    for(let i=0; i < 4; i++) {
+                        if (currentBitIndex + i < bitStream.length) {
+                            bitVal = (bitVal << 1) | bitStream[currentBitIndex + i];
+                        } else {
+                            bitVal = bitVal << 1; // Pad with 0
+                        }
                     }
-                    color = ULTRA_COLOR_MAP.find(c => c.bits.join('') === bitStr).hex;
-                
-                } else if (transferMode === 'turbo') {
-                    symbolText = 'Symbol';
+                    color = ULTRA_COLORS[bitVal];
+                    
+                } else if (isTurbo) {
+                    // Turbo mode: 2 bits per symbol
                     bitsToSend = 2;
+                    symbolIndex = Math.floor(currentBitIndex / 2) + 1;
+
                     if (currentBitIndex + 1 < bitStream.length) {
                         const bit1 = bitStream[currentBitIndex];
                         const bit2 = bitStream[currentBitIndex + 1];
                         
-                        if (bit1 === 0 && bit2 === 0) color = '#ff0000'; // Red = 00
-                        else if (bit1 === 0 && bit2 === 1) color = '#00ff00'; // Green = 01
-                        else if (bit1 === 1 && bit2 === 0) color = '#0000ff'; // Blue = 10
-                        else color = '#ffff00'; // Yellow = 11
+                        if (bit1 === 0 && bit2 === 0) {
+                            color = '#ff0000'; // Red = 00
+                        } else if (bit1 === 0 && bit2 === 1) {
+                            color = '#00ff00'; // Green = 01
+                        } else if (bit1 === 1 && bit2 === 0) {
+                            color = '#0000ff'; // Blue = 10
+                        } else {
+                            color = '#ffff00'; // Yellow = 11
+                        }
                     } else {
                         // Last bit, pad with 0
                         const bit1 = bitStream[currentBitIndex];
                         color = bit1 === 0 ? '#ff0000' : '#0000ff'; // 00 or 10
                     }
                 } else {
-                    // Standard mode
+                    // Standard mode: 1 bit per symbol
+                    bitsToSend = 1;
+                    symbolIndex = currentBitIndex + 1;
                     const bit = bitStream[currentBitIndex];
-                    color = bit === 0 ? '#ff0000' : '#0000ff';
+                    color = bit === 0 ? '#ff0000' : '#0000ff'; // Red or Blue
                 }
 
                 flashScreen.style.backgroundColor = color;
@@ -1006,12 +1050,13 @@
                 const remaining = bitsPerMs > 0 ? (bitStream.length - currentBitIndex) / bitsPerMs : 0;
                 document.getElementById('timeRemaining').textContent = Math.ceil(remaining / 1000) + 's';
                 
-                flashInfo.textContent = `${symbolText} ${Math.floor(currentBitIndex / bitsToSend) + 1} - ${progress}%`;
+                const symbolText = isStandard ? 'Bit' : 'Symbol';
+                flashInfo.textContent = `${symbolText} ${symbolIndex} - ${progress}%`;
 
                 currentBitIndex += bitsToSend;
 
                 setTimeout(() => {
-                    flashScreen.style.backgroundColor = '#ffffff';
+                    flashScreen.style.backgroundColor = '#000000'; // BLACK separator
                     setTimeout(transmitNextBit, bitSpeed / 2);
                 }, bitSpeed / 2);
             }
@@ -1020,35 +1065,28 @@
         }
 
         // --- Receiver Logic ---
-        
-        /**
-         * Finds the closest color in the ULTRA_COLOR_MAP to the given RGB values.
-         * Uses Euclidean distance.
-         */
-        function findClosestColor(r, g, b, threshold) {
-            let minDistance = Infinity;
-            let closestBits = null;
 
-            for (const color of ULTRA_COLOR_MAP) {
-                const dist = Math.sqrt(
-                    Math.pow(r - color.rgb[0], 2) +
-                    Math.pow(g - color.rgb[1], 2) +
-                    Math.pow(b - color.rgb[2], 2)
-                );
-
-                if (dist < minDistance) {
-                    minDistance = dist;
-                    closestBits = color.bits;
+        // Finds closest Ultra Mode color
+        function findClosestUltraColor(r, g, b) {
+            let minDistanceSq = Infinity;
+            let bestBits = null;
+            
+            for (const color of ULTRA_PALETTE_RGB) {
+                const distSq = (r - color.rgb[0])**2 + (g - color.rgb[1])**2 + (b - color.rgb[2])**2;
+                if (distSq < minDistanceSq) {
+                    minDistanceSq = distSq;
+                    bestBits = color.bits;
                 }
             }
-
-            // If the closest color is still too far, it's likely noise or a transition
-            if (minDistance > threshold) {
-                return null;
-            }
             
-            return closestBits;
+            // Add a threshold to reject noise. 
+            // 25000 is ~158 distance. A (128,0,0) is 128 distance from (255,0,0)
+            if (minDistanceSq < 30000) { 
+                return bestBits;
+            }
+            return null;
         }
+
 
         async function startColorReceive() {
             if (receivingActive) return;
@@ -1071,18 +1109,20 @@
                 document.getElementById('receivedImage').style.display = 'none';
                 document.getElementById('receivedImage').src = '';
                 
-                const transferMode = currentReceiveMode;
-                let modeText = 'Standard';
-                if (transferMode === 'turbo') modeText = '⚡ Turbo';
-                if (transferMode === 'ultra') modeText = '🚀 Ultra';
+                const isTurbo = document.getElementById('turboModeReceive').checked;
+                const isUltra = document.getElementById('ultraModeReceive').checked;
                 
                 document.getElementById('receiveStats').style.display = 'grid';
+                
+                let modeText = 'Standard';
+                if (isTurbo) modeText = '⚡ Turbo';
+                if (isUltra) modeText = '🚀 Ultra';
                 document.getElementById('receiveModeIndicator').textContent = modeText;
                 
                 const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
+                const ctx = canvas.getContext('2d', { willReadFrequently: true }); // Performance hint
                 
-                let waitingForSeparator = false;
+                let waitingForSeparator = false; // Waiting for black
                 
                 function captureFrame() {
                     if (!receivingActive) return;
@@ -1092,57 +1132,54 @@
                         return;
                     }
 
-                    canvas.width = video.videoWidth;
-                    canvas.height = video.videoHeight;
-                    ctx.drawImage(video, 0, 0);
+                    // Set canvas to video dimensions if not set
+                    if (canvas.width !== video.videoWidth) {
+                        canvas.width = video.videoWidth;
+                        canvas.height = video.videoHeight;
+                    }
+                    
+                    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
                     
                     // --- MODIFIED: Sample 1x1 center pixel ---
-                    const imageData = ctx.getImageData(
-                        Math.floor(canvas.width / 2), 
-                        Math.floor(canvas.height / 2), 
-                        1, 
-                        1
-                    ).data;
+                    const centerX = Math.floor(canvas.width / 2);
+                    const centerY = Math.floor(canvas.height / 2);
+                    const imageData = ctx.getImageData(centerX, centerY, 1, 1).data;
                     
                     const r = imageData[0];
                     const g = imageData[1];
                     const b = imageData[2];
+                    // --- End modification ---
 
-                    // Detect white (separator)
-                    if (r > 200 && g > 200 && b > 200) {
+                    // Detect black (separator)
+                    if (r < 50 && g < 50 && b < 50) {
                         waitingForSeparator = false;
                     } else if (!waitingForSeparator) {
-                        
+                        // Not black, and we are not waiting. This must be a color frame.
                         let bits = null;
 
-                        if (transferMode === 'ultra') {
-                            // Ultra mode: detect 16 colors
-                            // Use a threshold of 100 to avoid noise
-                            bits = findClosestColor(r, g, b, 100);
-
-                        } else if (transferMode === 'turbo') {
+                        if (isUltra) {
+                            // Ultra mode: find closest of 16 colors
+                            bits = findClosestUltraColor(r, g, b);
+                            
+                        } else if (isTurbo) {
                             // Turbo mode: detect 4 colors
-                            // Red = 00
-                            if (r > 150 && g < 100 && b < 100) bits = [0, 0];
-                            // Green = 01
-                            else if (g > 150 && r < 100 && b < 100) bits = [0, 1];
-                            // Blue = 10
-                            else if (b > 150 && r < 100 && g < 100) bits = [1, 0];
-                            // Yellow = 11
-                            else if (r > 150 && g > 150 && b < 100) bits = [1, 1];
-
+                            if (r > 150 && g < 100 && b < 100) { bits = [0, 0]; }         // Red
+                            else if (g > 150 && r < 100 && b < 100) { bits = [0, 1]; }  // Green
+                            else if (b > 150 && r < 100 && g < 100) { bits = [1, 0]; }  // Blue
+                            else if (r > 150 && g > 150 && b < 100) { bits = [1, 1]; }  // Yellow
+                            
                         } else {
                             // Standard mode: detect red/blue
-                            if (r > b + 50 && r > g + 50) {
+                            if (r > b + 50 && r > g + 50 && r > 150) { // Red
                                 bits = [0];
-                            } else if (b > r + 50 && b > g + 50) {
+                            } else if (b > r + 50 && b > g + 50 && b > 150) { // Blue
                                 bits = [1];
                             }
                         }
 
                         if (bits) {
                             receivedBits.push(...bits);
-                            waitingForSeparator = true;
+                            waitingForSeparator = true; // Wait for black frame
                             document.getElementById('receivedBits').textContent = receivedBits.length + ' bits';
                             updateReceivedPreview();
                         }
@@ -1162,7 +1199,7 @@
         }
 
         function updateReceivedPreview() {
-            if (receivedBits.length < 32) return; 
+            if (receivedBits.length < 32) return; // Wait for at least a few bytes
 
             const receivedBytes = bitsToBytes(receivedBits);
             

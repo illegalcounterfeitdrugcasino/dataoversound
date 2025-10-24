@@ -366,6 +366,29 @@
         }
 
         /* --- Receive UI --- */
+        #cameraContainer {
+            display: none;
+            margin-top: 20px;
+            padding: 20px;
+            background: var(--light-gray);
+            border: 2px solid var(--medium-gray);
+            border-radius: 12px;
+        }
+
+        #cameraView {
+            width: 100%;
+            border-radius: 12px;
+            border: 2px solid var(--medium-gray);
+            background: #000;
+        }
+
+        #receiveStats {
+            margin-top: 16px;
+            padding: 0;
+            background: none;
+            border: none;
+        }
+
         #receivedPreview {
             margin-top: 24px; 
             padding: 24px;
@@ -384,6 +407,43 @@
             font-weight: 600;
             color: var(--text-muted);
             text-align: center;
+        }
+        
+        #receiveProgress {
+            width: 100%;
+            height: 16px;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 2px solid var(--medium-gray);
+        }
+
+        #receiveProgress::-webkit-progress-bar {
+            background-color: #eee;
+        }
+
+        #receiveProgress::-webkit-progress-value {
+            background: var(--primary-gradient);
+            transition: width 0.1s linear;
+        }
+        #receiveProgress::-moz-progress-bar {
+            background: var(--primary-gradient);
+            transition: width 0.1s linear;
+        }
+
+        #receivedTextPreview {
+            display: none;
+            width: 100%;
+            min-height: 100px;
+            max-height: 300px;
+            overflow-y: auto;
+            background: white;
+            border: 2px solid var(--medium-gray);
+            border-radius: 8px;
+            padding: 12px;
+            font-family: 'Courier New', monospace;
+            white-space: pre-wrap;
+            word-break: break-all;
+            color: var(--dark-gray);
         }
         
         #receiveCanvas {
@@ -486,16 +546,6 @@
             display: flex;
             gap: 12px;
         }
-        
-        #cameraView {
-            width: 100%;
-            max-width: 400px;
-            border-radius: 12px;
-            border: 2px solid var(--medium-gray);
-            background: #000;
-            margin-top: 16px;
-            display: none;
-        }
 
     </style>
 </head>
@@ -568,13 +618,29 @@
                     <strong>📱 Setup Instructions:</strong>
                     1. Place your camera against the LEFT edge of the flashing screen.<br>
                     2. Keep devices stable during transfer.<br>
-                    3. Tap "Start Receiving" to open the camera modal.
+                    3. Tap "Start Receiving" to activate the camera.
                 </div>
 
-                <button class="btn primary" onclick="startColorReceive()">📹 Start Receiving</button>
+                <button id="receiveButton" class="btn primary" onclick="startColorReceive()">📹 Start Receiving</button>
+                
+                <div id="cameraContainer">
+                    <video id="cameraView" autoplay playsinline muted></video>
+                    <div id="receiveStats" class="stats">
+                        <div class="stat-item">
+                            <div class="stat-label">Received</div>
+                            <div class="stat-value" id="receivedBits">0 bits</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">Mode</div>
+                            <div class="stat-value" id="receiveModeIndicator" style="font-size: 18px;">⚡ Turbo</div>
+                        </div>
+                    </div>
+                </div>
                 
                 <div id="receivedPreview">
                     <div id="receiveStatus">Waiting to receive data...</div>
+                    <progress id="receiveProgress" value="0" max="100" style="width: 100%;"></progress>
+                    <pre id="receivedTextPreview"></pre>
                     <canvas id="receiveCanvas" width="128" height="128"></canvas>
                     <div id="downloadContainer">
                         <div id="downloadInfo">
@@ -598,25 +664,6 @@
                 <button class="btn secondary" onclick="hideConfirmationModal()">Cancel</button>
                 <button class="btn primary" onclick="startTransmission()">Start Now</button>
             </div>
-        </div>
-    </div>
-    
-    <div id="receiveModal" class="modal-overlay">
-        <div class="modal-content">
-            <h2>📹 Receiving...</h2>
-            <p>Point your camera at the sender's flashing screen. Keep it steady.</p>
-            <video id="cameraView" autoplay playsinline muted></video>
-            <div id="receiveStats" class="stats" style="margin-top: 16px;">
-                <div class="stat-item">
-                    <div class="stat-label">Received</div>
-                    <div class="stat-value" id="receivedBits">0 bits</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-label">Mode</div>
-                    <div class="stat-value" id="receiveModeIndicator" style="font-size: 18px;">⚡ Turbo</div>
-                </div>
-            </div>
-            <button class="btn danger" onclick="stopReceiving()" style="margin-top: 16px;">⏹️ Stop Receiving</button>
         </div>
     </div>
 
@@ -673,7 +720,7 @@
         /** Decodes a Uint8Array to a string using UTF-8 */
         const textDecoder = new TextDecoder();
         function bytesToString(bytes) {
-            return textDecoder.decode(bytes);
+            return textDecoder.decode(bytes, { stream: true }); // Stream allows partial decoding
         }
 
         /** Converts an array of bytes (Uint8Array) to an array of bits */
@@ -1015,7 +1062,10 @@
 
             $('#receivedBits').textContent = '0 bits';
             $('#receiveStatus').textContent = 'Waiting to receive data...';
+            $('#receiveProgress').value = 0;
             $('#receiveCanvas').style.display = 'none';
+            $('#receivedTextPreview').style.display = 'none';
+            $('#receivedTextPreview').textContent = '';
             $('#downloadContainer').style.display = 'none';
         }
 
@@ -1023,7 +1073,9 @@
             if (receivingActive) return;
 
             const video = $('#cameraView');
-            $('#receiveModal').classList.add('active');
+            const cameraContainer = $('#cameraContainer');
+            const receiveButton = $('#receiveButton');
+            
             resetReceiveState();
             
             try {
@@ -1035,8 +1087,13 @@
                     video: { facingMode: 'environment' } 
                 });
                 video.srcObject = videoStream;
-                video.style.display = 'block';
+                cameraContainer.style.display = 'block';
                 receivingActive = true;
+                
+                receiveButton.textContent = '⏹️ Stop Receiving';
+                receiveButton.onclick = stopReceiving;
+                receiveButton.classList.remove('primary');
+                receiveButton.classList.add('danger');
                 
                 const canvas = document.createElement('canvas');
                 const ctx = canvas.getContext('2d');
@@ -1112,26 +1169,36 @@
 
         function processReceivedBits() {
             try {
+                const headerLenBits = HEADER_LEN_BYTES * 8;
+                
                 // State 1: Waiting for Header Length
                 if (receiveState === 'header_len') {
-                    $('#receiveStatus').textContent = 'Detecting header...';
-                    if (receivedBits.length >= (HEADER_LEN_BYTES * 8)) {
-                        const lenBits = receivedBits.slice(0, HEADER_LEN_BYTES * 8);
+                    const progress = (receivedBits.length / headerLenBits) * 100;
+                    $('#receiveStatus').textContent = `State: Reading Header Length (${receivedBits.length}/${headerLenBits} bits)`;
+                    $('#receiveProgress').value = progress;
+
+                    if (receivedBits.length >= headerLenBits) {
+                        const lenBits = receivedBits.slice(0, headerLenBits);
                         const lenBytes = bitsToBytes(lenBits);
                         const dataView = new DataView(lenBytes.buffer);
                         const headerByteLength = dataView.getUint32(0, false); // Big Endian
                         
                         expectedHeaderBits = headerByteLength * 8;
                         receiveState = 'header';
-                        $('#receiveStatus').textContent = 'Receiving header (0%)...';
                     }
                 }
                 
                 // State 2: Waiting for Header
                 if (receiveState === 'header') {
-                    const totalHeaderBits = (HEADER_LEN_BYTES * 8) + expectedHeaderBits;
+                    const totalHeaderBits = headerLenBits + expectedHeaderBits;
+                    const currentHeaderBits = receivedBits.length - headerLenBits;
+                    const progress = (currentHeaderBits / expectedHeaderBits) * 100;
+
+                    $('#receiveStatus').textContent = `State: Reading Header (${currentHeaderBits}/${expectedHeaderBits} bits)`;
+                    $('#receiveProgress').value = progress;
+
                     if (receivedBits.length >= totalHeaderBits) {
-                        const headerBits = receivedBits.slice(HEADER_LEN_BYTES * 8, totalHeaderBits);
+                        const headerBits = receivedBits.slice(headerLenBits, totalHeaderBits);
                         const headerBytes = bitsToBytes(headerBits);
                         const headerString = bytesToString(headerBytes);
                         
@@ -1139,27 +1206,38 @@
                         expectedPayloadBits = transferHeader.size * 8;
                         receiveState = 'payload';
                         
-                        // Prepare for image payload
+                        // Prepare for payload
                         if (transferHeader.type === 'image') {
                             setupSpiralCanvas(transferHeader.img_w, transferHeader.img_h);
+                        } else if (transferHeader.type === 'text') {
+                            $('#receivedTextPreview').style.display = 'block';
+                            $('#receiveCanvas').style.display = 'none';
+                        } else {
+                             $('#receivedTextPreview').style.display = 'none';
+                             $('#receiveCanvas').style.display = 'none';
                         }
-                    } else {
-                         const progress = (receivedBits.length - (HEADER_LEN_BYTES * 8)) / expectedHeaderBits * 100;
-                        $('#receiveStatus').textContent = `Receiving header (${progress.toFixed(1)}%)...`;
                     }
                 }
                 
                 // State 3: Waiting for Payload
                 if (receiveState === 'payload') {
-                    const headerTotalBits = (HEADER_LEN_BYTES * 8) + expectedHeaderBits;
+                    const headerTotalBits = headerLenBits + expectedHeaderBits;
                     const payloadBits = receivedBits.slice(headerTotalBits);
                     const progress = (payloadBits.length / expectedPayloadBits) * 100;
+                    
+                    $('#receiveProgress').value = progress;
 
                     if (transferHeader.type === 'image') {
-                        $('#receiveStatus').textContent = `Receiving image... (${progress.toFixed(1)}%)`;
+                        $('#receiveStatus').textContent = `State: Receiving Image... (${progress.toFixed(1)}%)`;
                         drawSpiralPixels(payloadBits);
+                    } else if (transferHeader.type === 'text') {
+                        $('#receiveStatus').textContent = `State: Receiving Text... (${progress.toFixed(1)}%)`;
+                        // Update live text preview
+                        const currentBytes = bitsToBytes(payloadBits);
+                        const currentText = bytesToString(currentBytes);
+                        $('#receivedTextPreview').textContent = currentText;
                     } else {
-                        $('#receiveStatus').textContent = `Receiving file... (${progress.toFixed(1)}%)`;
+                        $('#receiveStatus').textContent = `State: Receiving File... (${progress.toFixed(1)}%)`;
                     }
                     
                     if (payloadBits.length >= expectedPayloadBits) {
@@ -1186,6 +1264,7 @@
             ctx.fillStyle = '#eee';
             ctx.fillRect(0, 0, w, h);
             canvas.style.display = 'block';
+            $('#receivedTextPreview').style.display = 'none';
             
             // Init spiral state
             spiralDrawState = {
@@ -1206,9 +1285,9 @@
             const { ctx, w, h } = spiralDrawState;
             if (!ctx) return;
             
-            // Check for new *bytes* (R,G,B = 3 bytes = 24 bits)
+            // Calculate new bits to process
             const newBits = payloadBits.slice(lastProcessedPixelIndex);
-            if (newBits.length < 24) return;
+            if (newBits.length < 24) return; // Wait for at least one full pixel (RGB = 24 bits)
             
             const newBytes = bitsToBytes(newBits);
             
@@ -1248,6 +1327,7 @@
         /** Called when all payload data is received */
         function processCompleteData(header, payloadBytes) {
             $('#receiveStatus').textContent = '✅ Transfer Complete!';
+            $('#receiveProgress').value = 100;
             
             const blob = new Blob([payloadBytes], { type: header.mime });
             const url = URL.createObjectURL(blob);
@@ -1289,8 +1369,16 @@
             }
             
             $('#cameraView').srcObject = null;
-            $('#cameraView').style.display = 'none';
-            $('#receiveModal').classList.remove('active');
+            $('#cameraContainer').style.display = 'none';
+
+            const receiveButton = $('#receiveButton');
+            receiveButton.textContent = '📹 Start Receiving';
+            receiveButton.onclick = startColorReceive;
+            receiveButton.classList.remove('danger');
+            receiveButton.classList.add('primary');
+            
+            // Don't reset the preview, so the user can download the file
+            // resetReceiveState(); // Only call this when starting
         }
 
         // --- Init & Cleanup ---

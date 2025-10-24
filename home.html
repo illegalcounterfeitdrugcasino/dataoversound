@@ -1179,94 +1179,102 @@
             }
         }
 
-        function processReceivedBits() {
-            try {
-                const headerLenBits = HEADER_LEN_BYTES * 8;
+function processReceivedBits() {
+    try {
+        const headerLenBits = HEADER_LEN_BYTES * 8;
+        
+        // State 1: Waiting for Header Length
+        if (receiveState === 'header_len') {
+            const progress = (receivedBits.length / headerLenBits) * 100;
+            $('#receiveStatus').textContent = `Reading Header Length: ${receivedBits.length}/${headerLenBits} bits (${progress.toFixed(1)}%)`;
+            $('#receiveProgress').value = progress;
+
+            if (receivedBits.length >= headerLenBits) {
+                const lenBits = receivedBits.slice(0, headerLenBits);
+                const lenBytes = bitsToBytes(lenBits);
+                const dataView = new DataView(lenBytes.buffer);
+                const headerByteLength = dataView.getUint32(0, false); // Big Endian
                 
-                // State 1: Waiting for Header Length
-                if (receiveState === 'header_len') {
-                    const progress = (receivedBits.length / headerLenBits) * 100;
-                    $('#receiveStatus').textContent = `State: Reading Header Length (${receivedBits.length}/${headerLenBits} bits)`;
-                    $('#receiveProgress').value = progress;
-
-                    if (receivedBits.length >= headerLenBits) {
-                        const lenBits = receivedBits.slice(0, headerLenBits);
-                        const lenBytes = bitsToBytes(lenBits);
-                        const dataView = new DataView(lenBytes.buffer);
-                        const headerByteLength = dataView.getUint32(0, false); // Big Endian
-                        
-                        expectedHeaderBits = headerByteLength * 8;
-                        receiveState = 'header';
-                    }
-                }
-                
-                // State 2: Waiting for Header
-                if (receiveState === 'header') {
-                    const totalHeaderBits = headerLenBits + expectedHeaderBits;
-                    const currentHeaderBits = receivedBits.length - headerLenBits;
-                    const progress = (currentHeaderBits / expectedHeaderBits) * 100;
-
-                    $('#receiveStatus').textContent = `State: Reading Header (${currentHeaderBits}/${expectedHeaderBits} bits)`;
-                    $('#receiveProgress').value = progress;
-
-                    if (receivedBits.length >= totalHeaderBits) {
-                        const headerBits = receivedBits.slice(headerLenBits, totalHeaderBits);
-                        const headerBytes = bitsToBytes(headerBits);
-                        const headerString = bytesToString(headerBytes);
-                        
-                        transferHeader = JSON.parse(headerString);
-                        expectedPayloadBits = transferHeader.size * 8;
-                        receiveState = 'payload';
-                        
-                        // Prepare for payload
-                        if (transferHeader.type === 'image') {
-                            setupSpiralCanvas(transferHeader.img_w, transferHeader.img_h);
-                        } else if (transferHeader.type === 'text') {
-                            $('#receivedTextPreview').style.display = 'block';
-                            $('#receiveCanvas').style.display = 'none';
-                        } else {
-                             $('#receivedTextPreview').style.display = 'none';
-                             $('#receiveCanvas').style.display = 'none';
-                        }
-                    }
-                }
-                
-                // State 3: Waiting for Payload
-                if (receiveState === 'payload') {
-                    const headerTotalBits = headerLenBits + expectedHeaderBits;
-                    const payloadBits = receivedBits.slice(headerTotalBits);
-                    const progress = (payloadBits.length / expectedPayloadBits) * 100;
-                    
-                    $('#receiveProgress').value = progress;
-
-                    if (transferHeader.type === 'image') {
-                        $('#receiveStatus').textContent = `State: Receiving Image... (${progress.toFixed(1)}%)`;
-                        drawSpiralPixels(payloadBits);
-                    } else if (transferHeader.type === 'text') {
-                        $('#receiveStatus').textContent = `State: Receiving Text... (${progress.toFixed(1)}%)`;
-                        // Update live text preview
-                        const currentBytes = bitsToBytes(payloadBits);
-                        const currentText = bytesToString(currentBytes);
-                        $('#receivedTextPreview').textContent = currentText;
-                    } else {
-                        $('#receiveStatus').textContent = `State: Receiving File... (${progress.toFixed(1)}%)`;
-                    }
-                    
-                    if (payloadBits.length >= expectedPayloadBits) {
-                        // --- Transfer Complete ---
-                        const finalPayloadBits = payloadBits.slice(0, expectedPayloadBits);
-                        const payloadBytes = bitsToBytes(finalPayloadBits);
-                        
-                        processCompleteData(transferHeader, payloadBytes);
-                        stopReceiving(); 
-                    }
-                }
-            } catch (e) {
-                console.error("Error processing received data:", e);
-                $('#receiveStatus').textContent = 'Error! Invalid data. Resetting...';
-                stopReceiving();
+                expectedHeaderBits = headerByteLength * 8;
+                receiveState = 'header';
+                $('#receiveStatus').textContent = `Header Length Received: ${headerByteLength} bytes (${expectedHeaderBits} bits)`;
             }
         }
+        
+        // State 2: Waiting for Header
+        if (receiveState === 'header') {
+            const totalHeaderBits = headerLenBits + expectedHeaderBits;
+            const currentHeaderBits = receivedBits.length - headerLenBits;
+            const progress = (currentHeaderBits / expectedHeaderBits) * 100;
+            const headerBytes = Math.floor(currentHeaderBits / 8);
+            const expectedHeaderBytes = Math.ceil(expectedHeaderBits / 8);
+
+            $('#receiveStatus').textContent = `Reading Header: ${headerBytes}/${expectedHeaderBytes} bytes (${progress.toFixed(1)}%)`;
+            $('#receiveProgress').value = progress;
+
+            if (receivedBits.length >= totalHeaderBits) {
+                const headerBits = receivedBits.slice(headerLenBits, totalHeaderBits);
+                const headerBytes = bitsToBytes(headerBits);
+                const headerString = bytesToString(headerBytes);
+                
+                transferHeader = JSON.parse(headerString);
+                expectedPayloadBits = transferHeader.size * 8;
+                receiveState = 'payload';
+                
+                // Show what we received in the header
+                $('#receiveStatus').textContent = `Header Received: Type=${transferHeader.type}, Name=${transferHeader.name}, Size=${formatBytes(transferHeader.size)}`;
+                
+                // Prepare for payload
+                if (transferHeader.type === 'image') {
+                    setupSpiralCanvas(transferHeader.img_w, transferHeader.img_h);
+                } else if (transferHeader.type === 'text') {
+                    $('#receivedTextPreview').style.display = 'block';
+                    $('#receiveCanvas').style.display = 'none';
+                } else {
+                     $('#receivedTextPreview').style.display = 'none';
+                     $('#receiveCanvas').style.display = 'none';
+                }
+            }
+        }
+        
+        // State 3: Waiting for Payload
+        if (receiveState === 'payload') {
+            const headerTotalBits = headerLenBits + expectedHeaderBits;
+            const payloadBits = receivedBits.slice(headerTotalBits);
+            const progress = (payloadBits.length / expectedPayloadBits) * 100;
+            const payloadBytes = Math.floor(payloadBits.length / 8);
+            const expectedPayloadBytes = Math.ceil(expectedPayloadBits / 8);
+            
+            $('#receiveProgress').value = progress;
+
+            if (transferHeader.type === 'image') {
+                $('#receiveStatus').textContent = `Receiving Image (${transferHeader.img_w}x${transferHeader.img_h}): ${payloadBytes}/${expectedPayloadBytes} bytes (${progress.toFixed(1)}%)`;
+                drawSpiralPixels(payloadBits);
+            } else if (transferHeader.type === 'text') {
+                $('#receiveStatus').textContent = `Receiving Text: ${payloadBytes}/${expectedPayloadBytes} bytes (${progress.toFixed(1)}%)`;
+                // Update live text preview
+                const currentBytes = bitsToBytes(payloadBits);
+                const currentText = bytesToString(currentBytes);
+                $('#receivedTextPreview').textContent = currentText;
+            } else {
+                $('#receiveStatus').textContent = `Receiving File (${transferHeader.name}): ${payloadBytes}/${expectedPayloadBytes} bytes (${progress.toFixed(1)}%)`;
+            }
+            
+            if (payloadBits.length >= expectedPayloadBits) {
+                // --- Transfer Complete ---
+                const finalPayloadBits = payloadBits.slice(0, expectedPayloadBits);
+                const payloadBytes = bitsToBytes(finalPayloadBits);
+                
+                processCompleteData(transferHeader, payloadBytes);
+                stopReceiving(); 
+            }
+        }
+    } catch (e) {
+        console.error("Error processing received data:", e);
+        $('#receiveStatus').textContent = 'Error! Invalid data. Resetting...';
+        stopReceiving();
+    }
+}
         
         function setupSpiralCanvas(w, h) {
             const canvas = $('#receiveCanvas');
